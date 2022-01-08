@@ -3,7 +3,7 @@
 //
 #include "../headers/node.h"
 
-Node createNode(const char* key, void* data){
+Node createNode(const char* index, void* data){
     Node tmp = (Node)malloc(sizeof(node));
     if(!tmp){
         // Failed to alloc
@@ -11,7 +11,7 @@ Node createNode(const char* key, void* data){
         return NULL;
     }
 
-    tmp->key = key;
+    tmp->index = index;
     tmp->data = data;
     tmp->next=tmp->prev=NULL;
 
@@ -20,7 +20,7 @@ Node createNode(const char* key, void* data){
 
 void freeNode(Node nodeToFree){
     if(nodeToFree){
-        if(nodeToFree->key) free((void*)nodeToFree->key);
+        if(nodeToFree->index) free((void*)nodeToFree->index);
         if(nodeToFree->data) free(nodeToFree->data);
         free(nodeToFree);
     }

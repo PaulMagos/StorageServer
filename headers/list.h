@@ -19,10 +19,10 @@ typedef list* List;
 
 List createList();
 
-int pushTop(List myList, const char* key, void* data);
+int pushTop(List myList, const char* index, void* data);
 
-int pushBottom(List myList, const char* key, void* data);
+int pushBottom(List myList, const char* index, void* data);
 
-int pullTop(List myList, const char* key, void* data);
+int pullTop(List myList, const char* index, void* data);
 
-int pullBottom(List myList, const char* key, void* data);
+int pullBottom(List myList, const char* index, void* data);
