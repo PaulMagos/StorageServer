@@ -10,20 +10,20 @@
 #include <stdlib.h>
 
 typedef struct element{
-    const char* key;
+    const char* index;
     void* data;
     struct element* next;
     struct element* prev;
 } node;
 /*
- * Double linked list's node with a key for implementation of hashmaps.
+ * Double linked list's node with a index for implementation of hashmaps.
  * */
 
 typedef node* Node;
 // Definition of Node, so we don't have to write "node*" everytime
 
 
-Node createNode(const char* key, void* data);
+Node createNode(const char* index, void* data);
 /*
  * Node allocation method
  * */
