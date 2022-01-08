@@ -57,7 +57,7 @@ int pushBottom(List list1, const char* index, void* data){
     return 0;
 }
 
-int pullTop(List list1, const char* index, void* data){
+int pullTop(List list1, const char** index, void** data){
     if(!list1 || list1->len<0){
         // ERRORE DA IMPLEMENTARE *******************************
         return -1;
@@ -80,7 +80,25 @@ int pullTop(List list1, const char* index, void* data){
     return 0;
 }
 
-int pullBottom(List list1, const char* index, void* data){
-int pullBottom(List list1, const char* index, void* data){
+int pullBottom(List list1, const char** index, void** data){
+    if(!list1 || list1->len<0){
+        // ERRORE DA IMPLEMENTARE *******************************
+        return -1;
+    }
 
+    Node tmp = list1->tail;
+
+    list1->len--;
+    if(list1->len == 0){
+        list1->head = NULL;
+        list1->tail = NULL;
+    }else {
+        list1->tail = list1->tail->prev;
+    }
+
+    *index = tmp->index;
+    *data = tmp->data;
+
+    free(tmp);
+    return 0;
 }
