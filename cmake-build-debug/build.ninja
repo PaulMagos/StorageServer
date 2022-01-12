@@ -78,17 +78,35 @@ build CMakeFiles/StorageServer.dir/main.c.o: C_COMPILER__StorageServer_Debug /ho
   OBJECT_DIR = CMakeFiles/StorageServer.dir
   OBJECT_FILE_DIR = CMakeFiles/StorageServer.dir
 
-build CMakeFiles/StorageServer.dir/DataStructures/node.c.o: C_COMPILER__StorageServer_Debug /home/paul/CLionProjects/StorageServer/DataStructures/node.c || cmake_object_order_depends_target_StorageServer
-  DEP_FILE = CMakeFiles/StorageServer.dir/DataStructures/node.c.o.d
+build CMakeFiles/StorageServer.dir/datastructures/node.c.o: C_COMPILER__StorageServer_Debug /home/paul/CLionProjects/StorageServer/datastructures/node.c || cmake_object_order_depends_target_StorageServer
+  DEP_FILE = CMakeFiles/StorageServer.dir/datastructures/node.c.o.d
   FLAGS = -std=gnu99
   OBJECT_DIR = CMakeFiles/StorageServer.dir
-  OBJECT_FILE_DIR = CMakeFiles/StorageServer.dir/DataStructures
+  OBJECT_FILE_DIR = CMakeFiles/StorageServer.dir/datastructures
 
-build CMakeFiles/StorageServer.dir/DataStructures/list.c.o: C_COMPILER__StorageServer_Debug /home/paul/CLionProjects/StorageServer/DataStructures/list.c || cmake_object_order_depends_target_StorageServer
-  DEP_FILE = CMakeFiles/StorageServer.dir/DataStructures/list.c.o.d
+build CMakeFiles/StorageServer.dir/datastructures/list.c.o: C_COMPILER__StorageServer_Debug /home/paul/CLionProjects/StorageServer/datastructures/list.c || cmake_object_order_depends_target_StorageServer
+  DEP_FILE = CMakeFiles/StorageServer.dir/datastructures/list.c.o.d
   FLAGS = -std=gnu99
   OBJECT_DIR = CMakeFiles/StorageServer.dir
-  OBJECT_FILE_DIR = CMakeFiles/StorageServer.dir/DataStructures
+  OBJECT_FILE_DIR = CMakeFiles/StorageServer.dir/datastructures
+
+build CMakeFiles/StorageServer.dir/src/Client/client.c.o: C_COMPILER__StorageServer_Debug /home/paul/CLionProjects/StorageServer/src/Client/client.c || cmake_object_order_depends_target_StorageServer
+  DEP_FILE = CMakeFiles/StorageServer.dir/src/Client/client.c.o.d
+  FLAGS = -std=gnu99
+  OBJECT_DIR = CMakeFiles/StorageServer.dir
+  OBJECT_FILE_DIR = CMakeFiles/StorageServer.dir/src/Client
+
+build CMakeFiles/StorageServer.dir/src/Server/server.c.o: C_COMPILER__StorageServer_Debug /home/paul/CLionProjects/StorageServer/src/Server/server.c || cmake_object_order_depends_target_StorageServer
+  DEP_FILE = CMakeFiles/StorageServer.dir/src/Server/server.c.o.d
+  FLAGS = -std=gnu99
+  OBJECT_DIR = CMakeFiles/StorageServer.dir
+  OBJECT_FILE_DIR = CMakeFiles/StorageServer.dir/src/Server
+
+build CMakeFiles/StorageServer.dir/src/utils.c.o: C_COMPILER__StorageServer_Debug /home/paul/CLionProjects/StorageServer/src/utils.c || cmake_object_order_depends_target_StorageServer
+  DEP_FILE = CMakeFiles/StorageServer.dir/src/utils.c.o.d
+  FLAGS = -std=gnu99
+  OBJECT_DIR = CMakeFiles/StorageServer.dir
+  OBJECT_FILE_DIR = CMakeFiles/StorageServer.dir/src
 
 
 # =============================================================================
@@ -98,7 +116,7 @@ build CMakeFiles/StorageServer.dir/DataStructures/list.c.o: C_COMPILER__StorageS
 #############################################
 # Link the executable StorageServer
 
-build StorageServer: C_EXECUTABLE_LINKER__StorageServer_Debug CMakeFiles/StorageServer.dir/main.c.o CMakeFiles/StorageServer.dir/DataStructures/node.c.o CMakeFiles/StorageServer.dir/DataStructures/list.c.o
+build StorageServer: C_EXECUTABLE_LINKER__StorageServer_Debug CMakeFiles/StorageServer.dir/main.c.o CMakeFiles/StorageServer.dir/datastructures/node.c.o CMakeFiles/StorageServer.dir/datastructures/list.c.o CMakeFiles/StorageServer.dir/src/Client/client.c.o CMakeFiles/StorageServer.dir/src/Server/server.c.o CMakeFiles/StorageServer.dir/src/utils.c.o
   OBJECT_DIR = CMakeFiles/StorageServer.dir
   POST_BUILD = :
   PRE_LINK = :

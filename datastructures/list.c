@@ -2,24 +2,40 @@
 // Created by paul magos on 07/01/22.
 //
 
+#include <stdio.h>
 #include "../headers/list.h"
 
 List createList(){
-    List list1 = (List) malloc(sizeof (list));
-    if(!list1){
+    List myList = (List) malloc(sizeof (list));
+    if(!myList){
         // Failed to alloc
         // ERRORE DA IMPLEMENTARE *******************************
         return NULL;
     }
 
-    list1->head = NULL;
-    list1->tail = NULL;
-    list1->len = 0;
-    return list1;
+    myList->head = NULL;
+    myList->tail = NULL;
+    myList->len = 0;
+    return myList;
 }
 
-int pushTop(List list1, const char* index, void* data){
-    if(!list1){
+
+void recPrint(Node head){
+    if(head == NULL) return;
+    fprintf(stderr, "%s %s \n", head->index, (char*)head->data);
+    recPrint(head->next);
+}
+
+void printList(List myList){
+    if(myList==NULL) {
+        return;
+    }else {
+        recPrint(myList->head);
+    }
+}
+
+int pushTop(List myList, const char* index, void* data){
+    if(!myList){
         // ERRORE DA IMPLEMENTARE *******************************
         return -1;
     }
@@ -27,19 +43,19 @@ int pushTop(List list1, const char* index, void* data){
     Node tmp = createNode(index, data);
     if(!tmp) return -1;
 
-    if(list1->len>0){
-        tmp->next = list1->head;
-        list1->head->prev = tmp;
-    } else list1->tail = tmp;
+    if(myList->len>0){
+        tmp->next = myList->head;
+        myList->head->prev = tmp;
+    } else myList->tail = tmp;
 
-    list1->head = tmp;
-    list1->len++;
+    myList->head = tmp;
+    myList->len++;
 
     return 0;
 }
 
-int pushBottom(List list1, const char* index, void* data){
-    if(!list1){
+int pushBottom(List myList, const char* index, void* data){
+    if(!myList){
         // ERRORE DA IMPLEMENTARE *******************************
         return -1;
     }
@@ -47,58 +63,73 @@ int pushBottom(List list1, const char* index, void* data){
     Node tmp = createNode(index, data);
     if(!tmp) return -1;
 
-    if(list1->len>0){
-        tmp->prev = list1->tail;
-        list1->tail->next = tmp;
-    } else list1->head = tmp;
+    if(myList->len>0){
+        tmp->prev = myList->tail;
+        myList->tail->next = tmp;
+    } else myList->head = tmp;
 
-    list1->tail = tmp;
-    list1->len++;
+    myList->tail = tmp;
+    myList->len++;
     return 0;
 }
 
-int pullTop(List list1, const char** index, void** data){
-    if(!list1 || list1->len<0){
+int pullTop(List myList, const char** index, void** data){
+    if(!myList || myList->len<0){
         // ERRORE DA IMPLEMENTARE *******************************
         return -1;
     }
 
-    Node tmp = list1->head;
+    Node tmp = myList->head;
 
-    list1->len--;
-    if(list1->len == 0){
-        list1->head = NULL;
-        list1->tail = NULL;
+    myList->len--;
+    if(myList->len == 0){
+        myList->head = NULL;
+        myList->tail = NULL;
     }else {
-        list1->head = list1->head->next;
+        myList->head = myList->head->next;
     }
 
     *index = tmp->index;
     *data = tmp->data;
 
-    free(tmp);
+    freeNode(tmp);
     return 0;
 }
 
-int pullBottom(List list1, const char** index, void** data){
-    if(!list1 || list1->len<0){
+int pullBottom(List myList, const char** index, void** data){
+    if(!myList || myList->len<0){
         // ERRORE DA IMPLEMENTARE *******************************
         return -1;
     }
 
-    Node tmp = list1->tail;
+    Node tmp = myList->tail;
 
-    list1->len--;
-    if(list1->len == 0){
-        list1->head = NULL;
-        list1->tail = NULL;
+    myList->len--;
+    if(myList->len == 0){
+        myList->head = NULL;
+        myList->tail = NULL;
     }else {
-        list1->tail = list1->tail->prev;
+        myList->tail = myList->tail->prev;
     }
 
     *index = tmp->index;
     *data = tmp->data;
 
-    free(tmp);
+    freeNode(tmp);
+    return 0;
+}
+
+int deleteList(List myList){
+    if(!myList){
+        // No list
+        // ERRORE DA IMPLEMENTARE *******************************
+        return -1;
+    }
+    char* ind;
+    void* data;
+
+    while(myList->len!=0) pullTop(myList, (const char **) &ind, &data);
+
+    free(myList);
     return 0;
 }

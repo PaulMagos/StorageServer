@@ -7,10 +7,11 @@
 #ifndef STORAGESERVER_API_H
 #define STORAGESERVER_API_H
 
+#include <stddef.h>
 #endif //STORAGESERVER_API_H
 
 
-int openConnection(const char* sockname, int msec, const struct timespec abstime);
+int openConnection(const char* sockname, int msec, /*const*/ struct timespec abstime);
 /*
  *
  *
