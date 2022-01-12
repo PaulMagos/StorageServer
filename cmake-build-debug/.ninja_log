@@ -1,0 +1,10 @@
+# ninja log v5
+1	25	1641979916440667774	CMakeFiles/StorageServer.dir/src/utils.c.o	303f0bd826a346ff
+1	25	1641979916440667774	CMakeFiles/StorageServer.dir/src/Server/server.c.o	47bc1770e61cca04
+0	36	1641979916452668056	CMakeFiles/StorageServer.dir/main.c.o	e41147a69c432ddf
+0	37	1641979916452668056	CMakeFiles/StorageServer.dir/datastructures/node.c.o	3ae5e9490befb419
+1	37	1641979916452668056	CMakeFiles/StorageServer.dir/src/Client/client.c.o	735ab1adb2ed8e02
+1	39	1641979916456668151	CMakeFiles/StorageServer.dir/datastructures/list.c.o	c540b6ff2a12857b
+1	9	1641997242928308727	CMakeFiles/StorageServer.dir/src/utils.c.o	303f0bd826a346ff
+0	19	1641997242940308857	CMakeFiles/StorageServer.dir/src/Client/client.c.o	735ab1adb2ed8e02
+0	24	1641997242944308900	CMakeFiles/StorageServer.dir/datastructures/list.c.o	c540b6ff2a12857b
