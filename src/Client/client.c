@@ -3,6 +3,7 @@
 //
 
 #include <stdio.h>
+#include <string.h>
 #include <stdbool.h>
 #include <getopt.h>
 #include "../../headers/api.h"
@@ -54,21 +55,27 @@ void getCmdList(list** opList, int argc, char* argv[]){
     bool pFlag = false;
     bool fFlag = false;
     char option;
+    char* temp = malloc(2*sizeof (char));
 
     while((option = (char)getopt(argc, argv, "hpf:w:W:D:r:R::d:t:l:u:c:")) != -1){
+        if(optarg[0]=='-') {
+            fprintf(stderr, "%c command needs at least one parameter\n", option);
+            exit(1);
+        }
         switch (option) {
             case 'h': {
                 usage(fFlag, pFlag);
                 break;
             }
             case 'p': {
-                (pFlag)? fprintf(stderr, "ERROR - standard output already required") : (pFlag = true);
+                (pFlag)? fprintf(stderr, "ERROR - standard output already required\n") : (pFlag = true);
                 break;
             }
             case 'f': {
-                (fFlag)? fprintf(stderr, "ERROR - socket already set") : (fFlag = true);
+                (fFlag)? fprintf(stderr, "ERROR - socket already set\n") : (fFlag = true);
+                pushTop(&(*opList), "f", optarg);
                 break;
-            }
+            }/*
             case 'w': {
                 pushTop(&(*opList), "w", optarg);
                 break;
@@ -108,16 +115,21 @@ void getCmdList(list** opList, int argc, char* argv[]){
             case 'u': {
                 pushTop(&(*opList), "u", optarg);
                 break;
-            }
+            }*/
             case '?': {
-                fprintf(stderr, "Run with -h to see command list");
+                fprintf(stderr, "Run with -h to see command list\n");
                 break;
             }
             case ':': {
-                fprintf(stderr, "%c command needs at least one parameter", optopt);
+                fprintf(stderr, "%c command needs at least one parameter\n", optopt);
                 break;
             }
-            default:{break;};
+            default:{
+                temp[0] = option;
+                temp[1] = '\0';
+                pushTop(&(*opList), temp,optarg);
+                break;
+            };
         }
     }
 }
