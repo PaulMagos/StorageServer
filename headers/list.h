@@ -29,4 +29,4 @@ int pullTop(List* myList, char** index, char** data);
 
 int pullBottom(List* myList, char** index, char** data);
 
-int deleteList(List* myList);
+int deleteList(List myList);

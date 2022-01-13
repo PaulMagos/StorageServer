@@ -28,7 +28,7 @@ int main(int argc,char* argv[]){
 
     printList(commandList);
 
-    //int t = deleteList(&commandList);
+    deleteList(commandList);
     return 0;
 }
 
@@ -58,9 +58,11 @@ void getCmdList(list** opList, int argc, char* argv[]){
     char* temp = malloc(2*sizeof (char));
 
     while((option = (char)getopt(argc, argv, "hpf:w:W:D:r:R::d:t:l:u:c:")) != -1){
-        if(optarg[0]=='-') {
-            fprintf(stderr, "%c command needs at least one parameter\n", option);
-            exit(1);
+        if(optarg) {
+            if(optarg[0]=='-'){
+                fprintf(stderr, "%c command needs at least one parameter\n", option);
+                exit(1);
+            }
         }
         switch (option) {
             case 'h': {

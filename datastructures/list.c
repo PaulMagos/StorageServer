@@ -120,20 +120,23 @@ int pullBottom(List* myList, char** index, char** data){
     return 0;
 }
 
-int deleteList(List* myList){
-    if(!(*myList)){
+int deleteList(List myList){
+
+    printf("ciao");
+    if(!(myList)){
         // No list
         // ERRORE DA IMPLEMENTARE *******************************
         return -1;
     }
 
-    node* p = (*myList)->head;
+    node* p = (myList)->head;
 
-    while(p!=NULL) {
-        p = (*myList)->head->next;
-        freeNode((*myList)->head);
+
+    while(p!=NULL && (myList)->head!=(myList)->tail) {
+        p = (myList)->head->next;
+        freeNode((myList)->head);
     };
 
-    free(&(*myList));
+    free(myList);
     return 0;
 }
