@@ -8,6 +8,9 @@
 #endif //STORAGESERVER_LIST_H
 
 #include "node.h"
+#include <stdbool.h>
+
+
 
 typedef struct el{
     Node head;
@@ -19,7 +22,7 @@ typedef list* List;
 
 List createList();
 
-void printList(List myList);
+void printList(Node head);
 
 int pushTop(List* myList, char* index, char* data);
 
@@ -29,4 +32,6 @@ int pullTop(List* myList, char** index, char** data);
 
 int pullBottom(List* myList, char** index, char** data);
 
-int deleteList(List myList);
+int deleteList(List* myList);
+
+bool search(Node head, char* str);

@@ -26,9 +26,12 @@ int main(int argc,char* argv[]){
     list* commandList = createList();
     getCmdList(&commandList, argc, argv);
 
-    printList(commandList);
+    printList(commandList->head);
 
-    deleteList(commandList);
+
+
+    // Free Command List
+    deleteList(&commandList);
     return 0;
 }
 
@@ -55,7 +58,7 @@ void getCmdList(list** opList, int argc, char* argv[]){
     bool pFlag = false;
     bool fFlag = false;
     char option;
-    char* temp = malloc(2*sizeof (char));
+    char temp[2];
 
     while((option = (char)getopt(argc, argv, "hpf:w:W:D:r:R::d:t:l:u:c:")) != -1){
         if(optarg) {
@@ -71,11 +74,12 @@ void getCmdList(list** opList, int argc, char* argv[]){
             }
             case 'p': {
                 (pFlag)? fprintf(stderr, "ERROR - standard output already required\n") : (pFlag = true);
+                pushBottom(&(*opList), "p", optarg);
                 break;
             }
             case 'f': {
                 (fFlag)? fprintf(stderr, "ERROR - socket already set\n") : (fFlag = true);
-                pushTop(&(*opList), "f", optarg);
+                pushBottom(&(*opList), "f", optarg);
                 break;
             }/*
             case 'w': {
@@ -129,9 +133,10 @@ void getCmdList(list** opList, int argc, char* argv[]){
             default:{
                 temp[0] = option;
                 temp[1] = '\0';
-                pushTop(&(*opList), temp,optarg);
+                pushBottom(&(*opList), toOpt(temp),optarg);
                 break;
             };
         }
+
     }
 }

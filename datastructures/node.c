@@ -4,6 +4,7 @@
 #include "../headers/node.h"
 #include <errno.h>
 #include <stdio.h>
+#include <string.h>
 
 node* createNode(char* index, char* data){
     node* tmp = (node*)malloc(sizeof(node));
@@ -23,8 +24,10 @@ node* createNode(char* index, char* data){
 
 void freeNode(node* nodeToFree){
     if(nodeToFree){
-        if(nodeToFree->index) free(nodeToFree->index);
-        if(nodeToFree->data) free(nodeToFree->data);
+        //if(nodeToFree->index) free(nodeToFree->index);
+        if(nodeToFree->prev) nodeToFree->prev->next = NULL;
+        if(nodeToFree->next) nodeToFree->next->prev = NULL;
+        //if(nodeToFree->data) free(nodeToFree->data);
         free(nodeToFree);
     }
 }

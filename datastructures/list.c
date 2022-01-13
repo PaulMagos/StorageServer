@@ -1,8 +1,10 @@
 //
 // Created by paul magos on 07/01/22.
 //
-
 #include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stdbool.h>
 #include "../headers/list.h"
 
 List createList(){
@@ -20,22 +22,13 @@ List createList(){
 }
 
 
-void recPrint(Node head){
+void printList(Node head){
     if(head == NULL) return;
-    fprintf(stderr, "%s %s \n", head->index, (char*)head->data);
-    recPrint(head->next);
-}
-
-void printList(List myList){
-    if(myList == NULL || myList->head == NULL) {
-        return;
-    }else {
-        recPrint(myList->head);
-    }
+    fprintf(stderr, "%s, %s\n", head->index, head->data);
+    printList(head->next);
 }
 
 int pushTop(List* myList, char* index, char* data){
-
     if(!(*myList)){
         // ERRORE DA IMPLEMENTARE *******************************
         perror("list null");
@@ -61,15 +54,15 @@ int pushBottom(List* myList, char* index, char* data){
         return -1;
     }
 
-    node* tmp = createNode(index, data);
-    if(!tmp) return -1;
+    node* temp = createNode(index, data);
+    if(!temp) return -1;
 
     if((*myList)->len>0){
-        tmp->prev = (*myList)->tail;
-        (*myList)->tail->next = tmp;
-    } else (*myList)->head = tmp;
+        temp->prev = (*myList)->tail;
+        (*myList)->tail->next = temp;
+    } else (*myList)->head = temp;
 
-    (*myList)->tail = tmp;
+    (*myList)->tail = temp;
     (*myList)->len++;
     return 0;
 }
@@ -120,23 +113,28 @@ int pullBottom(List* myList, char** index, char** data){
     return 0;
 }
 
-int deleteList(List myList){
+void freeNodes(Node head){
+    if(head == NULL) return;
+    freeNodes(head->next);
+    freeNode(head);
+    return;
+}
 
-    printf("ciao");
-    if(!(myList)){
+int deleteList(List* myList) {
+    if (!(*myList)) {
         // No list
         // ERRORE DA IMPLEMENTARE *******************************
         return -1;
     }
 
-    node* p = (myList)->head;
-
-
-    while(p!=NULL && (myList)->head!=(myList)->tail) {
-        p = (myList)->head->next;
-        freeNode((myList)->head);
-    };
-
-    free(myList);
+    freeNodes((*myList)->head);
+    //free(*myList);
     return 0;
+}
+
+bool search(Node head, char* str){
+    if(head == NULL) return false;
+    if (strcmp(head->index, str) == 0) return true;
+    if(head->next) search(head->next, str);
+    return false;
 }
