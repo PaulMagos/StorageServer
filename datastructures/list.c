@@ -123,12 +123,11 @@ void freeNodes(Node head){
 int deleteList(List* myList) {
     if (!(*myList)) {
         // No list
-        // ERRORE DA IMPLEMENTARE *******************************
         return -1;
     }
 
     freeNodes((*myList)->head);
-    //free(*myList);
+    free(*myList);
     return 0;
 }
 
