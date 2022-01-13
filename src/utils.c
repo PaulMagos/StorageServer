@@ -3,16 +3,14 @@
 //
 
 #include "../headers/utils.h"
-#include <stdio.h>
-#include <string.h>
 
 char intIsChar(int str){
     if((str > 96 && str < 123) || (str > 64 && str < 91)) return (char)str;
     else return 0;
 }
 
-char* toOpt(char* str){
-    switch (str[0]) {
+char* toOpt(char str){
+    switch (str) {
         case 'w': {
             return "w";
         }

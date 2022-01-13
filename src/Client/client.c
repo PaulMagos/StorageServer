@@ -58,7 +58,6 @@ void getCmdList(list** opList, int argc, char* argv[]){
     bool pFlag = false;
     bool fFlag = false;
     char option;
-    char temp[2];
 
     while((option = (char)getopt(argc, argv, "hpf:w:W:D:r:R::d:t:l:u:c:")) != -1){
         if(optarg) {
@@ -131,9 +130,7 @@ void getCmdList(list** opList, int argc, char* argv[]){
                 break;
             }
             default:{
-                temp[0] = option;
-                temp[1] = '\0';
-                pushBottom(&(*opList), toOpt(temp),optarg);
+                pushBottom(&(*opList), toOpt(option),optarg);
                 break;
             };
         }

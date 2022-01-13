@@ -8,4 +8,4 @@
 #endif //STORAGESERVER_UTILS_H
 
 char intToChar(int str);
-char* toOpt(char* str);
+char* toOpt(char str);
