@@ -7,4 +7,5 @@
 
 #endif //STORAGESERVER_UTILS_H
 
-char toChar(int str);
+char intToChar(int str);
+void intToString(char** tmp, int str);

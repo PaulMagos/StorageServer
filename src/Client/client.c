@@ -9,22 +9,25 @@
 #include "../../headers/list.h"
 #include "../../headers/utils.h"
 
+
+// Parse the commands given by execution of the client
+void getCmdList(list** opList, int argc, char* argv[]);
+
 // Operation description for the client
 static void usage(bool fFlag, bool pFlag);
 
-// Parse the commands given by execution of the client
-List getCmdList(int argc, char** argv);
 
 
-int main(int argc,char** argv){
-    char* socket = NULL;
-    char* workingDir = NULL;
-    char* expelledDir = "/dev/null";
-    List commandList = getCmdList(argc, argv);
+int main(int argc,char* argv[]){
+    //char* socket = NULL;
+    //char* workingDir = NULL;
+    //char* expelledDir = "/dev/null";
+    list* commandList = createList();
+    getCmdList(&commandList, argc, argv);
 
     printList(commandList);
 
-    deleteList(commandList);
+    //int t = deleteList(&commandList);
     return 0;
 }
 
@@ -47,18 +50,12 @@ static void usage(bool fFlag, bool pFlag){
     fprintf(stderr,(!pFlag)? "-p \t\t\t enables print on the standard output for each operation \n":"");
 }
 
-List getCmdList(int argc, char** argv){
+void getCmdList(list** opList, int argc, char* argv[]){
     bool pFlag = false;
     bool fFlag = false;
     char option;
 
-    // Command list with arguments
-    List opList =    createList();
-    if(opList == NULL){
-        return NULL;
-    }
-
-    while((option = (char)getopt(argc, argv, "hf:w:W:S:r:R::d:t:l:u:c:p"))){
+    while((option = (char)getopt(argc, argv, "hpf:w:W:D:r:R::d:t:l:u:c:")) != -1){
         switch (option) {
             case 'h': {
                 usage(fFlag, pFlag);
@@ -70,6 +67,47 @@ List getCmdList(int argc, char** argv){
             }
             case 'f': {
                 (fFlag)? fprintf(stderr, "ERROR - socket already set") : (fFlag = true);
+                break;
+            }
+            case 'w': {
+                pushTop(&(*opList), "w", optarg);
+                break;
+            }
+            case 'W': {
+                pushTop(&(*opList), "W", optarg);
+                break;
+            }
+            case 'D': {
+                pushTop(&(*opList), "D", optarg);
+                break;
+            }
+            case 'r': {
+                pushTop(&(*opList), "r", optarg);
+                break;
+            }
+            case 'R': {
+                pushTop(&(*opList), "R", optarg);
+                break;
+            }
+            case 'd': {
+                pushTop(&(*opList), "d", optarg);
+                break;
+            }
+            case 't': {
+                pushTop(&(*opList), "t", optarg);
+                break;
+            }
+            case 'l': {
+                pushTop(&(*opList), "l", optarg);
+                break;
+            }
+            case 'c': {
+                pushTop(&(*opList), "c", optarg);
+                break;
+            }
+            case 'u': {
+                pushTop(&(*opList), "u", optarg);
+                break;
             }
             case '?': {
                 fprintf(stderr, "Run with -h to see command list");
@@ -79,14 +117,7 @@ List getCmdList(int argc, char** argv){
                 fprintf(stderr, "%c command needs at least one parameter", optopt);
                 break;
             }
-            default:{
-                char* tmp = toChar(optopt);
-                char* t = char* tmp;
-                pushTop(opList, (const char*) t, optarg);
-                break;
-            };
+            default:{break;};
         }
     }
-    return opList;
 }
-

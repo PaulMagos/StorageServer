@@ -11,7 +11,7 @@
 #endif //STORAGESERVER_API_H
 
 
-int openConnection(const char* sockname, int msec, /*const*/ struct timespec abstime);
+//int openConnection(const char* sockname, int msec, const struct timespec abstime);
 /*
  *
  *

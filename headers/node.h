@@ -10,8 +10,8 @@
 #include <stdlib.h>
 
 typedef struct element{
-    const char* index;
-    void* data;
+    char* index;
+    char* data;
     struct element* next;
     struct element* prev;
 } node;
@@ -23,9 +23,9 @@ typedef node* Node;
 // Definition of Node, so we don't have to write "node*" everytime
 
 
-Node createNode(const char* index, void* data);
+node* createNode(char* index, char* data);
 /*
  * Node allocation method
  * */
 
-void freeNode(Node nodeToFree);
+void freeNode(node* nodeToFree);

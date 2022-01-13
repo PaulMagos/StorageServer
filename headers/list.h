@@ -21,12 +21,12 @@ List createList();
 
 void printList(List myList);
 
-int pushTop(List myList, const char* index, void* data);
+int pushTop(List* myList, char* index, char* data);
 
-int pushBottom(List myList, const char* index, void* data);
+int pushBottom(List* myList, char* index, char* data);
 
-int pullTop(List myList, const char** index, void** data);
+int pullTop(List* myList, char** index, char** data);
 
-int pullBottom(List myList, const char** index, void** data);
+int pullBottom(List* myList, char** index, char** data);
 
-int deleteList(List myList);
+int deleteList(List* myList);

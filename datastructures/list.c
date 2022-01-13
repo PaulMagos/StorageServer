@@ -9,7 +9,7 @@ List createList(){
     List myList = (List) malloc(sizeof (list));
     if(!myList){
         // Failed to alloc
-        // ERRORE DA IMPLEMENTARE *******************************
+        perror("malloc");
         return NULL;
     }
 
@@ -27,66 +27,67 @@ void recPrint(Node head){
 }
 
 void printList(List myList){
-    if(myList==NULL) {
+    if(myList == NULL || myList->head == NULL) {
         return;
     }else {
         recPrint(myList->head);
     }
 }
 
-int pushTop(List myList, const char* index, void* data){
-    if(!myList){
+int pushTop(List* myList, char* index, char* data){
+
+    if(!(*myList)){
         // ERRORE DA IMPLEMENTARE *******************************
+        perror("list null");
         return -1;
     }
 
-    Node tmp = createNode(index, data);
+    node* tmp = createNode(index, data);
     if(!tmp) return -1;
 
-    if(myList->len>0){
-        tmp->next = myList->head;
-        myList->head->prev = tmp;
-    } else myList->tail = tmp;
+    if((*myList)->len>0){
+        tmp->next = (*myList)->head;
+        (*myList)->head->prev = tmp;
+    } else (*myList)->tail = tmp;
 
-    myList->head = tmp;
-    myList->len++;
-
+    (*myList)->head = tmp;
+    (*myList)->len++;
     return 0;
 }
 
-int pushBottom(List myList, const char* index, void* data){
-    if(!myList){
+int pushBottom(List* myList, char* index, char* data){
+    if(!(*myList)){
         // ERRORE DA IMPLEMENTARE *******************************
         return -1;
     }
 
-    Node tmp = createNode(index, data);
+    node* tmp = createNode(index, data);
     if(!tmp) return -1;
 
-    if(myList->len>0){
-        tmp->prev = myList->tail;
-        myList->tail->next = tmp;
-    } else myList->head = tmp;
+    if((*myList)->len>0){
+        tmp->prev = (*myList)->tail;
+        (*myList)->tail->next = tmp;
+    } else (*myList)->head = tmp;
 
-    myList->tail = tmp;
-    myList->len++;
+    (*myList)->tail = tmp;
+    (*myList)->len++;
     return 0;
 }
 
-int pullTop(List myList, const char** index, void** data){
-    if(!myList || myList->len<0){
+int pullTop(List* myList, char** index, char** data){
+    if(!(*myList) || (*myList)->len < 1){
         // ERRORE DA IMPLEMENTARE *******************************
         return -1;
     }
 
-    Node tmp = myList->head;
+    node* tmp = (*myList)->head;
 
-    myList->len--;
-    if(myList->len == 0){
-        myList->head = NULL;
-        myList->tail = NULL;
+    (*myList)->len--;
+    if((*myList)->len == 0){
+        (*myList)->head = NULL;
+        (*myList)->tail = NULL;
     }else {
-        myList->head = myList->head->next;
+        (*myList)->head = (*myList)->head->next;
     }
 
     *index = tmp->index;
@@ -96,20 +97,20 @@ int pullTop(List myList, const char** index, void** data){
     return 0;
 }
 
-int pullBottom(List myList, const char** index, void** data){
-    if(!myList || myList->len<0){
+int pullBottom(List* myList, char** index, char** data){
+    if(!(*myList) || (*myList)->len < 1){
         // ERRORE DA IMPLEMENTARE *******************************
         return -1;
     }
 
-    Node tmp = myList->tail;
+    node* tmp = (*myList)->tail;
 
-    myList->len--;
-    if(myList->len == 0){
-        myList->head = NULL;
-        myList->tail = NULL;
+    (*myList)->len--;
+    if((*myList)->len == 0){
+        (*myList)->head = NULL;
+        (*myList)->tail = NULL;
     }else {
-        myList->tail = myList->tail->prev;
+        (*myList)->tail = (*myList)->tail->prev;
     }
 
     *index = tmp->index;
@@ -119,17 +120,20 @@ int pullBottom(List myList, const char** index, void** data){
     return 0;
 }
 
-int deleteList(List myList){
-    if(!myList){
+int deleteList(List* myList){
+    if(!(*myList)){
         // No list
         // ERRORE DA IMPLEMENTARE *******************************
         return -1;
     }
-    char* ind;
-    void* data;
 
-    while(myList->len!=0) pullTop(myList, (const char **) &ind, &data);
+    node* p = (*myList)->head;
 
-    free(myList);
+    while(p!=NULL) {
+        p = (*myList)->head->next;
+        freeNode((*myList)->head);
+    };
+
+    free(&(*myList));
     return 0;
 }
