@@ -12,22 +12,23 @@
 
 
 // Parse the commands given by execution of the client
-bool getCmdList(List* opList, int argc, char* argv[]);
+bool getCmdList(List* opList, int argc, char* argv[], bool* pFlag, bool* fFlag);
 
 // Operation description for the client
 static void usage(bool fFlag, bool pFlag);
 
-void commandHandler(List* commandList);
+void commandHandler(List* commandList, bool pFlag, bool fFlag);
 
 
 
 int main(int argc,char* argv[]){
-
+    bool pflag, fFlag;
 
     // Command list creation and parsing
     List commandList = createList();
 
-    if(getCmdList(&commandList, argc, argv))  commandHandler(&commandList);
+    if(getCmdList(&commandList, argc, argv, &pflag, &fFlag))
+        commandHandler(&commandList, pflag, fFlag);
     else(exit(1));
 
     // Free Command List
@@ -54,9 +55,9 @@ static void usage(bool fFlag, bool pFlag){
     fprintf(stderr,(!pFlag)? "-p \t\t\t enables print on the standard output for each operation \n":"");
 }
 
-bool getCmdList(List* opList, int argc, char* argv[]){
-    bool pFlag = false;
-    bool fFlag = false;
+bool getCmdList(List* opList, int argc, char* argv[],bool* pFlag,bool* fFlag){
+    *pFlag = false;
+    *fFlag = false;
     char option;
 
     while((option = (char)getopt(argc, argv, "hpf:w:W:D:r:R::d:t:l:u:c:")) != -1){
@@ -68,22 +69,24 @@ bool getCmdList(List* opList, int argc, char* argv[]){
         }
         switch (option) {
             case 'h': {
-                usage(fFlag, pFlag);
+                usage(*fFlag, *pFlag);
                 break;
             }
             case 'p': {
-                if(pFlag) {
+                if(*pFlag) {
                     fprintf(stderr, "ERROR - standard output already required, require it once\n");
                     return false;
-                } else (pFlag = true);
-                pushBottom(&(*opList), "p", optarg);
+                } else {
+                    fprintf(stderr, "SUCCESS - standard output activated\n");
+                    (*pFlag = true);
+                }
                 break;
             }
             case 'f': {
-                if(fFlag){
+                if((*fFlag)){
                     fprintf(stderr, "ERROR - socket can be set only once\n");
                     return false;
-                }else (fFlag = true);
+                }else ((*fFlag) = true);
                 pushBottom(&(*opList), "f", optarg);
                 break;
             }
@@ -96,7 +99,7 @@ bool getCmdList(List* opList, int argc, char* argv[]){
                 return false;
             }
             default:{
-                pushBottom(&(*opList), toOpt(option),optarg);
+                pushBottom(&(*opList), toString(option),optarg);
                 break;
             };
         }
@@ -105,23 +108,19 @@ bool getCmdList(List* opList, int argc, char* argv[]){
     return true;
 }
 
-void commandHandler(List* commandList){
+void commandHandler(List* commandList, bool pFlag, bool fFlag){
     char* socket = NULL;
     char* workingDir = NULL;
     char* expelledDir = "/dev/null";
-    bool monOutput = false;
 
+    long timeToSleep = 0;
 
     char* command;
     char* argument;
+
+
     while ( pullTop(&(*commandList), &command, &argument) == 0){
-        switch (command[0]) {
-            case 'p':{
-                printf("Stampa attivata\n");
-                monOutput = !monOutput;
-                msSleep()
-                break;
-            }
+        switch (toChar(command)) {
             case 'f':{
                 printf("ciao '%c' %d\n", command[0],(*commandList)->len);
                 break;
@@ -151,7 +150,12 @@ void commandHandler(List* commandList){
                 break;
             }
             case 't':{
-                printf("ciao '%c' %d\n", command[0],(*commandList)->len);
+                if(!(timeToSleep = stringToLong(argument))){
+                    if(pFlag) fprintf(stderr, "ERROR - %s not a number\n", argument);
+                    timeToSleep = 0;
+                } else{
+                    if(pFlag) fprintf(stderr, "SUCCESS - time = %lu\n", timeToSleep);
+                }
                 break;
             }
             case 'l':{

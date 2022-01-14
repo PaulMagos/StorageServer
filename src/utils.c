@@ -3,13 +3,19 @@
 //
 
 #include "../headers/utils.h"
+#include <errno.h>
+#include <time.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <limits.h>
+
 
 char intIsChar(int str){
     if((str > 96 && str < 123) || (str > 64 && str < 91)) return (char)str;
     else return 0;
 }
 
-char* toOpt(char str){
+char* toString(char str){
     switch (str) {
         case 'w': {
             return "w";
@@ -43,4 +49,48 @@ char* toOpt(char str){
         }
     }
     return 0;
+}
+char toChar(char* str){
+    return intIsChar((int)str[0]);
+}
+
+int msleep(long msec)
+{
+    struct timespec ts;
+    int res;
+
+    if (msec < 0)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    ts.tv_sec = msec / 1000;
+    ts.tv_nsec = (msec % 1000) * 1000000;
+
+    do {
+        res = nanosleep(&ts, &ts);
+    } while (res && errno == EINTR);
+
+    return res;
+}
+
+long stringToLong(char* str){
+    long result;
+
+    result = strtol(str, NULL, 10);
+
+    if(result == 0){
+        if(errno == EINVAL){
+            fprintf(stderr, "Char to Long Conversion ERROR: %d\n", errno);
+            exit(0);
+        }
+    }
+
+    if(result == LONG_MAX || result == LONG_MIN){
+        if(errno == ERANGE){
+            fprintf(stderr, "Char to Long Conversion ERROR - Out of Range\n");
+        }
+    }
+    return result;
 }
