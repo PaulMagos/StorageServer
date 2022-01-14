@@ -31,7 +31,6 @@ void printList(Node head){
 int pushTop(List* myList, char* index, char* data){
     if(!(*myList)){
         // ERRORE DA IMPLEMENTARE *******************************
-        perror("list null");
         return -1;
     }
 

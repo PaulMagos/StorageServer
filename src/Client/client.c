@@ -3,7 +3,7 @@
 //
 
 #include <stdio.h>
-#include <string.h>
+#include <time.h>
 #include <stdbool.h>
 #include <getopt.h>
 #include "../../headers/api.h"
@@ -12,23 +12,23 @@
 
 
 // Parse the commands given by execution of the client
-void getCmdList(list** opList, int argc, char* argv[]);
+bool getCmdList(List* opList, int argc, char* argv[]);
 
 // Operation description for the client
 static void usage(bool fFlag, bool pFlag);
 
+void commandHandler(List* commandList);
+
 
 
 int main(int argc,char* argv[]){
-    //char* socket = NULL;
-    //char* workingDir = NULL;
-    //char* expelledDir = "/dev/null";
-    list* commandList = createList();
-    getCmdList(&commandList, argc, argv);
-
-    printList(commandList->head);
 
 
+    // Command list creation and parsing
+    List commandList = createList();
+
+    if(getCmdList(&commandList, argc, argv))  commandHandler(&commandList);
+    else(exit(1));
 
     // Free Command List
     deleteList(&commandList);
@@ -54,7 +54,7 @@ static void usage(bool fFlag, bool pFlag){
     fprintf(stderr,(!pFlag)? "-p \t\t\t enables print on the standard output for each operation \n":"");
 }
 
-void getCmdList(list** opList, int argc, char* argv[]){
+bool getCmdList(List* opList, int argc, char* argv[]){
     bool pFlag = false;
     bool fFlag = false;
     char option;
@@ -63,7 +63,7 @@ void getCmdList(list** opList, int argc, char* argv[]){
         if(optarg) {
             if(optarg[0]=='-'){
                 fprintf(stderr, "%c command needs at least one parameter\n", option);
-                exit(1);
+                return false;
             }
         }
         switch (option) {
@@ -72,62 +72,28 @@ void getCmdList(list** opList, int argc, char* argv[]){
                 break;
             }
             case 'p': {
-                (pFlag)? fprintf(stderr, "ERROR - standard output already required\n") : (pFlag = true);
+                if(pFlag) {
+                    fprintf(stderr, "ERROR - standard output already required, require it once\n");
+                    return false;
+                } else (pFlag = true);
                 pushBottom(&(*opList), "p", optarg);
                 break;
             }
             case 'f': {
-                (fFlag)? fprintf(stderr, "ERROR - socket already set\n") : (fFlag = true);
+                if(fFlag){
+                    fprintf(stderr, "ERROR - socket can be set only once\n");
+                    return false;
+                }else (fFlag = true);
                 pushBottom(&(*opList), "f", optarg);
-                break;
-            }/*
-            case 'w': {
-                pushTop(&(*opList), "w", optarg);
-                break;
-            }
-            case 'W': {
-                pushTop(&(*opList), "W", optarg);
-                break;
-            }
-            case 'D': {
-                pushTop(&(*opList), "D", optarg);
-                break;
-            }
-            case 'r': {
-                pushTop(&(*opList), "r", optarg);
-                break;
-            }
-            case 'R': {
-                pushTop(&(*opList), "R", optarg);
-                break;
-            }
-            case 'd': {
-                pushTop(&(*opList), "d", optarg);
-                break;
-            }
-            case 't': {
-                pushTop(&(*opList), "t", optarg);
-                break;
-            }
-            case 'l': {
-                pushTop(&(*opList), "l", optarg);
-                break;
-            }
-            case 'c': {
-                pushTop(&(*opList), "c", optarg);
-                break;
-            }
-            case 'u': {
-                pushTop(&(*opList), "u", optarg);
-                break;
-            }*/
-            case '?': {
-                fprintf(stderr, "Run with -h to see command list\n");
                 break;
             }
             case ':': {
                 fprintf(stderr, "%c command needs at least one parameter\n", optopt);
-                break;
+                return false;
+            }
+            case '?': {
+                fprintf(stderr, "Run with -h to see command list\n");
+                return false;
             }
             default:{
                 pushBottom(&(*opList), toOpt(option),optarg);
@@ -136,4 +102,72 @@ void getCmdList(list** opList, int argc, char* argv[]){
         }
 
     }
+    return true;
 }
+
+void commandHandler(List* commandList){
+    char* socket = NULL;
+    char* workingDir = NULL;
+    char* expelledDir = "/dev/null";
+    bool monOutput = false;
+
+
+    char* command;
+    char* argument;
+    while ( pullTop(&(*commandList), &command, &argument) == 0){
+        switch (command[0]) {
+            case 'p':{
+                printf("Stampa attivata\n");
+                monOutput = !monOutput;
+                msSleep()
+                break;
+            }
+            case 'f':{
+                printf("ciao '%c' %d\n", command[0],(*commandList)->len);
+                break;
+            }
+            case 'w':{
+                printf("ciao '%c' %d\n", command[0],(*commandList)->len);
+                break;
+            }
+            case 'W':{
+                printf("ciao '%c' %d\n", command[0],(*commandList)->len);
+                break;
+            }
+            case 'D':{
+                printf("ciao '%c' %d\n", command[0],(*commandList)->len);
+                break;
+            }
+            case 'r':{
+                printf("ciao '%c' %d\n", command[0],(*commandList)->len);
+                break;
+            }
+            case 'R':{
+                printf("ciao '%c' %d\n", command[0],(*commandList)->len);
+                break;
+            }
+            case 'd':{
+                printf("ciao '%c' %d\n", command[0],(*commandList)->len);
+                break;
+            }
+            case 't':{
+                printf("ciao '%c' %d\n", command[0],(*commandList)->len);
+                break;
+            }
+            case 'l':{
+                printf("ciao '%c' %d\n", command[0],(*commandList)->len);
+                break;
+            }
+            case 'u':{
+                printf("ciao '%c' %d\n", command[0],(*commandList)->len);
+                break;
+            }
+            case 'c':{
+                printf("ciao '%c' %d\n", command[0],(*commandList)->len);
+                break;
+            }
+        }
+    }
+    return;
+}
+
