@@ -5,8 +5,6 @@
 #include "../headers/utils.h"
 #include <errno.h>
 #include <time.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <limits.h>
 
 
@@ -81,16 +79,13 @@ long stringToLong(char* str){
     result = strtol(str, NULL, 10);
 
     if(result == 0){
-        if(errno == EINVAL){
-            fprintf(stderr, "Char to Long Conversion ERROR: %d\n", errno);
-            exit(0);
-        }
+        errno = EINVAL;
+        return -1;
     }
 
     if(result == LONG_MAX || result == LONG_MIN){
-        if(errno == ERANGE){
-            fprintf(stderr, "Char to Long Conversion ERROR - Out of Range\n");
-        }
+        errno = ERANGE;
+        return -1;
     }
     return result;
 }

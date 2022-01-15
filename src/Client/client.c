@@ -109,9 +109,9 @@ bool getCmdList(List* opList, int argc, char* argv[],bool* pFlag,bool* fFlag){
 }
 
 void commandHandler(List* commandList, bool pFlag, bool fFlag){
-    char* socket = NULL;
-    char* workingDir = NULL;
-    char* expelledDir = "/dev/null";
+    //char* socket = NULL;
+    //char* workingDir = NULL;
+    //char* expelledDir = "/dev/null";
 
     long timeToSleep = 0;
 
@@ -122,7 +122,10 @@ void commandHandler(List* commandList, bool pFlag, bool fFlag){
     while ( pullTop(&(*commandList), &command, &argument) == 0){
         switch (toChar(command)) {
             case 'f':{
-                printf("ciao '%c' %d\n", command[0],(*commandList)->len);
+                /*struct timespec Ts;
+                clock_gettime(CLOCK_REALTIME, &Ts);
+                Ts.tv_sec = Ts.tv_sec + 60;
+                if(openConnection(arg, 1000, Ts) == -1);*/
                 break;
             }
             case 'w':{
@@ -150,12 +153,15 @@ void commandHandler(List* commandList, bool pFlag, bool fFlag){
                 break;
             }
             case 't':{
-                if(!(timeToSleep = stringToLong(argument))){
-                    if(pFlag) fprintf(stderr, "ERROR - %s not a number\n", argument);
+                /*if(!(timeToSleep = stringToLong(argument))){
+                    if(pFlag) fprintf(stderr, "ERROR - %s not a number, time set to 0\n", argument);
                     timeToSleep = 0;
                 } else{
                     if(pFlag) fprintf(stderr, "SUCCESS - time = %lu\n", timeToSleep);
-                }
+                }*/
+                SYSCALL_EXIT(stringToLong, timeToSleep, stringToLong(argument),
+                             "Char '%s' to Long Conversion gone wrong, errno=%d\n", argument, errno);
+                if(pFlag) fprintf(stderr, "SUCCESS - time = %lu\n", timeToSleep);
                 break;
             }
             case 'l':{
