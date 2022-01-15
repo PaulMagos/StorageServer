@@ -20,7 +20,7 @@ typedef struct el{
 
 typedef list* List;
 
-List createList();
+int  createList(List* myList);
 
 void printList(Node head);
 

@@ -5,22 +5,17 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include "../headers/utils.h"
 #include "../headers/list.h"
 
-List createList(){
-    List myList = (List) malloc(sizeof (list));
-    if(!myList){
-        // Failed to alloc
-        perror("malloc");
-        return NULL;
+int createList(List* myList){
+    *myList = (List) malloc (sizeof (list));
+    if(!(*myList)) {
+        errno = ENOMEM;
+        return -1;
     }
-
-    myList->head = NULL;
-    myList->tail = NULL;
-    myList->len = 0;
-    return myList;
+    return 0;
 }
-
 
 void printList(Node head){
     if(head == NULL) return;
@@ -30,31 +25,39 @@ void printList(Node head){
 
 int pushTop(List* myList, char* index, char* data){
     if(!(*myList)){
-        // ERRORE DA IMPLEMENTARE *******************************
+        // ERRORE *******************************
+        errno = EINVAL;
         return -1;
     }
 
-    node* tmp = createNode(index, data);
-    if(!tmp) return -1;
+    node* temp = createNode(index, data);
+    if(!temp) {
+        errno = ENOMEM;
+        return -1;
+    }
 
     if((*myList)->len>0){
-        tmp->next = (*myList)->head;
-        (*myList)->head->prev = tmp;
-    } else (*myList)->tail = tmp;
+        temp->next = (*myList)->head;
+        (*myList)->head->prev = temp;
+    } else (*myList)->tail = temp;
 
-    (*myList)->head = tmp;
+    (*myList)->head = temp;
     (*myList)->len++;
     return 0;
 }
 
 int pushBottom(List* myList, char* index, char* data){
     if(!(*myList)){
-        // ERRORE DA IMPLEMENTARE *******************************
+        // ERRORE *******************************
+        errno = EINVAL;
         return -1;
     }
 
     node* temp = createNode(index, data);
-    if(!temp) return -1;
+    if(!temp) {
+        errno = ENOMEM;
+        return -1;
+    }
 
     if((*myList)->len>0){
         temp->prev = (*myList)->tail;
@@ -69,6 +72,7 @@ int pushBottom(List* myList, char* index, char* data){
 int pullTop(List* myList, char** index, char** data){
     if(!(*myList) || (*myList)->len < 1){
         // ERRORE DA IMPLEMENTARE *******************************
+        errno = EINVAL;
         return -1;
     }
 
@@ -92,6 +96,7 @@ int pullTop(List* myList, char** index, char** data){
 int pullBottom(List* myList, char** index, char** data){
     if(!(*myList) || (*myList)->len < 1){
         // ERRORE DA IMPLEMENTARE *******************************
+        errno = EINVAL;
         return -1;
     }
 
@@ -122,6 +127,7 @@ void freeNodes(Node head){
 int deleteList(List* myList) {
     if (!(*myList)) {
         // No list
+        errno = EINVAL;
         return -1;
     }
 
