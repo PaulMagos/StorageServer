@@ -73,36 +73,6 @@ int getCmdList(List* opList, int argc, char* argv[],bool* pFlag,bool* fFlag, lon
             }
         }
         switch (option) {
-            case 'h': {
-                usage(*fFlag, *pFlag);
-                break;
-            }
-            case 'p': {
-                if(*pFlag) {
-                    fprintf(stderr, "ERROR - standard output already required, require it once\n");
-                    return -1;
-                } else {
-                    fprintf(stderr, "SUCCESS - standard output activated\n");
-                    (*pFlag = true);
-                }
-                break;
-            }
-            case 'f': {
-                if((*fFlag)){
-                    fprintf(stderr, "ERROR - socket can be set only once\n");
-                    return -1;
-                }else ((*fFlag) = true);
-                pushBottom(&(*opList), "f", optarg);
-                break;
-            }
-            case 't': {
-                int tmp = 0;
-                SYSCALL_EXIT(stringToLong, tmp, stringToLong(optarg),
-                             (pFlag)? "Char '%s' to Long Conversion gone wrong, errno=%d\n" : "", optarg, errno);
-                *timeToSleep = tmp;
-                if(*pFlag) fprintf(stderr, "SUCCESS - time = %lu\n", *timeToSleep);
-                break;
-            }
             case ':': {
                 fprintf(stderr, "%c command needs at least one parameter\n", optopt);
                 return -1;
@@ -119,6 +89,26 @@ int getCmdList(List* opList, int argc, char* argv[],bool* pFlag,bool* fFlag, lon
         }
 
     }
+
+    if(search((*opList)->head, "h")) usage(*fFlag, *pFlag);
+    if(search((*opList)->head, "p")){
+        if(*pFlag) {
+            fprintf(stderr, "ERROR - standard output already required, require it once\n");
+            return -1;
+        } else {
+            fprintf(stderr, "SUCCESS - standard output activated\n");
+            (*pFlag = true);
+        }
+    }
+    if((*timeToSleep = timeCheck((*opList)->head, *pFlag)) != 0){
+        if(*pFlag) fprintf(stderr, "SUCCESS - time = %lu\n", *timeToSleep);
+    }
+    if(search((*opList)->head, "f")){
+        if((*fFlag)){
+            fprintf(stderr, "ERROR - socket can be set only once\n");
+            return -1;
+        }else ((*fFlag) = true);
+    }
     return 0;
 }
 
@@ -134,6 +124,15 @@ void commandHandler(List* commandList, bool pFlag, bool fFlag, long* timeToSleep
 
     while ( pullTop(&(*commandList), &command, &argument) == 0){
         switch (toChar(command)) {
+            case 'p':{
+                continue;
+            }
+            case 'h':{
+                continue;
+            }
+            case 't':{
+                continue;
+            }
             case 'f':{
                 if(fFlag) fFlag = !fFlag;
                 else continue;

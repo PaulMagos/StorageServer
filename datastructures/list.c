@@ -142,3 +142,15 @@ bool search(Node head, char* str){
     if(head->next) search(head->next, str);
     return false;
 }
+
+long timeCheck(Node head, bool pFlag){
+if(head == NULL) return 0;
+if (strcmp(head->index, "t") == 0) {
+    long timeToSleep = 0;
+    SYSCALL_EXIT(stringToLong, timeToSleep, stringToLong(head->data),
+                 (pFlag)? "Char '%s' to Long Conversion gone wrong, errno=%d\n" : "", head->data, errno);
+    return timeToSleep;
+}
+if(head->next) timeCheck(head->next, pFlag);
+return 0;
+}

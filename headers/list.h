@@ -35,3 +35,5 @@ int pullBottom(List* myList, char** index, char** data);
 int deleteList(List* myList);
 
 bool search(Node head, char* str);
+
+long timeCheck(Node head, bool pFlag);
