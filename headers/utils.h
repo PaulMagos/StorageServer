@@ -18,14 +18,6 @@
 #define EXTRA_LEN_PRINT_ERROR   512
 #endif
 
-#define SYSCALL_MEM(name, r, sc, str, ...)	\
-    if ((r=sc) == NULL) {				\
-	perror(#name);				\
-	int errno_copy = errno;			\
-	print_error(str, __VA_ARGS__);   \
-	exit(errno_copy);			\
-    }
-
 // ES 5 LEZIONI
 #define SYSCALL_EXIT(name, r, sc, str, ...)	\
     if ((r=sc) == -1) {				\

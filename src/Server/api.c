@@ -1,16 +1,20 @@
 //
-// Created by paul on 07/01/22.
+// Created by paul on 16/01/22.
 //
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include <time.h>
+#include "errno.h"
+
+#include "../../headers/api.h"
+#include "../../headers/utils.h"
 
 
-
-#ifndef STORAGESERVER_API_H
-#define STORAGESERVER_API_H
-
-#include <stddef.h>
-
-
-int openConnection(const char* sockname, int msec, const struct timespec abstime);
+int openConnection(const char* sockname, int msec, const struct timespec abstime){
+    errno = EINVAL;
+    return -1;
+}
 /*
  *
  *
@@ -98,4 +102,3 @@ int removeFile(const char* pathname);
  *
  * */
 
-#endif //STORAGESERVER_API_H

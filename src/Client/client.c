@@ -12,27 +12,28 @@
 
 
 // Parse the commands given by execution of the client
-int getCmdList(List* opList, int argc, char* argv[], bool* pFlag, bool* fFlag);
+int getCmdList(List* opList, int argc, char* argv[], bool* pFlag, bool* fFlag, long* timeToSleep);
 
 // Operation description for the client
 static void usage(bool fFlag, bool pFlag);
 
-void commandHandler(List* commandList, bool pFlag, bool fFlag);
+void commandHandler(List* commandList, bool pFlag, bool fFlag, long* timeToSleep);
 
 
 
 int main(int argc,char* argv[]){
     bool pflag, fFlag;
     int del=0;
+    long timeToSleep = 0;
 
     // Command list creation
     List commandList;
     SYSCALL_EXIT(createList, del, createList(&commandList), "Error during list creation, errno = %d\n", errno);
 
     // Command list parsing
-    if(getCmdList(&commandList, argc, argv, &pflag, &fFlag) == 0)
-        commandHandler(&commandList, pflag, fFlag);
-    else(exit(1));
+    if(getCmdList(&commandList, argc, argv, &pflag, &fFlag, &timeToSleep) == 0)
+        commandHandler(&commandList, pflag, fFlag, &timeToSleep);
+    else(exit(22));
 
     // Free Command List
     SYSCALL_EXIT(deleteList, del, deleteList(&commandList), "Errore during list free, errno = %d\n", errno);
@@ -58,7 +59,7 @@ static void usage(bool fFlag, bool pFlag){
     fprintf(stderr,(!pFlag)? "-p \t\t\t enables print on the standard output for each operation \n":"");
 }
 
-int getCmdList(List* opList, int argc, char* argv[],bool* pFlag,bool* fFlag){
+int getCmdList(List* opList, int argc, char* argv[],bool* pFlag,bool* fFlag, long* timeToSleep){
     *pFlag = false;
     *fFlag = false;
     char option;
@@ -94,6 +95,14 @@ int getCmdList(List* opList, int argc, char* argv[],bool* pFlag,bool* fFlag){
                 pushBottom(&(*opList), "f", optarg);
                 break;
             }
+            case 't': {
+                int tmp = 0;
+                SYSCALL_EXIT(stringToLong, tmp, stringToLong(optarg),
+                             (pFlag)? "Char '%s' to Long Conversion gone wrong, errno=%d\n" : "", optarg, errno);
+                *timeToSleep = tmp;
+                if(*pFlag) fprintf(stderr, "SUCCESS - time = %lu\n", *timeToSleep);
+                break;
+            }
             case ':': {
                 fprintf(stderr, "%c command needs at least one parameter\n", optopt);
                 return -1;
@@ -105,7 +114,6 @@ int getCmdList(List* opList, int argc, char* argv[],bool* pFlag,bool* fFlag){
             default:{
                 SYSCALL_EXIT(pushBottom, test, pushBottom(&(*opList), toString(option),optarg),
                              "Error no List, errno = %d\n", errno);
-                //pushBottom(&(*opList), toString(option),optarg);
                 break;
             };
         }
@@ -114,12 +122,11 @@ int getCmdList(List* opList, int argc, char* argv[],bool* pFlag,bool* fFlag){
     return 0;
 }
 
-void commandHandler(List* commandList, bool pFlag, bool fFlag){
+void commandHandler(List* commandList, bool pFlag, bool fFlag, long* timeToSleep){
     //char* socket = NULL;
     //char* workingDir = NULL;
     //char* expelledDir = "/dev/null";
-
-    long timeToSleep = 0;
+    int scres;
 
     char* command;
     char* argument;
@@ -128,10 +135,22 @@ void commandHandler(List* commandList, bool pFlag, bool fFlag){
     while ( pullTop(&(*commandList), &command, &argument) == 0){
         switch (toChar(command)) {
             case 'f':{
-                /*struct timespec Ts;
-                clock_gettime(CLOCK_REALTIME, &Ts);
-                Ts.tv_sec = Ts.tv_sec + 60;
-                if(openConnection(arg, 1000, Ts) == -1);*/
+                if(fFlag) fFlag = !fFlag;
+                else continue;
+                struct timespec absTime;
+                SYSCALL_EXIT(clock_gettime, scres, clock_gettime(CLOCK_REALTIME, &absTime),
+                             "Error during getTime, errno = %d\n", errno);
+                absTime.tv_sec = absTime.tv_sec + 60;
+                SYSCALL_EXIT(openConnection,
+                             scres,
+                             openConnection(argument,
+                                            (*timeToSleep>0)? *timeToSleep : 1000,
+                                            absTime),
+                             "Connection error to socket %s, errno %d\n",
+                             argument,
+                             errno);
+                if(pFlag) fprintf(stderr, "SUCCESS - Connected to %s", argument);
+                msleep(*timeToSleep);
                 break;
             }
             case 'w':{
@@ -156,12 +175,6 @@ void commandHandler(List* commandList, bool pFlag, bool fFlag){
             }
             case 'd':{
                 printf("ciao '%c' %d\n", command[0],(*commandList)->len);
-                break;
-            }
-            case 't':{
-                SYSCALL_EXIT(stringToLong, timeToSleep, stringToLong(argument), (pFlag)?
-                             "Char '%s' to Long Conversion gone wrong, errno=%d\n" : "", argument, errno);
-                if(pFlag) fprintf(stderr, "SUCCESS - time = %lu\n", timeToSleep);
                 break;
             }
             case 'l':{
