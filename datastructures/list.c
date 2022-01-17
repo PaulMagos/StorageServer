@@ -136,21 +136,8 @@ int deleteList(List* myList) {
     return 0;
 }
 
-bool search(Node head, char* str){
-    if(head == NULL) return false;
-    if (strcmp(head->index, str) == 0) return true;
-    if(head->next) search(head->next, str);
-    return false;
-}
-
-long timeCheck(Node head, bool pFlag){
-if(head == NULL) return 0;
-if (strcmp(head->index, "t") == 0) {
-    long timeToSleep = 0;
-    SYSCALL_EXIT(stringToLong, timeToSleep, stringToLong(head->data),
-                 (pFlag)? "Char '%s' to Long Conversion gone wrong, errno=%d\n" : "", head->data, errno);
-    return timeToSleep;
-}
-if(head->next) timeCheck(head->next, pFlag);
-return 0;
+int search(Node head, char* str){
+    if(head == NULL) return 0;
+    if (toChar(head->index) == toChar(str)) return 1;
+    return search(head->next, str);
 }

@@ -15,6 +15,12 @@ char intIsChar(int str){
 
 char* toString(char str){
     switch (str) {
+        case 'h': {
+            return "h";
+        }
+        case 'p': {
+            return "p";
+        }
         case 'f': {
             return "f";
         }
