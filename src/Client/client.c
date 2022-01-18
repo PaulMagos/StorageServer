@@ -6,6 +6,7 @@
 #include <time.h>
 #include <stdbool.h>
 #include <getopt.h>
+#include <sys/stat.h>
 #include "../../headers/api.h"
 #include "../../headers/list.h"
 #include "../../headers/utils.h"
@@ -64,7 +65,8 @@ int getCmdList(List* opList, int argc, char* argv[],bool* pFlag,bool* fFlag, lon
     *fFlag = false;
     char option;
     int test;
-    char* timeArg;
+    char* timeArg = NULL;
+    bool hFlag = false;
 
     while((option = (char)getopt(argc, argv, "hpf:w:W:D:r:R::d:t:l:u:c:")) != -1){
         if(optarg) {
@@ -74,6 +76,35 @@ int getCmdList(List* opList, int argc, char* argv[],bool* pFlag,bool* fFlag, lon
             }
         }
         switch (option) {
+            case 'p': {
+                if(!*pFlag){
+                    fprintf(stderr, "SUCCESS - standard output activated\n");
+                    (*pFlag = true);
+                } else{
+                    fprintf(stderr, "ERROR - standard output already required, require it once\n");
+                    return -1;
+                }
+                break;
+            }
+            case 'f': {
+                if((*fFlag)){
+                    fprintf(stderr, "ERROR - socket can be set only once\n");
+                    return -1;
+                }else {
+                    SYSCALL_EXIT(pushBottom, test, pushBottom(&(*opList), toString(option),optarg),
+                                 "Error List Push, errno = %d\n", errno);
+                    ((*fFlag) = true);
+                    break;
+                }
+            }
+            case 'h': {
+                hFlag = true;
+                break;
+            }
+            case 't': {
+                if(timeArg==NULL) timeArg = optarg;
+                break;
+            }
             case ':': {
                 fprintf(stderr, "%c command needs at least one parameter\n", optopt);
                 return -1;
@@ -83,34 +114,18 @@ int getCmdList(List* opList, int argc, char* argv[],bool* pFlag,bool* fFlag, lon
                 return -1;
             }
             default:{
-                (option=='t')? timeArg = optarg : "";
                 SYSCALL_EXIT(pushBottom, test, pushBottom(&(*opList), toString(option),optarg),
-                             "Error no List, errno = %d\n", errno);
+                             "Error List Push, errno = %d\n", errno);
                 break;
             };
         }
 
     }
-    if(search((*opList)->head, "h")) usage(*fFlag, *pFlag);
-    if(search((*opList)->head, "p")){
-        if(*pFlag) {
-            fprintf(stderr, "ERROR - standard output already required, require it once\n");
-            return -1;
-        } else {
-            fprintf(stderr, "SUCCESS - standard output activated\n");
-            (*pFlag = true);
-        }
-    }
-    if(search((*opList)->head, "t")){
+    if(hFlag) usage(*fFlag, *pFlag);
+    if(timeArg!=NULL){
         SYSCALL_EXIT(stringToLong, *timeToSleep, stringToLong(timeArg),
-                     (pFlag)? "Char '%s' to Long Conversion gone wrong, errno=%d\n" : "", timeArg, errno);
+                     "Char '%s' to Long Conversion gone wrong, errno=%d\n", timeArg, errno);
         if(*pFlag) fprintf(stderr, "SUCCESS - time = %lu\n", *timeToSleep);
-    }
-    if(search((*opList)->head, "f")){
-        if((*fFlag)){
-            fprintf(stderr, "ERROR - socket can be set only once\n");
-            return -1;
-        }else ((*fFlag) = true);
     }
     if(search((*opList)->head, "D")) {
         if (!(search((*opList)->head, "w") || search((*opList)->head, "W"))) {
@@ -136,6 +151,9 @@ void commandHandler(List* commandList, bool pFlag, bool fFlag, long timeToSleep)
     char* command;
     char* argument;
 
+    struct stat dir_Details;
+    long numOfFiles = 0;
+    char* temporary;
 
     while ( pullTop(&(*commandList), &command, &argument) == 0){
         switch (toChar(command)) {
@@ -160,7 +178,17 @@ void commandHandler(List* commandList, bool pFlag, bool fFlag, long timeToSleep)
                 break;
             }
             case 'w':{
-                printf("ciao '%c' %d\n", command[0],(*commandList)->len);
+                char* rest;
+                char* dir = strtok_r(argument, ",", &rest);
+                stat(dir, &dir_Details);
+                if(S_ISDIR(dir_Details.st_mode)){
+                    if((temporary = strtok_r(NULL, ",", &rest)) != NULL)
+                        SYSCALL_EXIT(stringToLong, numOfFiles, stringToLong(temporary),
+                                 (pFlag)? "Char '%s' to Long Conversion gone wrong, errno=%d\n" : "", temporary, errno);
+                    fprintf(stderr, "n = %lu\n", numOfFiles);
+                } else{
+
+                }
                 break;
             }
             case 'W':{
@@ -195,17 +223,9 @@ void commandHandler(List* commandList, bool pFlag, bool fFlag, long timeToSleep)
                 printf("ciao '%c' %d\n", command[0],(*commandList)->len);
                 break;
             }
-            case 'p':{
-                break;
-            }
-            case 'h':{
-                break;
-            }
-            case 't':{
-                break;
-            }
         }
     }
     return;
 }
 
+//void recIter(char* dirname, int cnt,  )

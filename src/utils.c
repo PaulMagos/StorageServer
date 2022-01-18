@@ -85,6 +85,10 @@ int msleep(long msec)
 long stringToLong(char* str){
     long result;
 
+    if(str == NULL){
+        errno = EINVAL;
+        return -1;
+    }
     result = strtol(str, NULL, 10);
 
     if(result == 0){
