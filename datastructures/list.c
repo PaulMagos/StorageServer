@@ -141,3 +141,9 @@ int search(Node head, char* str){
     if (toChar(head->index) == toChar(str)) return 1;
     return search(head->next, str);
 }
+
+void getArg(Node head, char* str, char** dir){
+    if(head == NULL) return;
+    if (toChar(head->index) == toChar(str)) *dir = head->data;
+    getArg(head->next, str, &(*dir));
+}
