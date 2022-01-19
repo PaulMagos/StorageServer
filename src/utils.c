@@ -82,21 +82,21 @@ int msleep(long msec)
     return res;
 }
 
-long stringToLong(char* str){
+long stringToLong(char* str) {
     long result;
 
-    if(str == NULL){
+    if (str == NULL) {
         errno = EINVAL;
         return -1;
     }
     result = strtol(str, NULL, 10);
 
-    if(result == 0){
+    if (result == 0) {
         errno = EINVAL;
         return -1;
     }
 
-    if(result == LONG_MAX || result == LONG_MIN){
+    if (result == LONG_MAX || result == LONG_MIN) {
         errno = ERANGE;
         return -1;
     }

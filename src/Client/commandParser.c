@@ -1,17 +1,27 @@
 //
 // Created by paul magos on 18/01/22.
 //
+#include <fcntl.h>
 #include <stdio.h>
 #include <getopt.h>
+#include <dirent.h>
+#include <limits.h>
 #include <stdbool.h>
 #include <sys/stat.h>
 #include "../../headers/api.h"
 #include "../../headers/utils.h"
 #include "../../headers/commandParser.h"
 
+#define DIM_MSG 2048
+#define MAX_DIM_LEN 1024
+#define UNIX_PATH_MAX 108 /* man 7 unix */
+
+
 bool pFlag, fFlag, dFlag, DFlag;
 long timeToSleep = 0;
 
+
+void recWrite(char* dirname, char* expelledDir, int cnt, int indent);
 static void usage(){
     fprintf(stderr,"-h \t\t\t help (commands description)\n");
     fprintf(stderr,(!fFlag)? "-f filename  \t\t socket name (AF_UNIX socket)\n":"");
@@ -30,7 +40,7 @@ static void usage(){
                    "-c file1[,file2] \t list of file we want to remove from the server\n");
     fprintf(stderr,(!pFlag)? "-p \t\t\t enables print on the standard output for each operation \n":"");
 }
-void recWrite(char* dirname, char* expelledDir, int cnt);
+
 int getCmdList(List* opList, int argc, char* argv[]){
     pFlag = false;
     fFlag = false;
@@ -100,7 +110,7 @@ int getCmdList(List* opList, int argc, char* argv[]){
     if(hFlag) usage();
     if(timeArg!=NULL){
         SYSCALL_EXIT(stringToLong, timeToSleep, stringToLong(timeArg),
-                     "Char '%s' to Long Conversion gone wrong, errno=%d\n", timeArg, errno);
+                     "ERROR - Time Char '%s' to Long Conversion gone wrong, errno=%d\n", timeArg, errno);
         if(pFlag) fprintf(stderr, "SUCCESS - time = %lu\n", timeToSleep);
     }
     if(search((*opList)->head, "D")){
@@ -128,8 +138,8 @@ void commandHandler(List* commandList){
     char* socket = NULL;
     char* readDir = NULL;
     char* expelledDir = NULL;
-    long numOfFilesToWrite = 0;
-    //long numOfFilesToRead = 0;
+    long numOfFilesToWrite = INT_MAX;
+    long numOfFilesToRead = INT_MAX;
 
     // Response for SYSCALL_EXIT
     int scRes;
@@ -140,6 +150,9 @@ void commandHandler(List* commandList){
 
     // Path details, to establish if it's a directory
     struct stat dir_Details;
+    char* token; // For strtok_r
+    char* rest; // For strtok_r
+    char* path;
     char* temporary;
 
     // Control if given arguments for expelled files, and readen files from server are directories
@@ -185,43 +198,145 @@ void commandHandler(List* commandList){
                 break;
             }
             case 'w':{
-                char* rest;
-                char* dir = strtok_r(argument, ",", &rest);
-                stat(dir, &dir_Details);
+                token = strtok_r(argument, ",", &rest);
+                stat(token, &dir_Details);
                 if(S_ISDIR(dir_Details.st_mode)){
                     if((temporary = strtok_r(NULL, ",", &rest)) != NULL)
                         SYSCALL_EXIT(stringToLong, numOfFilesToWrite, stringToLong(temporary),
                                      (pFlag)? "Char '%s' to Long Conversion gone wrong, errno=%d\n" : "", temporary, errno);
-                    recWrite(dir, expelledDir, numOfFilesToWrite);
+                    if(pFlag) fprintf(stderr, "Accessing Folder %s : \n", token);
+                    recWrite(token, expelledDir, numOfFilesToWrite, 0);
                 } else{
-                    fprintf(stderr, "ERROR - writing files from directory '%s', not a valid directory\n",dir);
+                    fprintf(stderr, "ERROR - writing files from directory '%s', not a valid directory\n",token);
                 }
+                memset(&dir_Details, 0, sizeof(dir_Details));
                 msleep(timeToSleep);
                 break;
             }
             case 'W':{
-                printf("ciao '%c' %d\n", command[0],(*commandList)->len);
+                token = strtok_r(argument, ",", &rest);
+                stat(token, &dir_Details);
+                char* path = NULL;
+                if((path = realpath(token, path)) == NULL) fprintf(stderr, "ERROR - Opening File %s\n", token);
+                else{
+                    SYSCALL_EXIT(openFile, scRes, openFile(path, 1), (pFlag)?
+                        "ERROR - Couldn't send file %s to server, errno = %d\n": "", token, errno);
+                    SYSCALL_EXIT(writeFile, scRes, writeFile(path, expelledDir), (pFlag)?
+                        "ERROR - Couldn't write file %s on server, errno = %d\n": "", token, errno);
+                    SYSCALL_EXIT(closeFile, scRes, closeFile(path), (pFlag)?
+                        "ERROR - Couldn't close file %s on server, errno = %d\n": "", token, errno);
+                    if(pFlag) fprintf(stderr,"%s -> WRITE SUCCESS\n", token);
+                }
+                free(path);
+                msleep(timeToSleep);
                 break;
             }
             case 'r':{
-                printf("ciao '%c' %d\n", command[0],(*commandList)->len);
+                token = strtok_r(argument, ",", &rest);
+                stat(token, &dir_Details);
+                char* path = NULL;
+                while (token) {
+                    if ((path = realpath(token, path)) == NULL) fprintf(stderr, "ERROR - Opening File %s\n", token);
+                    else {
+                        SYSCALL_EXIT(openFile, scRes, openFile(path, 1), (pFlag) ?
+                            "ERROR - Couldn't send file %s to server, errno = %d\n" : "", token, errno);
+                        char *buffer;
+                        size_t size;
+                        SYSCALL_EXIT(readFile, scRes, readFile(path, (void **) &buffer, &size), (pFlag) ?
+                            "ERROR - Couldn't write file %s on server, errno = %d\n" : "", token, errno);
+                        if (readDir != NULL){
+                            char clientPath[UNIX_PATH_MAX];
+                            memset(clientPath, 0, UNIX_PATH_MAX);
+                            char* fileName = token;
+                            sprintf(clientPath, "%s/%s", readDir, fileName);
+
+                            FILE* clientFile = fopen(clientPath, "w");
+                            if(clientFile){ fprintf(clientFile, "%s", buffer);}
+                            else fprintf(stderr, "ERROR - Saving file %s", token);
+                            fclose(clientFile);
+                        }
+
+                        SYSCALL_EXIT(closeFile, scRes, closeFile(path), (pFlag) ?
+                            "ERROR - Couldn't close file %s on server, errno = %d\n" : "", token, errno);
+                        if (pFlag) fprintf(stderr, "%s -> WRITE SUCCESS\n", token);
+                    }
+                    token = strtok_r(NULL, ",", &rest);
+                    msleep(timeToSleep);
+                }
+                free(path);
                 break;
             }
             case 'R':{
-                printf("ciao '%c' %d\n", command[0],(*commandList)->len);
+                if(argument!=NULL)
+                    SYSCALL_EXIT(stringToLong, numOfFilesToRead, stringToLong(argument),
+                                 "ERROR - ReadNF Char '%s' to Long Conversion gone wrong, errno=%d\n", argument, errno);
+                SYSCALL_EXIT(readNFiles, scRes, readNFiles(numOfFilesToRead, readDir),
+                             "ERROR - ReadNF lettura file, errno = %d\n", errno);
+                if(pFlag) fprintf(stderr, "SUCCESS - Lettura di file\n");
+                msleep(timeToSleep);
                 break;
             }
             case 'l':{
-                printf("ciao '%c' %d\n", command[0],(*commandList)->len);
+                token = strtok_r(argument, ",", &rest);
+                while (token){
+                    if(!(path = realpath(token, path))){
+                        fprintf(stderr, "ERROR - file '%s' not exits", token);
+                    } else{
+                        stat(path, &dir_Details);
+                        if(S_ISREG(dir_Details.st_mode)){
+                            SYSCALL_EXIT(lockFile, scRes, lockFile(path),
+                                         "ERROR - lock file %s, errno = %d", token, path);
+                            if(pFlag) fprintf(stderr, "SUCCESS - %s file locked", token);
+                        }else{
+                            fprintf(stderr, "ERROR - '%s' not a file", token);
+                        }
+                    }
+                    token = strtok_r(NULL, ",", &rest);
+                    msleep(timeToSleep);
+                }
+                memset(&dir_Details, 0, sizeof(dir_Details));
                 break;
             }
             case 'u':{
-                printf("ciao '%c' %d\n", command[0],(*commandList)->len);
+                token = strtok_r(argument, ",", &rest);
+                while (token){
+                    if(!(path = realpath(token, path))){
+                        fprintf(stderr, "ERROR - file '%s' not exits", token);
+                    } else{
+                        stat(path, &dir_Details);
+                        if(S_ISREG(dir_Details.st_mode)){
+                            SYSCALL_EXIT(unlockFile, scRes, unlockFile(path),
+                                         "ERROR - Unlock file %s, errno = %d", token, path);
+                            if(pFlag) fprintf(stderr, "SUCCESS - %s file unlocked", token);
+                        }else{
+                            fprintf(stderr, "ERROR - '%s' not a file", token);
+                        }
+                    }
+                    token = strtok_r(NULL, ",", &rest);
+                    msleep(timeToSleep);
+                }
+                memset(&dir_Details, 0, sizeof(dir_Details));
                 break;
             }
             case 'c':{
-                printf("ciao '%c' %d\n", command[0],(*commandList)->len);
-                break;
+                token = strtok_r(argument, ",", &rest);
+                while (token){
+                    if(!(path = realpath(token, path))){
+                        fprintf(stderr, "ERROR - file '%s' not exits", token);
+                    } else{
+                        stat(path, &dir_Details);
+                        if(S_ISREG(dir_Details.st_mode)){
+                            SYSCALL_EXIT(removeFile, scRes, removeFile(path),
+                                         "ERROR - Remove file %s, errno = %d", token, path);
+                            if(pFlag) fprintf(stderr, "SUCCESS - %s file removed", token);
+                        }else{
+                            fprintf(stderr, "ERROR - '%s' not a file", token);
+                        }
+                    }
+                    token = strtok_r(NULL, ",", &rest);
+                    msleep(timeToSleep);
+                }
+                memset(&dir_Details, 0, sizeof(dir_Details));
             }
             case 'D':{
                 break;
@@ -231,9 +346,60 @@ void commandHandler(List* commandList){
             }
         }
     }
+    closeConnection(socket);
     return;
 }
 
-void recWrite(char* dirname, char* expelledDir, int cnt){
 
+void recWrite(char* dirname, char* expelledDir, int cnt, int indent){
+    DIR* directory;
+    struct dirent* element;
+    int filesSent = 0;
+    if(dirname[sizeof(dirname)-1] == '/') dirname[sizeof(dirname)-1] = '\0';
+    int scRes;
+
+    if((directory = opendir(dirname))==NULL || filesSent == cnt) return;
+
+    errno = 0;
+    // StackOverflow has something similar at
+    // https://stackoverflow.com/questions/8436841/how-to-recursively-list-directories-in-c-on-linux/29402705
+    while ((element = readdir(directory)) != NULL && filesSent<cnt){
+        char newPath[PATH_MAX];
+        snprintf(newPath, sizeof(newPath), "%s/%s", dirname, element->d_name);
+        switch(element->d_type){
+            case DT_REG:{
+                char* path = NULL;
+                if((path = realpath(newPath, path)) == NULL) fprintf(stderr, "ERROR - Opening File %s\n", newPath);
+                else{
+                    SYSCALL_EXIT(openFile, scRes, openFile(path, 1), (pFlag)?
+                        "ERROR - Couldn't send file %s to server, errno = %d\n": "", element->d_name, errno);
+                    SYSCALL_EXIT(writeFile, scRes, writeFile(path, expelledDir), (pFlag)?
+                        "ERROR - Couldn't write file %s on server, errno = %d\n": "", element->d_name, errno);
+                    SYSCALL_EXIT(closeFile, scRes, closeFile(path), (pFlag)?
+                        "ERROR - Couldn't close file %s on server, errno = %d\n": "", element->d_name, errno);
+                    if(pFlag) printf("%*s- %s -> WRITE SUCCESS\n", indent, "", element->d_name);
+                    filesSent++;
+                }
+                free(path);
+                msleep(timeToSleep);
+                break;
+            }
+            case DT_DIR: {
+                if (strcmp(element->d_name, ".") == 0 || strcmp(element->d_name, "..") == 0) continue;
+                if (pFlag) printf("%*s[%s]\n", indent, "", element->d_name);
+                recWrite(newPath, expelledDir, cnt - filesSent, indent + 2);
+                break;
+            }
+            default:{
+                break;
+            }
+        }
+    }
+    closedir(directory);
 }
+
+
+
+
+
+
