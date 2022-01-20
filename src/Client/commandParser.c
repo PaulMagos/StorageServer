@@ -1,7 +1,7 @@
 //
 // Created by paul magos on 18/01/22.
 //
-#include <fcntl.h>
+
 #include <stdio.h>
 #include <getopt.h>
 #include <dirent.h>
@@ -11,10 +11,6 @@
 #include "../../headers/api.h"
 #include "../../headers/utils.h"
 #include "../../headers/commandParser.h"
-
-#define DIM_MSG 2048
-#define MAX_DIM_LEN 1024
-#define UNIX_PATH_MAX 108 /* man 7 unix */
 
 
 bool pFlag, fFlag, dFlag, DFlag;
@@ -181,10 +177,8 @@ void commandHandler(List* commandList){
                 if(fFlag) fFlag = !fFlag;
                 else continue;
                 socket = argument;
-                struct timespec absTime;
-                SYSCALL_EXIT(clock_gettime, scRes, clock_gettime(CLOCK_REALTIME, &absTime),
-                             "Error during getTime, errno = %d\n", errno);
-                absTime.tv_sec = absTime.tv_sec + 60;
+                // Provo a collegarmi per 10 secondi
+                struct timespec absTime = {10, 0};
                 SYSCALL_EXIT(openConnection,
                              scRes,
                              openConnection(socket,

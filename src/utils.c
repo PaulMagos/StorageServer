@@ -8,6 +8,7 @@
 #include <limits.h>
 
 
+
 char intIsChar(int str){
     if((str > 96 && str < 123) || (str > 64 && str < 91)) return (char)str;
     else return 0;
