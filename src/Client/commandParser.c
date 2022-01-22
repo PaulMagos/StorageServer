@@ -17,7 +17,7 @@ bool pFlag, fFlag, dFlag, DFlag;
 long timeToSleep = 0;
 
 
-void recWrite(char* dirname, char* expelledDir, int cnt, int indent);
+int recWrite(char* dirname, char* expelledDir, long cnt, int indent);
 static void usage(){
     fprintf(stderr,"-h \t\t\t help (commands description)\n");
     fprintf(stderr,(!fFlag)? "-f filename  \t\t socket name (AF_UNIX socket)\n":"");
@@ -44,6 +44,7 @@ int getCmdList(List* opList, int argc, char* argv[]){
     char option;
     int test;
     char* timeArg = NULL;
+    char* fArg = NULL;
 
     while((option = (char)getopt(argc, argv, "hpf:w:W:D:r:R::d:t:l:u:c:")) != -1){
         if(optarg) {
@@ -73,6 +74,7 @@ int getCmdList(List* opList, int argc, char* argv[]){
                 }else {
                     SYSCALL_EXIT(pushBottom, test, pushBottom(&(*opList), toString(option),optarg),
                                  "Error List Push, errno = %d\n", errno);
+                    fArg = optarg;
                     ((fFlag) = true);
                     break;
                 }
@@ -108,6 +110,20 @@ int getCmdList(List* opList, int argc, char* argv[]){
         SYSCALL_EXIT(stringToLong, timeToSleep, stringToLong(timeArg),
                      "ERROR - Time Char '%s' to Long Conversion gone wrong, errno=%d\n", timeArg, errno);
         if(pFlag) fprintf(stderr, "SUCCESS - time = %lu\n", timeToSleep);
+    }
+    if(fFlag){
+        // Provo a collegarmi per 10 secondi
+        struct timespec absTime = {10, 0};
+        SYSCALL_EXIT(openConnection,
+                     test,
+                     openConnection(fArg,
+                                    1000,
+                                    absTime),
+                     "Connection error to socket %s, errno %d\n",
+                     fArg,
+                     errno);
+        if(pFlag) fprintf(stderr, "SUCCESS - Connected to %s", fArg);
+        msleep(timeToSleep);
     }
     if(search((*opList)->head, "D")){
         if(!(search((*opList)->head, "w") || search((*opList)->head, "W"))) {
@@ -163,34 +179,16 @@ void commandHandler(List* commandList){
     }
     if(dFlag) {
         getArg((*commandList)->head, "d", &readDir);
-        if(readDir) {
-            stat(readDir,&dir_Details);
-            if(!S_ISDIR(dir_Details.st_mode))  readDir = "dev/null";
-            else if(pFlag) fprintf(stderr, "SUCCESS - Received Files Directory set : %s\n", readDir);
+        if (readDir) {
+            stat(readDir, &dir_Details);
+            if (!S_ISDIR(dir_Details.st_mode)) readDir = "dev/null";
+            else if (pFlag) fprintf(stderr, "SUCCESS - Received Files Directory set : %s\n", readDir);
         }
         memset(&dir_Details, 0, sizeof(dir_Details));
     }
 
     while ( pullTop(&(*commandList), &command, &argument) == 0){
         switch (toChar(command)) {
-            case 'f':{
-                if(fFlag) fFlag = !fFlag;
-                else continue;
-                socket = argument;
-                // Provo a collegarmi per 10 secondi
-                struct timespec absTime = {10, 0};
-                SYSCALL_EXIT(openConnection,
-                             scRes,
-                             openConnection(socket,
-                                            1000,
-                                            absTime),
-                             "Connection error to socket %s, errno %d\n",
-                             argument,
-                             errno);
-                if(pFlag) fprintf(stderr, "SUCCESS - Connected to %s", socket);
-                msleep(timeToSleep);
-                break;
-            }
             case 'w':{
                 token = strtok_r(argument, ",", &rest);
                 stat(token, &dir_Details);
@@ -338,6 +336,10 @@ void commandHandler(List* commandList){
             case 'd':{
                 break;
             }
+            case 'f':{
+                socket = argument;
+                break;
+            }
         }
     }
     SYSCALL_EXIT(closeConnection, scRes, closeConnection(socket), "ERROR closing connection to %s, errno = %d", socket, errno);
@@ -345,19 +347,18 @@ void commandHandler(List* commandList){
 }
 
 
-void recWrite(char* dirname, char* expelledDir, int cnt, int indent){
+int recWrite(char* dirname, char* expelledDir, long cnt, int indent){
     DIR* directory;
     struct dirent* element;
-    int filesSent = 0;
+    long filesToWrite = cnt;
     if(dirname[sizeof(dirname)-1] == '/') dirname[sizeof(dirname)-1] = '\0';
     int scRes;
-
-    if((directory = opendir(dirname))==NULL || filesSent == cnt) return;
+    if((directory = opendir(dirname))==NULL || filesToWrite == 0) return 0;
 
     errno = 0;
     // StackOverflow has something similar at
     // https://stackoverflow.com/questions/8436841/how-to-recursively-list-directories-in-c-on-linux/29402705
-    while ((element = readdir(directory)) != NULL && filesSent<cnt){
+    while ((element = readdir(directory)) != NULL && filesToWrite > 0){
         char newPath[PATH_MAX];
         snprintf(newPath, sizeof(newPath), "%s/%s", dirname, element->d_name);
         switch(element->d_type){
@@ -372,7 +373,7 @@ void recWrite(char* dirname, char* expelledDir, int cnt, int indent){
                     SYSCALL_EXIT(closeFile, scRes, closeFile(path), (pFlag)?
                         "ERROR - Couldn't close file %s on server, errno = %d\n": "", element->d_name, errno);
                     if(pFlag) printf("%*s- %s -> WRITE SUCCESS\n", indent, "", element->d_name);
-                    filesSent++;
+                    filesToWrite--;
                 }
                 free(path);
                 msleep(timeToSleep);
@@ -381,7 +382,7 @@ void recWrite(char* dirname, char* expelledDir, int cnt, int indent){
             case DT_DIR: {
                 if (strcmp(element->d_name, ".") == 0 || strcmp(element->d_name, "..") == 0) continue;
                 if (pFlag) printf("%*s[%s]\n", indent, "", element->d_name);
-                recWrite(newPath, expelledDir, cnt - filesSent, indent + 2);
+                filesToWrite  = filesToWrite - recWrite(newPath, expelledDir, filesToWrite, indent + 2);
                 break;
             }
             default:{
@@ -390,6 +391,7 @@ void recWrite(char* dirname, char* expelledDir, int cnt, int indent){
         }
     }
     closedir(directory);
+    return cnt - filesToWrite;
 }
 
 

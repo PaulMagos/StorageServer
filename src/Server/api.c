@@ -15,7 +15,7 @@
 // Socket name
 char* sName;
 // Socket fd
-int fd_socket;
+int fd_socket = -1;
 
 
 int lengthCheck(const char* str){
@@ -102,7 +102,6 @@ int closeConnection(const char* sockname){
 }
 
 int openFile(const char* pathname, int flags){
-
     if (pathname == NULL){
         errno = EINVAL;
         return -1;
