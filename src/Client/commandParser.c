@@ -182,7 +182,7 @@ void commandHandler(List* commandList){
                 SYSCALL_EXIT(openConnection,
                              scRes,
                              openConnection(socket,
-                                            (timeToSleep>0)? timeToSleep : 1000,
+                                            1000,
                                             absTime),
                              "Connection error to socket %s, errno %d\n",
                              argument,
@@ -340,7 +340,7 @@ void commandHandler(List* commandList){
             }
         }
     }
-    closeConnection(socket);
+    SYSCALL_EXIT(closeConnection, scRes, closeConnection(socket), "ERROR closing connection to %s, errno = %d", socket, errno);
     return;
 }
 
