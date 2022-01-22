@@ -15,11 +15,12 @@ typedef enum{
     of, // open
     wr, // write
     r, // read file
-    rn, // Read nFiles
+    rn, // read nFiles
     lk, // lock file
     unlk, // unlock file
     del, // delete file
     cl, // close file
+    ap, // append to file
 } operation;
 
 

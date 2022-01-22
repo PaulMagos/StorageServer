@@ -246,7 +246,28 @@ int writeFile(const char* pathname, const char* dirname){
  *
  * */
 
-int appendToFile(const char* pathname, void* buf, size_t size, const char* dirname);
+int appendToFile(const char* pathname, void* buf, size_t size, const char* dirname){
+    if (pathname == NULL){
+        errno = EINVAL;
+        return -1;
+    }
+    if(fd_socket == -1){
+        errno = ENOTCONN;
+        return -1;
+    }
+    int scRes;
+    operation op = ap;
+    SYSCALL_EXIT(writen, scRes, writen(fd_socket, &op,sizeof(op)),
+                 "ERROR WriteFile - Sending operation to server, errno = %d\n", errno);
+
+    // Invio dimensione del path e path al server
+    int length = strlen(pathname) + 1;
+    SYSCALL_EXIT(writen, scRes, writen(fd_socket, &length, sizeof(int)),
+                 "ERROR WriteFile - Sending path size to server, errno = %d\n", errno);
+    SYSCALL_EXIT(writen, scRes, writen(fd_socket, (void*) pathname, length),
+                 "ERROR WriteFile - Sending path to server, errno = %d\n", errno);
+    return 0;
+}
 /*
  *
  *
