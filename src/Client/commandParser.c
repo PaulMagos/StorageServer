@@ -195,7 +195,7 @@ void commandHandler(List* commandList){
                 if(S_ISDIR(dir_Details.st_mode)){
                     if((temporary = strtok_r(NULL, ",", &rest)) != NULL)
                         SYSCALL_EXIT(stringToLong, numOfFilesToWrite, stringToLong(temporary),
-                                     (pFlag)? "Char '%s' to Long Conversion gone wrong, errno=%d\n" : "", temporary, errno);
+                                     "Char '%s' to Long Conversion gone wrong, errno=%d\n", temporary, errno);
                     if(pFlag) fprintf(stderr, "Accessing Folder %s : \n", token);
                     recWrite(token, expelledDir, numOfFilesToWrite, 0);
                 } else{
@@ -211,12 +211,12 @@ void commandHandler(List* commandList){
                 char* path = NULL;
                 if((path = realpath(token, path)) == NULL) fprintf(stderr, "ERROR - Opening File %s\n", token);
                 else{
-                    SYSCALL_EXIT(openFile, scRes, openFile(path, 1), (pFlag)?
-                        "ERROR - Couldn't send file %s to server, errno = %d\n": "", token, errno);
-                    SYSCALL_EXIT(writeFile, scRes, writeFile(path, expelledDir), (pFlag)?
-                        "ERROR - Couldn't write file %s on server, errno = %d\n": "", token, errno);
-                    SYSCALL_EXIT(closeFile, scRes, closeFile(path), (pFlag)?
-                        "ERROR - Couldn't close file %s on server, errno = %d\n": "", token, errno);
+                    SYSCALL_EXIT(openFile, scRes, openFile(path, 1),
+                        "ERROR - Couldn't send file %s to server, errno = %d\n", token, errno);
+                    SYSCALL_EXIT(writeFile, scRes, writeFile(path, expelledDir),
+                        "ERROR - Couldn't write file %s on server, errno = %d\n", token, errno);
+                    SYSCALL_EXIT(closeFile, scRes, closeFile(path),
+                        "ERROR - Couldn't close file %s on server, errno = %d\n", token, errno);
                     if(pFlag) fprintf(stderr,"%s -> WRITE SUCCESS\n", token);
                 }
                 free(path);
