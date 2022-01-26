@@ -8,7 +8,7 @@
 #endif //STORAGESERVER_LIST_H
 
 #include "node.h"
-#include <stdbool.h>
+#include "utils.h"
 
 
 

@@ -2,17 +2,13 @@
 // Created by paul on 11/01/22.
 //
 
-#include <stdio.h>
-#include "../../headers/utils.h"
-#include "../../headers/commandParser.h"
-
-
+#include "../../headers/client.h"
 
 int main(int argc,char* argv[]){
-    int del=0;
+    int del;
 
     // Command list creation
-    List commandList;
+    List commandList = NULL;
     SYSCALL_EXIT(createList,
                  del,
                  createList(&commandList),
@@ -30,8 +26,6 @@ int main(int argc,char* argv[]){
                  deleteList(&commandList),
                  "Errore during list free, errno = %d\n",
                  errno);
-
-    return 0;
+    del = 0;
+    return del;
 }
-
-//void recIter(char* dirname, int cnt,  )

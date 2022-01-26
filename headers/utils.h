@@ -7,12 +7,23 @@
 
 
 #include <time.h>
-#include <string.h>
-#include <stdarg.h>
-
 #include <stdio.h>
-#include <stdlib.h>
 #include <errno.h>
+#include <string.h>
+#include <stdlib.h>
+#include <stddef.h>
+#include <stdarg.h>
+#include <getopt.h>
+#include <dirent.h>
+#include <limits.h>
+#include <sys/un.h>
+#include <unistd.h>
+#include <libgen.h>
+#include <stdbool.h>
+#include <pthread.h>
+#include <sys/time.h>
+#include <sys/stat.h>
+#include <sys/socket.h>
 
 #if !defined(EXTRA_LEN_PRINT_ERROR)
 #define EXTRA_LEN_PRINT_ERROR   512
@@ -24,12 +35,12 @@
 
 // ES 5 LEZIONI
 #define SYSCALL_EXIT(name, r, sc, str, ...)	\
-    if ((r=sc) == -1) {				\
-	perror(#name);				\
-	int errno_copy = errno;			\
-	print_error(str, __VA_ARGS__);   \
-	exit(errno_copy);			\
-    }
+    if ((r=sc) == -1) {				        \
+	perror(#name);				            \
+	int errno_copy = errno;			        \
+	print_error(str, __VA_ARGS__);          \
+	exit(errno_copy);			            \
+    }                                       \
 
 /**
 * \brief Procedura di utilita' per la stampa degli errori
@@ -53,18 +64,57 @@ static inline void print_error(const char * str, ...) {
 }
 // ES 5 LEZIONI
 
-// Returns the char of the int str in ascii, 0 if it's not an alphabet letter
-char intToChar(int str);
-
-// Returns a string with the char you give in str
-char* toString(char str);
-char toChar(char* str);
 
 // msleep(): Sleep for the requested number of milliseconds.
 // StackOverflow ->
 // https://stackoverflow.com/questions/1157209/is-there-an-alternative-sleep-function-in-c-to-milliseconds
-int msleep(long msec);
+static inline int msleep(long msec){
+    struct timespec ts;
+    int res;
 
-long stringToLong(char* str);
+    if (msec < 0)
+    {
+        errno = EINVAL;
+        return -1;
+    }
+
+    ts.tv_sec = msec / 1000;
+    ts.tv_nsec = (msec % 1000) * 1000000;
+
+    do {
+        res = nanosleep(&ts, &ts);
+    } while (res && errno == EINTR);
+
+    return res;
+}
+
+// Returns the char of the int str in ascii, 0 if it's not an alphabet letter
+static inline int intIsChar(int str){
+    if((str > 96 && str < 123) || (str > 64 && str < 91)) return str;
+    else return 0;
+}
+
+// Returns a string with the char you give in str
+static inline long StringToLong(char* str) {
+    long result;
+
+    if (str == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    result = strtol(str, NULL, 10);
+
+    if (result == 0) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    if (result == LONG_MAX || result == LONG_MIN) {
+        errno = ERANGE;
+        return -1;
+    }
+    return result;
+}
+
 
 #endif //STORAGESERVER_UTILS_H

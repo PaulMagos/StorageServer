@@ -1,13 +1,12 @@
 //
 // Created by paul magos on 07/01/22.
 //
-#include "../headers/node.h"
-#include <errno.h>
+#include "../../headers/node.h"
 #include <stdio.h>
 #include <string.h>
 
-node* createNode(char* index, char* data){
-    node* tmp = (node*)malloc(sizeof(node));
+Node createNode(char* index, void* data){
+    Node tmp = (Node)malloc(sizeof(node));
     if(!tmp){
         // Failed to alloc
         perror("malloc");
@@ -22,12 +21,12 @@ node* createNode(char* index, char* data){
     return tmp;
 }
 
-void freeNode(node* nodeToFree){
+void freeNode(Node* nodeToFree){
     if(nodeToFree){
         //if(nodeToFree->index) free(nodeToFree->index);
-        if(nodeToFree->prev) nodeToFree->prev->next = NULL;
-        if(nodeToFree->next) nodeToFree->next->prev = NULL;
+        if((*nodeToFree)->prev) (*nodeToFree)->prev->next = NULL;
+        if((*nodeToFree)->next) (*nodeToFree)->next->prev = NULL;
         //if(nodeToFree->data) free(nodeToFree->data);
-        free(nodeToFree);
+        free(*nodeToFree);
     }
 }

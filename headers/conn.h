@@ -9,7 +9,7 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
-#define SOCKNAME     "./cs_sock"
+#define SOCKNAME     "../../tmp/cs_socket"
 
 typedef enum{
     of, // open

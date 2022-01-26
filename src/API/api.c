@@ -1,24 +1,12 @@
 //
 // Created by paul magos on 16/01/22.
 //
-#include <time.h>
-#include <errno.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/un.h>
-#include <unistd.h>
-#include <libgen.h>
-#include <limits.h>
-#include <stdbool.h>
-#include <sys/stat.h>
-#include <sys/socket.h>
+
 #include "../../headers/api.h"
 #include "../../headers/conn.h"
-#include "../../headers/utils.h"
 
 // Socket name
-char* sName;
+const char* sName;
 // Socket fd
 int fd_socket = -1;
 
@@ -64,7 +52,6 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
     struct sockaddr_un socketAdd;
     // Time variables
     struct timespec currenTime, iniTime;
-
     memset(&socketAdd, '0', sizeof(socketAdd));
 
     SYSCALL_EXIT(lengthCheck, scRes, lengthCheck(sockname), "ERROR - socket name too long, errno = %d\n", errno);
@@ -89,7 +76,7 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
         errno = ETIMEDOUT;
         return -1;
     }
-    strcpy(sName, sockname);
+    sName = sockname;
     return 0;
 }
 
@@ -99,7 +86,7 @@ int closeConnection(const char* sockname){
         return -1;
     }
     // if it's not the socket we are connected to, gives an error
-    if(strcpy(sName, sockname)!=0){
+    if(strcmp(sName, sockname)!=0){
         errno = ENOTCONN;
         return -1;
     }

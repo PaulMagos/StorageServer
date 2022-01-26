@@ -11,7 +11,7 @@
 
 typedef struct element{
     char* index;
-    char* data;
+    void* data;
     struct element* next;
     struct element* prev;
 } node;
@@ -23,9 +23,9 @@ typedef node* Node;
 // Definition of Node, so we don't have to write "node*" everytime
 
 
-node* createNode(char* index, char* data);
+Node createNode(char* index, void* data);
 /*
  * Node allocation method
  * */
 
-void freeNode(node* nodeToFree);
+void freeNode(Node* nodeToFree);

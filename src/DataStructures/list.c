@@ -1,16 +1,12 @@
 //
 // Created by paul magos on 07/01/22.
 //
-#include <stdio.h>
-#include <string.h>
-#include <stdlib.h>
-#include <stdbool.h>
-#include "../headers/utils.h"
-#include "../headers/list.h"
+#include "../../headers/list.h"
 
 int createList(List* myList){
-    *myList = (List) malloc (sizeof (list));
+    *myList =  malloc (sizeof (list));
     if(!(*myList)) {
+        // ERRORE DOVUTO ALL'ALLOCAZIONE NON ANDATA A BUON FINE
         errno = ENOMEM;
         return -1;
     }
@@ -19,19 +15,20 @@ int createList(List* myList){
 
 void printList(Node head){
     if(head == NULL) return;
-    fprintf(stderr, "%s, %s\n", head->index, head->data);
+    fprintf(stderr, "%s, %s\n", head->index, (char*)head->data);
     printList(head->next);
 }
 
 int pushTop(List* myList, char* index, char* data){
     if(!(*myList)){
-        // ERRORE *******************************
+        // ERRORE DOVUTO AD ARGOMENTO INVALIDO
         errno = EINVAL;
         return -1;
     }
 
     node* temp = createNode(index, data);
     if(!temp) {
+        // ERRORE DOVUTO ALL'ALLOCAZIONE NON ANDATA A BUON FINE
         errno = ENOMEM;
         return -1;
     }
@@ -48,13 +45,14 @@ int pushTop(List* myList, char* index, char* data){
 
 int pushBottom(List* myList, char* index, char* data){
     if(!(*myList)){
-        // ERRORE *******************************
+        // ERRORE DOVUTO AD ARGOMENTO INVALIDO
         errno = EINVAL;
         return -1;
     }
 
     node* temp = createNode(index, data);
     if(!temp) {
+        // ERRORE DOVUTO ALL'ALLOCAZIONE NON ANDATA A BUON FINE
         errno = ENOMEM;
         return -1;
     }
@@ -71,7 +69,7 @@ int pushBottom(List* myList, char* index, char* data){
 
 int pullTop(List* myList, char** index, char** data){
     if(!(*myList) || (*myList)->len < 1){
-        // ERRORE DA IMPLEMENTARE *******************************
+        // ERRORE DOVUTO AD ARGOMENTO INVALIDO
         errno = EINVAL;
         return -1;
     }
@@ -89,13 +87,13 @@ int pullTop(List* myList, char** index, char** data){
     *index = tmp->index;
     *data = tmp->data;
 
-    freeNode(tmp);
+    freeNode(&tmp);
     return 0;
 }
 
 int pullBottom(List* myList, char** index, char** data){
     if(!(*myList) || (*myList)->len < 1){
-        // ERRORE DA IMPLEMENTARE *******************************
+        // ERRORE DOVUTO AD ARGOMENTO INVALIDO
         errno = EINVAL;
         return -1;
     }
@@ -113,37 +111,37 @@ int pullBottom(List* myList, char** index, char** data){
     *index = tmp->index;
     *data = tmp->data;
 
-    freeNode(tmp);
+    freeNode(&tmp);
     return 0;
 }
 
-void freeNodes(Node head){
-    if(head == NULL) return;
-    freeNodes(head->next);
-    freeNode(head);
+void freeNodes(Node* head){
+    if((*head) == NULL) return;
+    freeNodes(&(*head)->next);
+    freeNode(&(*head));
     return;
 }
 
 int deleteList(List* myList) {
     if (!(*myList)) {
-        // No list
+        // ERRORE DOVUTO AD ARGOMENTO INVALIDO
         errno = EINVAL;
         return -1;
     }
 
-    freeNodes((*myList)->head);
+    freeNodes(&(*myList)->head);
     free(*myList);
     return 0;
 }
 
 int search(Node head, char* str){
     if(head == NULL) return 0;
-    if (toChar(head->index) == toChar(str)) return 1;
+    if (*head->index == *str) return 1;
     return search(head->next, str);
 }
 
 void getArg(Node head, char* str, char** dir){
     if(head == NULL) return;
-    if (toChar(head->index) == toChar(str)) *dir = head->data;
+    if (*head->index == *str) *dir = head->data;
     getArg(head->next, str, &(*dir));
 }

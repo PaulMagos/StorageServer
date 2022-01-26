@@ -2,13 +2,10 @@
 // Created by paul on 07/01/22.
 //
 
-
-
 #ifndef STORAGESERVER_API_H
 #define STORAGESERVER_API_H
 
-#include <stddef.h>
-
+#include "utils.h"
 
 int openConnection(const char* sockname, int msec, const struct timespec abstime);
 /*

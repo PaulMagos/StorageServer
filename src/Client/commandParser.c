@@ -2,14 +2,6 @@
 // Created by paul magos on 18/01/22.
 //
 
-#include <stdio.h>
-#include <getopt.h>
-#include <dirent.h>
-#include <limits.h>
-#include <stdbool.h>
-#include <sys/stat.h>
-#include "../../headers/api.h"
-#include "../../headers/utils.h"
 #include "../../headers/commandParser.h"
 
 
@@ -18,23 +10,27 @@ long timeToSleep = 0;
 
 
 int recWrite(char* dirname, char* expelledDir, long cnt, int indent);
-static void usage(){
-    fprintf(stderr,"-h \t\t\t help (commands description)\n");
-    fprintf(stderr,(!fFlag)? "-f filename  \t\t socket name (AF_UNIX socket)\n":"");
-    fprintf(stderr,"-w dirname[,n=0] \t sends n files from dirname, if n=0 it sends all the files it can; "
-                   "recursively access sub directories\n"
-                   "-W file1[,file2] \t list of files to send to the server, detached by comma\n"
-                   "-D dirname \t\t expelled files (from server) directory for client, it has to be used "
-                   "with -w or -W, if not specified the files sent by the server will be ignored by the client\n"
-                   "-r file1[,file2] \t list of files to read from the server, detached by comma\n"
-                   "-R [n=0] \t\t read n files from the server, if n = 0 or not specified, it reads all "
-                   "the files on the server\n"
-                   "-d dirname \t\t directory name for storing the files readen from the server\n"
-                   "-t time \t\t waiting time between queries to the server\n"
-                   "-l file1[,file2] \t list of file on which we need mutual exclusion\n"
-                   "-u file1[,file2] \t list of file on which we have to release mutual exclusion\n"
-                   "-c file1[,file2] \t list of file we want to remove from the server\n");
-    fprintf(stderr,(!pFlag)? "-p \t\t\t enables print on the standard output for each operation \n":"");
+char* charToString(char str);
+
+void usage(){
+    fprintf(stderr,
+        "-h \t\t\t help (commands description)\n"
+               "-f filename  \t\t socket name (AF_UNIX socket)\n"
+               "-w dirname[,n=0] \t sends n files from dirname, if n=0 it sends all the files it can;"
+               "recursively access sub directories\n"
+               "-W file1[,file2] \t list of files to send to the server, detached by comma\n"
+               "-D dirname \t\t expelled files (from server) directory for client, it has to be used "
+               "with -w or -W, if not specified the files sent by the server will be ignored by the client\n"
+               "-r file1[,file2] \t list of files to read from the server, detached by comma\n"
+               "-R [n=0] \t\t read n files from the server, if n = 0 or not specified, it reads all "
+               "the files on the server\n"
+               "-d dirname \t\t directory name for storing the files readen from the server\n"
+               "-t time \t\t waiting time between queries to the server\n"
+               "-l file1[,file2] \t list of file on which we need mutual exclusion\n"
+               "-u file1[,file2] \t list of file on which we have to release mutual exclusion\n"
+               "-c file1[,file2] \t list of file we want to remove from the server\n"
+               "-p \t\t\t enables print on the standard output for each operation \n"
+            );
 }
 
 int getCmdList(List* opList, int argc, char* argv[]){
@@ -72,7 +68,7 @@ int getCmdList(List* opList, int argc, char* argv[]){
                     errno = EINVAL;
                     return -1;
                 }else {
-                    SYSCALL_EXIT(pushBottom, test, pushBottom(&(*opList), toString(option),optarg),
+                    SYSCALL_EXIT(pushBottom, test, pushBottom(&(*opList), charToString(option),optarg),
                                  "Error List Push, errno = %d\n", errno);
                     fArg = optarg;
                     ((fFlag) = true);
@@ -98,7 +94,7 @@ int getCmdList(List* opList, int argc, char* argv[]){
                 return -1;
             }
             default:{
-                SYSCALL_EXIT(pushBottom, test, pushBottom(&(*opList), toString(option),optarg),
+                SYSCALL_EXIT(pushBottom, test, pushBottom(&(*opList), charToString(option),optarg),
                              "Error List Push, errno = %d\n", errno);
                 break;
             };
@@ -107,7 +103,7 @@ int getCmdList(List* opList, int argc, char* argv[]){
     }
     if(hFlag) usage();
     if(timeArg!=NULL){
-        SYSCALL_EXIT(stringToLong, timeToSleep, stringToLong(timeArg),
+        SYSCALL_EXIT(StringToLong, timeToSleep, StringToLong(timeArg),
                      "ERROR - Time Char '%s' to Long Conversion gone wrong, errno=%d\n", timeArg, errno);
         if(pFlag) fprintf(stderr, "SUCCESS - time = %lu\n", timeToSleep);
     }
@@ -122,7 +118,7 @@ int getCmdList(List* opList, int argc, char* argv[]){
                      "Connection error to socket %s, errno %d\n",
                      fArg,
                      errno);
-        if(pFlag) fprintf(stderr, "SUCCESS - Connected to %s", fArg);
+        if(pFlag) fprintf(stderr, "SUCCESS - Connected to %s\n", fArg);
         msleep(timeToSleep);
     }
     if(search((*opList)->head, "D")){
@@ -188,13 +184,13 @@ void commandHandler(List* commandList){
     }
 
     while ( pullTop(&(*commandList), &command, &argument) == 0){
-        switch (toChar(command)) {
+        switch (*command) {
             case 'w':{
                 token = strtok_r(argument, ",", &rest);
                 stat(token, &dir_Details);
                 if(S_ISDIR(dir_Details.st_mode)){
                     if((temporary = strtok_r(NULL, ",", &rest)) != NULL)
-                        SYSCALL_EXIT(stringToLong, numOfFilesToWrite, stringToLong(temporary),
+                        SYSCALL_EXIT(StringToLong, numOfFilesToWrite, StringToLong(temporary),
                                      "Char '%s' to Long Conversion gone wrong, errno=%d\n", temporary, errno);
                     if(pFlag) fprintf(stderr, "Accessing Folder %s : \n", token);
                     recWrite(token, expelledDir, numOfFilesToWrite, 0);
@@ -260,7 +256,7 @@ void commandHandler(List* commandList){
             }
             case 'R':{
                 if(argument!=NULL)
-                    SYSCALL_EXIT(stringToLong, numOfFilesToRead, stringToLong(argument),
+                    SYSCALL_EXIT(StringToLong, numOfFilesToRead, StringToLong(argument),
                                  "ERROR - ReadNF Char '%s' to Long Conversion gone wrong, errno=%d\n", argument, errno);
                 SYSCALL_EXIT(readNFiles, scRes, readNFiles(numOfFilesToRead, readDir),
                              "ERROR - ReadNF lettura file, errno = %d\n", errno);
@@ -342,6 +338,7 @@ void commandHandler(List* commandList){
             }
         }
     }
+    msleep(timeToSleep);
     SYSCALL_EXIT(closeConnection, scRes, closeConnection(socket), "ERROR closing connection to %s, errno = %d", socket, errno);
     return;
 }
@@ -395,6 +392,41 @@ int recWrite(char* dirname, char* expelledDir, long cnt, int indent){
 }
 
 
+char* charToString(char str){
+    switch (str) {
+        case 'f': {
+            return "f";
+        }
+        case 'w': {
+            return "w";
+        }
+        case 'W': {
+            return "W";
+        }
+        case 'D': {
+            return "D";
+        }
+        case 'r': {
+            return "r";
+        }
+        case 'R': {
+            return "R";
+        }
+        case 'd': {
+            return "d";
+        }
+        case 'l': {
+            return "l";
+        }
+        case 'c': {
+            return "c";
+        }
+        case 'u': {
+            return "u";
+        }
+    }
+    return 0;
+}
 
 
 
