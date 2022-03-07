@@ -3,6 +3,17 @@
 //
 #include "../../headers/list.h"
 
+List returnNewList(){
+    List myList =  malloc (sizeof (list));
+    if(!(myList)) {
+        // ERRORE DOVUTO ALL'ALLOCAZIONE NON ANDATA A BUON FINE
+        errno = ENOMEM;
+        return NULL;
+    }
+    return myList;
+}
+
+
 int createList(List* myList){
     *myList =  malloc (sizeof (list));
     if(!(*myList)) {
@@ -19,7 +30,7 @@ void printList(Node head){
     printList(head->next);
 }
 
-int pushTop(List* myList, char* index, char* data){
+int pushTop(List* myList, char* index, void* data){
     if(!(*myList)){
         // ERRORE DOVUTO AD ARGOMENTO INVALIDO
         errno = EINVAL;
@@ -43,7 +54,7 @@ int pushTop(List* myList, char* index, char* data){
     return 0;
 }
 
-int pushBottom(List* myList, char* index, char* data){
+int pushBottom(List* myList, char* index, void* data){
     if(!(*myList)){
         // ERRORE DOVUTO AD ARGOMENTO INVALIDO
         errno = EINVAL;
@@ -67,7 +78,7 @@ int pushBottom(List* myList, char* index, char* data){
     return 0;
 }
 
-int pullTop(List* myList, char** index, char** data){
+int pullTop(List* myList, char** index, void** data){
     if(!(*myList) || (*myList)->len < 1){
         // ERRORE DOVUTO AD ARGOMENTO INVALIDO
         errno = EINVAL;
@@ -91,7 +102,27 @@ int pullTop(List* myList, char** index, char** data){
     return 0;
 }
 
-int pullBottom(List* myList, char** index, char** data){
+Node getHead(List* myList){
+    if(!(*myList) || (*myList)->len < 1){
+        // ERRORE DOVUTO AD ARGOMENTO INVALIDO
+        errno = EINVAL;
+        return NULL;
+    }
+
+    node* tmp = (*myList)->head;
+
+    (*myList)->len--;
+    if((*myList)->len == 0){
+        (*myList)->head = NULL;
+        (*myList)->tail = NULL;
+    }else {
+        (*myList)->head = (*myList)->head->next;
+    }
+
+    return tmp;
+}
+
+int pullBottom(List* myList, char** index, void** data){
     if(!(*myList) || (*myList)->len < 1){
         // ERRORE DOVUTO AD ARGOMENTO INVALIDO
         errno = EINVAL;
@@ -145,3 +176,4 @@ void getArg(Node head, char* str, char** dir){
     if (*head->index == *str) *dir = head->data;
     getArg(head->next, str, &(*dir));
 }
+

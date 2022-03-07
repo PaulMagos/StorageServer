@@ -34,13 +34,21 @@
 #define UNIX_PATH_MAX 108 /* man 7 unix */
 
 // ES 5 LEZIONI
-#define SYSCALL_EXIT(name, r, sc, str, ...)	\
-    if ((r=sc) == -1) {				        \
-	perror(#name);				            \
-	int errno_copy = errno;			        \
-	print_error(str, __VA_ARGS__);          \
-	exit(errno_copy);			            \
-    }                                       \
+#define SYSCALL_EXIT(name, r, sc, str, ...)	    \
+    if ((r=sc) == -1) {				            \
+	perror(#name);				                \
+	int errno_copy = errno;			            \
+	print_error(str, __VA_ARGS__);              \
+	exit(errno_copy);			                \
+    }                                           \
+
+
+#define SYSCALL_RETURN(name, sc, str, ...)	    \
+    if (sc == -1) {				                \
+	perror(#name);          		            \
+	print_error(str, __VA_ARGS__);              \
+	return -1;			                        \
+    }                                           \
 
 /**
 * \brief Procedura di utilita' per la stampa degli errori
@@ -64,6 +72,7 @@ static inline void print_error(const char * str, ...) {
 }
 // ES 5 LEZIONI
 
+int nanosleep(const struct timespec *req, struct timespec *rem);
 
 // msleep(): Sleep for the requested number of milliseconds.
 // StackOverflow ->

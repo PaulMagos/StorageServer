@@ -20,20 +20,24 @@ typedef struct el{
 
 typedef list* List;
 
-int  createList(List* myList);
+List returnNewList();
+
+int createList(List* myList);
 
 void printList(Node head);
 
-int pushTop(List* myList, char* index, char* data);
+int pushTop(List* myList, char* index, void* data);
 
-int pushBottom(List* myList, char* index, char* data);
+int pushBottom(List* myList, char* index, void* data);
 
-int pullTop(List* myList, char** index, char** data);
+int pullTop(List* myList, char** index, void** data);
 
-int pullBottom(List* myList, char** index, char** data);
+int pullBottom(List* myList, char** index, void** data);
 
 int deleteList(List* myList);
 
 int search(Node head, char* str);
 
 void getArg(Node head, char* str, char** dir);
+
+Node getHead(List* myList);

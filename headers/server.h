@@ -9,11 +9,12 @@
 #include "utils.h"
 #include "list.h"
 #include "conn.h"
+#include "log.h"
 
  // -------------------------------- SERVER STATUS --------------------------------
 typedef enum{
     E,                                      // Enabled
-    Q,                                      // Quitting, serve last request only
+    Q,                                      // Quitting, serve last requests only
     S,                                      // Turned Off
 } serverStat;
 
@@ -50,7 +51,7 @@ typedef struct{
 
  // -------------------------------- FILES STRUCT --------------------------------
 typedef struct {
-    // File itsel
+    // File itself
     char* path;                             // The path in which hypothetically the server will store the files
     size_t size;                            // The size of the file in bytes
     void* content;                          // The actual content of the file
@@ -72,7 +73,7 @@ typedef struct {
  // -------------------------------- GLOBAR VARIABLES --------------------------------
 serverConfig config;
 fileServerStat* fileServer;
-
+logFile serverLog;
 
 
 

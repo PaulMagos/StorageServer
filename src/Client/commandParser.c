@@ -13,7 +13,7 @@ int recWrite(char* dirname, char* expelledDir, long cnt, int indent);
 char* charToString(char str);
 
 void usage(){
-    fprintf(stderr,
+    fprintf(stdout,
         "-h \t\t\t help (commands description)\n"
                "-f filename  \t\t socket name (AF_UNIX socket)\n"
                "-w dirname[,n=0] \t sends n files from dirname, if n=0 it sends all the files it can;"
@@ -53,7 +53,7 @@ int getCmdList(List* opList, int argc, char* argv[]){
         switch (option) {
             case 'p': {
                 if(!pFlag){
-                    fprintf(stderr, "SUCCESS - standard output activated\n");
+                    fprintf(stdout, "SUCCESS - standard output activated\n");
                     (pFlag = true);
                 } else{
                     fprintf(stderr, "ERROR - standard output already required, require it once\n");
@@ -105,7 +105,7 @@ int getCmdList(List* opList, int argc, char* argv[]){
     if(timeArg!=NULL){
         SYSCALL_EXIT(StringToLong, timeToSleep, StringToLong(timeArg),
                      "ERROR - Time Char '%s' to Long Conversion gone wrong, errno=%d\n", timeArg, errno);
-        if(pFlag) fprintf(stderr, "SUCCESS - time = %lu\n", timeToSleep);
+        if(pFlag) fprintf(stdout, "SUCCESS - time = %lu\n", timeToSleep);
     }
     if(fFlag){
         // Provo a collegarmi per 10 secondi
@@ -118,7 +118,7 @@ int getCmdList(List* opList, int argc, char* argv[]){
                      "Connection error to socket %s, errno %d\n",
                      fArg,
                      errno);
-        if(pFlag) fprintf(stderr, "SUCCESS - Connected to %s\n", fArg);
+        if(pFlag) fprintf(stdout, "SUCCESS - Connected to %s\n", fArg);
         msleep(timeToSleep);
     }
     if(search((*opList)->head, "D")){
@@ -154,7 +154,7 @@ void commandHandler(List* commandList){
 
     // Command and argument for each element of opList
     char* command;
-    char* argument;
+    void* argument;
 
     // Path details, to establish if it's a directory
     struct stat dir_Details;
@@ -169,7 +169,7 @@ void commandHandler(List* commandList){
         if(expelledDir) {
             stat(expelledDir,&dir_Details);
             if(!S_ISDIR(dir_Details.st_mode))  expelledDir = "dev/null";
-            else if(pFlag) fprintf(stderr, "SUCCESS - Expelled Directory set : %s\n", expelledDir);
+            else if(pFlag) fprintf(stdout, "SUCCESS - Expelled Directory set : %s\n", expelledDir);
         }
         memset(&dir_Details, 0, sizeof(dir_Details));
     }
@@ -178,7 +178,7 @@ void commandHandler(List* commandList){
         if (readDir) {
             stat(readDir, &dir_Details);
             if (!S_ISDIR(dir_Details.st_mode)) readDir = "dev/null";
-            else if (pFlag) fprintf(stderr, "SUCCESS - Received Files Directory set : %s\n", readDir);
+            else if (pFlag) fprintf(stdout, "SUCCESS - Received Files Directory set : %s\n", readDir);
         }
         memset(&dir_Details, 0, sizeof(dir_Details));
     }
@@ -192,7 +192,7 @@ void commandHandler(List* commandList){
                     if((temporary = strtok_r(NULL, ",", &rest)) != NULL)
                         SYSCALL_EXIT(StringToLong, numOfFilesToWrite, StringToLong(temporary),
                                      "Char '%s' to Long Conversion gone wrong, errno=%d\n", temporary, errno);
-                    if(pFlag) fprintf(stderr, "Accessing Folder %s : \n", token);
+                    if(pFlag) fprintf(stdout, "Accessing Folder %s : \n", token);
                     recWrite(token, expelledDir, numOfFilesToWrite, 0);
                 } else{
                     fprintf(stderr, "ERROR - writing files from directory '%s', not a valid directory\n",token);
@@ -213,7 +213,7 @@ void commandHandler(List* commandList){
                         "ERROR - Couldn't write file %s on server, errno = %d\n", token, errno);
                     SYSCALL_EXIT(closeFile, scRes, closeFile(path),
                         "ERROR - Couldn't close file %s on server, errno = %d\n", token, errno);
-                    if(pFlag) fprintf(stderr,"%s -> WRITE SUCCESS\n", token);
+                    if(pFlag) fprintf(stdout,"%s -> WRITE SUCCESS\n", token);
                 }
                 free(path);
                 msleep(timeToSleep);
@@ -246,7 +246,7 @@ void commandHandler(List* commandList){
 
                         SYSCALL_EXIT(closeFile, scRes, closeFile(path), (pFlag) ?
                             "ERROR - Couldn't close file %s on server, errno = %d\n" : "", token, errno);
-                        if (pFlag) fprintf(stderr, "%s -> WRITE SUCCESS\n", token);
+                        if (pFlag) fprintf(stdout, "%s -> WRITE SUCCESS\n", token);
                     }
                     token = strtok_r(NULL, ",", &rest);
                     msleep(timeToSleep);
@@ -260,7 +260,7 @@ void commandHandler(List* commandList){
                                  "ERROR - ReadNF Char '%s' to Long Conversion gone wrong, errno=%d\n", argument, errno);
                 SYSCALL_EXIT(readNFiles, scRes, readNFiles(numOfFilesToRead, readDir),
                              "ERROR - ReadNF lettura file, errno = %d\n", errno);
-                if(pFlag) fprintf(stderr, "SUCCESS - Lettura di file\n");
+                if(pFlag) fprintf(stdout, "SUCCESS - Lettura di file\n");
                 msleep(timeToSleep);
                 break;
             }
@@ -274,7 +274,7 @@ void commandHandler(List* commandList){
                         if(S_ISREG(dir_Details.st_mode)){
                             SYSCALL_EXIT(lockFile, scRes, lockFile(path),
                                          "ERROR - lock file %s, errno = %d", token, path);
-                            if(pFlag) fprintf(stderr, "SUCCESS - %s file locked", token);
+                            if(pFlag) fprintf(stdout, "SUCCESS - %s file locked", token);
                         }else{
                             fprintf(stderr, "ERROR - '%s' not a file", token);
                         }
@@ -295,7 +295,7 @@ void commandHandler(List* commandList){
                         if(S_ISREG(dir_Details.st_mode)){
                             SYSCALL_EXIT(unlockFile, scRes, unlockFile(path),
                                          "ERROR - Unlock file %s, errno = %d", token, path);
-                            if(pFlag) fprintf(stderr, "SUCCESS - %s file unlocked", token);
+                            if(pFlag) fprintf(stdout, "SUCCESS - %s file unlocked", token);
                         }else{
                             fprintf(stderr, "ERROR - '%s' not a file", token);
                         }
@@ -316,7 +316,7 @@ void commandHandler(List* commandList){
                         if(S_ISREG(dir_Details.st_mode)){
                             SYSCALL_EXIT(removeFile, scRes, removeFile(path),
                                          "ERROR - Remove file %s, errno = %d", token, path);
-                            if(pFlag) fprintf(stderr, "SUCCESS - %s file removed", token);
+                            if(pFlag) fprintf(stdout, "SUCCESS - %s file removed", token);
                         }else{
                             fprintf(stderr, "ERROR - '%s' not a file", token);
                         }

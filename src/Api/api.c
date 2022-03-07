@@ -69,7 +69,7 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
         msleep(msec);
         SYSCALL_EXIT(clock_gettime, scRes, clock_gettime(CLOCK_REALTIME, &currenTime),
                      "ERROR - getting current time, errno = %d\n", errno);
-        fprintf(stderr, "Trying connection... %d\n", (int)(currenTime.tv_sec-iniTime.tv_sec+1));
+        fprintf(stdout, "Trying connection... %d\n", (int)(currenTime.tv_sec-iniTime.tv_sec+1));
     }
     if(connRes==-1){
         fd_socket = -1;
