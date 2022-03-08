@@ -11,13 +11,14 @@
 #include "conn.h"
 #include "utils.h"
 #include "icl_hash.h"
+#include "threadpool.h"
 
 
  // -------------------------------- SERVER STATUS --------------------------------
 typedef enum{
-    E,                                      // Enabled
-    Q,                                      // Quitting, serve last requests only
-    S,                                      // Turned Off
+    E = 0,                                  // Enabled
+    Q = 1,                                  // Quitting, serve last requests only
+    S = -1,                                 // Turned Off
 } serverStat;
 
 // Policy for replacement
@@ -32,9 +33,16 @@ typedef enum {
 // -------------------------------- SigHandler Args --------------------------------
 
 typedef struct{
-    int pipe;
-    sigset_t *sigSet;
+    int pipe;                               // Pipe for communication between threads
+    sigset_t *sigSet;                       // Signal set for the signal handler
 } sigHandlerArgs;
+
+// -------------------------------- Clients Struct --------------------------------
+
+typedef struct{
+    List ClientsFds;                        // Client List
+    pthread_mutex_t lock;                   // Client list lock
+} clientList;
 
 // -------------------------------- SERVER CONFIG --------------------------------
 typedef struct{

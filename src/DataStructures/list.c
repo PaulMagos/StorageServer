@@ -171,6 +171,12 @@ int search(Node head, char* str){
     return search(head->next, str);
 }
 
+int compareDataAsInt(Node head, void data){
+    if(head == NULL) return 0;
+    if ((int)(*head->data) == (int)data) return 1;
+    return compareDataAsInt(head->next, data);
+}
+
 void getArg(Node head, char* str, char** dir){
     if(head == NULL) return;
     if (*head->index == *str) *dir = head->data;

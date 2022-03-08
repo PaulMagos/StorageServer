@@ -25,6 +25,7 @@
 #include <sys/time.h>
 #include <sys/stat.h>
 #include <sys/socket.h>
+#include <sys/select.h>
 
 #if !defined(EXTRA_LEN_PRINT_ERROR)
 #define EXTRA_LEN_PRINT_ERROR   512
@@ -133,5 +134,9 @@ static inline long StringToLong(char* str) {
     return result;
 }
 
+static int max(int a, int b){
+    if(a>b) return a;
+    else return b;
+}
 
 #endif //STORAGESERVER_UTILS_H

@@ -38,4 +38,6 @@ int deleteList(List* myList);
 
 int search(Node head, char* str);
 
+int compareDataAsInt(Node head, void data);
+
 void getArg(Node head, char* str, char** dir);
