@@ -10,6 +10,8 @@ typedef struct {
     int worker_id;
 } wTask;
 
+static int CloseConnection(int fd_client, int workerid);
+
 void taskExecute(void* argument){
     if( argument == NULL ) {
         fprintf(stderr, "ERROR - Invalid Worker Argument, errno = %d", EINVAL);
@@ -68,4 +70,19 @@ void taskExecute(void* argument){
             }   // append to file
         }
     }
+}
+
+static int CloseConnection(int fd_client, int workerid){
+    if(fd_client == -1 || workerid == -1){
+        errno = EINVAL;
+        return -1;
+    }
+    SYSCALL_RETURN(closeConn_pthread_mutex_lock, pthread_mutex_lock(&(ServerStorage->lock)),
+                   "Error - Server Lock failure, errno = %d", errno);
+
+    fileServer file;
+    icl_hash_t *currentbucket, *current;
+
+    int i = 0;
+
 }

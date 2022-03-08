@@ -39,5 +39,3 @@ int deleteList(List* myList);
 int search(Node head, char* str);
 
 void getArg(Node head, char* str, char** dir);
-
-Node getHead(List* myList);

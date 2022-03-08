@@ -6,7 +6,8 @@
 
 int main(int argc, char* argv[]){
     if(argc < 2) argv[1]= 0;
-    int fd_skt;
+    // TEST se funzionava la connessione client server
+    /*int fd_skt;
     struct sockaddr_un sa;
     unlink("../../tmp/cs_socket");
     memset(&sa, '0', sizeof(sa));
@@ -34,6 +35,11 @@ int main(int argc, char* argv[]){
             printf("I am alive: %d\n", client_fd);
         }
         break;
-    } while (1);
+    } while (1);*/
+
+}
+
+
+static int serverConfigParser(char* path){
 
 }

@@ -5,8 +5,10 @@
 #ifndef STORAGESERVER_THREAD_H
 #define STORAGESERVER_THREAD_H
 
-#include "utils.h"
 #include "conn.h"
+#include "utils.h"
+#include "server.h"
+#include "icl_hash.h"
 
 
 void taskExecute (void* argument);
