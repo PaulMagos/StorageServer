@@ -9,6 +9,7 @@ void createLog(char* dir, logFile* log){
     if(dir == NULL) directory = "../../log/";
     else directory = dir;
     if(*log == NULL) *log = malloc(sizeof(logF));
+    else return;
     if(!*log){
         fprintf(stderr, "ERROR - Log Structure alloc failure\n");
         exit(EXIT_FAILURE);

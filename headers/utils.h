@@ -19,6 +19,7 @@
 #include <sys/un.h>
 #include <unistd.h>
 #include <libgen.h>
+#include <signal.h>
 #include <stdbool.h>
 #include <pthread.h>
 #include <sys/time.h>
@@ -50,6 +51,13 @@
 	return -1;			                        \
     }                                           \
 
+#define SYSCALL_ASSIGN(name, r, sc, str, ...)	\
+    if ((r=sc) != 0) {				            \
+	perror(#name);				                \
+	int errno_copy = errno;			            \
+	print_error(str, __VA_ARGS__);              \
+    return;                                     \
+    }                                           \
 /**
 * \brief Procedura di utilita' per la stampa degli errori
 *

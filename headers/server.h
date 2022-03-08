@@ -4,13 +4,14 @@
 
 #ifndef STORAGESERVER_SERVER_H
 #define STORAGESERVER_SERVER_H
-#define DEFAULT_CONFIG {100, 15728640, 15, E, FIFO, "../../tmp/cs_socket"}
+#define DEFAULT_CONFIG {100, 15728640, 15, FIFO, "../../tmp/cs_socket"}
 
-#include "utils.h"
+#include "log.h"
 #include "list.h"
 #include "conn.h"
-#include "log.h"
+#include "utils.h"
 #include "icl_hash.h"
+
 
  // -------------------------------- SERVER STATUS --------------------------------
 typedef enum{
@@ -27,7 +28,15 @@ typedef enum {
     MRU,                                    // Most recently used
 } cachePolicy;
 
-// Struct for server configuration
+
+// -------------------------------- SigHandler Args --------------------------------
+
+typedef struct{
+    int pipe;
+    sigset_t *sigSet;
+} sigHandlerArgs;
+
+// -------------------------------- SERVER CONFIG --------------------------------
 typedef struct{
     int maxFile;                            // Server max number of files
     size_t maxByte;                         // Capacity of the server
@@ -60,7 +69,7 @@ typedef struct {
 
  // -------------------------------- WORKER WORKING STRUCT --------------------------------
 typedef struct{
-    bool stdOutput;                         // Bool variable to see operations on the terminal
+    int stdOutput;                          // Bool variable to see operations on the terminal
     serverStat status;                      // Server status
     int expelledFiles;                      // Number of expelled files
     int maxConnections;                     // The max number of client connected in one session
@@ -73,10 +82,6 @@ typedef struct{
     char serverLog[UNIX_PATH_MAX];          // Log path for server
 } fileServer;
 
- // -------------------------------- GLOBAR VARIABLES --------------------------------
-serverConfig ServerConfig;
-fileServer* ServerStorage;
-logFile ServerLog;
 
 
 
