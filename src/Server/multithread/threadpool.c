@@ -2,7 +2,7 @@
 // Created by paul on 26/01/22.
 //
 
-#include "../../../headers/threadpool.h"
+#include "../../../headers/server.h"
 
 static queueTask* getTask(threadPool* tPool){
     queueTask* tmpTask;
@@ -37,6 +37,16 @@ static void threadPoolTaskDestroy(queueTask* task){
 static void *threadPoolWorker(void* arg){
     threadPool* tmpPool  = arg;
     queueTask* tmpTask;
+    pthread_t self = pthread_self();
+    int id;
+    for(int i = 0; i < tmpPool->threadCnt; i++){
+        if(pthread_equal(self, tmpPool->workers[i])) {
+            id = i;
+            break;
+        }
+    }
+    appendOnLog(ServerLog, "Thread %d: Started\n", id);
+
     while (1){
         pthread_mutex_lock(&(tmpPool->lock));
         while ( tmpPool->taskHead == NULL && tmpPool->stop==0){
@@ -58,7 +68,7 @@ static void *threadPoolWorker(void* arg){
             threadPoolTaskDestroy(tmpTask);
         }
     }
-    appendOnLog(ServerLog, "Thread %d: Stopped\n", pthread_self());
+    appendOnLog(ServerLog, "Thread %d: Stopped\n", id);
     pthread_mutex_unlock(&(tmpPool->lock));
     pthread_exit(NULL);
 }
@@ -99,6 +109,7 @@ threadPool* initThreadPool(int threads){
         }
         threadPool1->threadCnt++;
     }
+    appendOnLog(ServerLog, "ThreadPool: Started\n");
     return threadPool1;
 }
 

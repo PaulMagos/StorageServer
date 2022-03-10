@@ -1,7 +1,7 @@
 #if !defined(CONN_H)
 #define CONN_H
 
-#include <sys/types.h> 
+#include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
 #include <sys/un.h>

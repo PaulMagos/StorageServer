@@ -91,21 +91,11 @@ int main(int argc, char* argv[]){
         exit(EXIT_FAILURE);
     }
 
-    if(stopThreadPool(threadPool1, 1) != 0){
-        printf("Error - stopthreadpool ");
-    }
-    signalHandlerDestroy(&sigHandler_t);
-    closeLogStr(ServerLog);
-    serverDestroy();
-    free(sigHandler_Pipe);
-    exit(0);
 
-
-/*
    // ------------------------------------- ServerSocket -------------------------------------
     // Socket creation
-    int max_fd;
-    int fd_server_socket, fd_client_socket;
+    int max_fd = 0;
+    int fd_server_socket, fd_client_socket = 0;
     struct sockaddr_un SocketAddress;
     (void) unlink(ServerConfig.serverSocketName);
     memset(&SocketAddress, '0', sizeof(SocketAddress));
@@ -120,27 +110,34 @@ int main(int argc, char* argv[]){
     SYSCALL_EXIT(listen, res, listen(fd_server_socket, SOMAXCONN),
             "ERROR - Socket listen failure, errno = %d\n", errno)
 
+
+
     // ------------------------------------- Clients Fds -------------------------------------
     fd_set readySet, allSet;
     FD_ZERO(&allSet);
+    FD_ZERO(&readySet);
     FD_SET(fd_server_socket, &allSet);
     FD_SET(sigHandler_Pipe[0], &allSet);
     FD_SET(threadsPipe[0], &allSet);
 
-    max_fd = max(fd_server_socket, pipeFd[0]);
-    max_fd = max(max_fd, threadsPipe[0]);
+    max_fd = MAX(fd_server_socket, sigHandler_Pipe[0]);
+    max_fd = MAX(max_fd, threadsPipe[0]);
 
     // ----------------------------------- MainThreadFunc ------------------------------------
-    struct timeval temp;
     while (ServerStorage->status == E){
         readySet = allSet;
-        temp = {0, 200000}; // Time 2 seconds
-        if((res = select(max_fd+1, &readySet, NULL, NULL, &temp) ) < 0 ){
-            fprintf(stderr, "ERROR - ")
-        }
-    }*/
+        SYSCALL_EXIT(select, res, select(max_fd, &readySet,NULL, NULL, NULL), "ERROR - Select failed, errno = %d", errno);
+    }
 
 
+    if(stopThreadPool(threadPool1, 1) != 0){
+        printf("Error - stopthreadpool, %d %d", max_fd, fd_client_socket);
+    }
+    signalHandlerDestroy(&sigHandler_t);
+    closeLogStr(ServerLog);
+    serverDestroy();
+    free(sigHandler_Pipe);
+    return 0;
 }
 
 
@@ -206,9 +203,9 @@ static void* signalHandler(void *arguments){
     int pipeFd = ((sigHandlerArgs*)arguments)->pipe;
     int signal;
     int res;
-    int tmp = 0;
     appendOnLog(ServerLog, "SignalHandler: Started\n");
-    while(tmp<10000){
+    while(1){
+        pthread_exit(NULL);
         res = sigwait(workingSet, &signal);
         if(res != 0){
             fprintf(stderr, "ERROR - sigWait failure, errno = %d\n", res);
@@ -239,7 +236,7 @@ static void* signalHandler(void *arguments){
     pthread_exit(NULL);
 }
 int signalHandlerDestroy(pthread_t* pthread){
-    appendOnLog(ServerLog, "Signal Handler: Stopped");
+    appendOnLog(ServerLog, "Signal Handler: Stopped\n");
     return pthread_join((*pthread), NULL);
 }
 static int serverConfigParser(char* path){

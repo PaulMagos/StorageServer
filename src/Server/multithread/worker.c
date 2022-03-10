@@ -2,8 +2,7 @@
 // Created by paul on 26/01/22.
 //
 
-#include "../../../headers/worker.h"
-#include <unistd.h>
+#include "../../../headers/server.h"
 
 
 //static int CloseConnection(int fd_client, int workerId);

@@ -34,6 +34,8 @@
 #define MAX_DIM_LEN 1024
 #define UNIX_PATH_MAX 108 /* man 7 unix */
 
+#define MAX(a,b) (((a)>(b))?(a):(b))
+
 // ES 5 LEZIONI
 #define SYSCALL_EXIT(name, r, sc, str, ...)	    \
     if ((r=sc) == -1) {				            \

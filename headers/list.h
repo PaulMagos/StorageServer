@@ -8,9 +8,6 @@
 #endif //STORAGESERVER_LIST_H
 
 #include "node.h"
-#include "utils.h"
-
-
 
 typedef struct el{
     Node head;
