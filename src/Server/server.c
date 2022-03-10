@@ -16,7 +16,6 @@ int clientDestroy();
 int clientGetCount();
 int clientAdd(int fd);
 static void* signalHandler(void* arguments);
-int signalHandlerInit(int** sigPipe, pthread_t* pthread);
 int signalHandlerDestroy(pthread_t* pthread);
 int serverInit(char* configPath, char* logPath);
 static void defaultConfig(serverConfig* config);
@@ -46,8 +45,6 @@ int main(int argc, char* argv[]){
 
     // ------------------------------------- SigHandler -------------------------------------
     // Signal Handler & Respective Pipe Init
-    // Sig Handler Thread Creation
-
     // Signal Set creation for the sigHandler thread
     sigset_t mask;
     sigemptyset(&mask);
@@ -70,9 +67,14 @@ int main(int argc, char* argv[]){
                    "ERROR - pipe failure, errno = %d", errno)
 
     pthread_t sigHandler_t;
-
     sigHandlerArgs args = {(sigHandler_Pipe)[1], &mask};
-    SYSCALL_RETURN(sigHandler_pthread_creation, pthread_create(pthread, NULL, signalHandler, &args),
+    SYSCALL_RETURN(sigHandler_pthread_creation,
+                   pthread_create(
+                           &sigHandler_t,
+                           NULL,
+                           signalHandler,
+                           &args
+                           ),
                    "ERROR - Signal Handler Thread Creation Failure, errno = %d", errno)
 
 
@@ -92,9 +94,9 @@ int main(int argc, char* argv[]){
     if(stopThreadPool(threadPool1, 1) != 0){
         printf("Error - stopthreadpool ");
     }
+    signalHandlerDestroy(&sigHandler_t);
     closeLogStr(ServerLog);
     serverDestroy();
-    signalHandlerDestroy(&sigHandler_t);
     free(sigHandler_Pipe);
     exit(0);
 
@@ -199,42 +201,14 @@ int clientAdd(int fd){
                    "ERROR - fd_clients unlock failure, errno = %d\n", errno)
     return 0;
 }
-int signalHandlerInit(int** sigPipe, pthread_t* pthread){
-   /* // Signal Set creation for the sigHandler thread
-    sigset_t mask;
-    sigemptyset(&mask);
-    sigaddset(&mask, SIGHUP);
-    sigaddset(&mask, SIGINT);
-    sigaddset(&mask, SIGQUIT);
-    sigaddset(&mask, SIGTERM);
-    SYSCALL_RETURN(pthread_sigmask, pthread_sigmask(SIG_BLOCK, &mask, NULL),
-                   "ERROR - pthread_sigmask fault, errno = %d\n", errno)
-
-    // SigPipe Ignore
-    struct sigaction act;
-    memset(&act, 0, sizeof(act));
-    act.sa_handler = SIG_IGN;
-    SYSCALL_RETURN(sigaction, sigaction(SIGPIPE, &act, NULL),
-                   "ERROR - sigaction failure to ignore sigpipe, errno = %d\n", errno)
-    // Pipe init for threads communications
-    SYSCALL_RETURN(pipe, pipe((*sigPipe)),
-                   "ERROR - pipe failure, errno = %d", errno)
-
-
-    sigHandlerArgs* args = calloc(1, sizeof(sigHandlerArgs));
-    args->pipe = (*sigPipe)[1];
-    args->sigSet = mask;
-    SYSCALL_RETURN(sigHandler_pthread_creation, pthread_create(pthread, NULL, signalHandler, &args),
-                   "ERROR - Signal Handler Thread Creation Failure, errno = %d", errno)*/
-    return 0;
-}
 static void* signalHandler(void *arguments){
     sigset_t *workingSet = ((sigHandlerArgs*)arguments)->sigSet;
     int pipeFd = ((sigHandlerArgs*)arguments)->pipe;
     int signal;
     int res;
+    int tmp = 0;
     appendOnLog(ServerLog, "SignalHandler: Started\n");
-    while(1){
+    while(tmp<10000){
         res = sigwait(workingSet, &signal);
         if(res != 0){
             fprintf(stderr, "ERROR - sigWait failure, errno = %d\n", res);
@@ -249,7 +223,7 @@ static void* signalHandler(void *arguments){
                     fprintf(stderr, "ERROR - SigHandler Pipe writing failure\n");
                 }
                 close(pipeFd);
-                break;
+                pthread_exit(NULL);
             }
             case SIGHUP:{
                 appendOnLog(ServerLog, "Signal Handler: %s signal received, quitting after serving last clients\n",
@@ -262,6 +236,7 @@ static void* signalHandler(void *arguments){
             }
         }
     }
+    pthread_exit(NULL);
 }
 int signalHandlerDestroy(pthread_t* pthread){
     appendOnLog(ServerLog, "Signal Handler: Stopped");
