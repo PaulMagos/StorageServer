@@ -31,9 +31,9 @@ void createLog(char* dir, logFile* log){
         exit(errno);
     }
     free(path);
+    free(time);
 
     if(pthread_mutex_init(&(*log)->mutex, NULL) != 0){
-        free(time);
         fclose((*log)->file);
         free(log);
         fprintf(stderr, "ERROR - Log Mutex init failure\n");
@@ -65,6 +65,7 @@ int appendOnLog(logFile log, char* strBuf,...){
 
     SYSCALL_RETURN(pthread_mutex_init, pthread_mutex_unlock(&(log->mutex)),
                    "ERROR - Log File UnLock, errno = %d\n", errno);
+    free(time);
     return 0;
 }
 
@@ -76,4 +77,9 @@ int closeLogStr(logFile log){
     pthread_mutex_destroy(&(log->mutex));
     free(log);
     return 0;
+}
+
+void logSeparator(logFile log){
+    if(log == NULL) return;
+    fprintf(log->file, "-------------------------------------------------\n");
 }

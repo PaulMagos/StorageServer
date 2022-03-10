@@ -15,7 +15,7 @@ List returnNewList(){
 
 
 int createList(List* myList){
-    *myList =  malloc (sizeof (list));
+    *myList =  calloc (1, sizeof (list));
     if(!(*myList)) {
         // ERRORE DOVUTO ALL'ALLOCAZIONE NON ANDATA A BUON FINE
         errno = ENOMEM;
@@ -171,10 +171,10 @@ int search(Node head, char* str){
     return search(head->next, str);
 }
 
-int compareDataAsInt(Node head, void data){
+int searchInt(Node head, int num){
     if(head == NULL) return 0;
-    if ((int)(*head->data) == (int)data) return 1;
-    return compareDataAsInt(head->next, data);
+    if (*(int*)(head->data) == num) return 1;
+    return searchInt(head->next, num);
 }
 
 void getArg(Node head, char* str, char** dir){

@@ -4,10 +4,9 @@
 
 #ifndef STORAGESERVER_SERVER_H
 #define STORAGESERVER_SERVER_H
-#define DEFAULT_CONFIG {100, 15728640, 15, FIFO, "../../tmp/cs_socket"}
+#define DEFAULT_CONFIG {100, 15728640, 15, 0, "../../tmp/cs_socket"}
 
 #include "log.h"
-#include "list.h"
 #include "conn.h"
 #include "utils.h"
 #include "icl_hash.h"
@@ -23,10 +22,10 @@ typedef enum{
 
 // Policy for replacement
 typedef enum {
-    FIFO,                                   // Firs In, First Out
-    LIFO,                                   // Last In First Out
-    LRU,                                    // Last recently used
-    MRU,                                    // Most recently used
+    FIFO = 0,                                   // Firs In, First Out
+    LIFO = 1,                                   // Last In First Out
+    LRU = 2,                                    // Last recently used
+    MRU = 3,                                    // Most recently used
 } cachePolicy;
 
 
@@ -91,7 +90,10 @@ typedef struct{
 } fileServer;
 
 
-
+extern serverConfig ServerConfig;
+extern fileServer* ServerStorage;
+extern logFile ServerLog;
+extern clientList* fd_clients;
 
 
 #endif //STORAGESERVER_SERVER_H

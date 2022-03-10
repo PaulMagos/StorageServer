@@ -5,11 +5,14 @@
 #ifndef STORAGESERVER_THREAD_H
 #define STORAGESERVER_THREAD_H
 
-#include "conn.h"
-#include "utils.h"
 #include "server.h"
 #include "icl_hash.h"
 
+typedef struct {
+    int pipe;
+    int client_fd;
+    int worker_id;
+} wTask;
 
 void taskExecute (void* argument);
 

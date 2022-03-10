@@ -5,7 +5,6 @@
 #ifndef STORAGESERVER_UTILS_H
 #define STORAGESERVER_UTILS_H
 
-
 #include <time.h>
 #include <stdio.h>
 #include <errno.h>
@@ -132,11 +131,6 @@ static inline long StringToLong(char* str) {
         return -1;
     }
     return result;
-}
-
-static int max(int a, int b){
-    if(a>b) return a;
-    else return b;
 }
 
 #endif //STORAGESERVER_UTILS_H

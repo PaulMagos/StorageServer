@@ -9,6 +9,7 @@
 #define MAX_TASKS 5000
 
 #include "list.h"
+#include "worker.h"
 #include "utils.h"
 
 
@@ -58,11 +59,11 @@ int enqueue(threadPool* tPool, void (*func)(void*), void* arguments);
  *   @func  closeThreadPool
  *   @effects if hard_off is true it closes immediately all the threads and frees the space
  *   @param tPool -> Thread-pool structure
- *   @param hard_off -> if true it forces all the thread to go down, if false the thread will work on the pending
+ *   @param hard_off -> if 1 it forces all the thread to go down, if 0 the thread will work on the pending
  *                         task then close
  *   @return returns 0 in case everything goes right, -1 if an error occurs
  */
-int stopThreadPool(threadPool* tPool, bool hard_off);
+int stopThreadPool(threadPool* tPool, int hard_off);
 
 
 

@@ -2,8 +2,6 @@
 // Created by paul magos on 07/01/22.
 //
 #include "../../headers/node.h"
-#include <stdio.h>
-#include <string.h>
 
 Node createNode(char* index, void* data){
     Node tmp = (Node)malloc(sizeof(node));

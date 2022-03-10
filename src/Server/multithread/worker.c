@@ -3,21 +3,19 @@
 //
 
 #include "../../../headers/worker.h"
+#include <unistd.h>
 
-typedef struct {
-    int pipe;
-    int client_fd;
-    int worker_id;
-} wTask;
 
-static int CloseConnection(int fd_client, int workerid);
+//static int CloseConnection(int fd_client, int workerId);
+
+//static int OpenFile(int fd_client, int workerId)
 
 void taskExecute(void* argument){
     if( argument == NULL ) {
         fprintf(stderr, "ERROR - Invalid Worker Argument, errno = %d", EINVAL);
         exit(EXIT_FAILURE);
     }
-
+/*
     wTask *tmpArgs = argument;
     int myId = tmpArgs->worker_id;
     int fd_client = tmpArgs->client_fd;
@@ -37,11 +35,27 @@ void taskExecute(void* argument){
 
     if(readed == 0){
         // client non più connesso
-        if(CloseConnection(fd_client, myId) == -1) perror("CloseConnection");
+        if(CloseConnection(fd_client, myId) == -1)
+            fprintf(stderr, "ERROR - Closing connection to client fault, errno = %d", errno);
         return;
     } else{
         switch (operation1) {
             case of:{
+                if(OpenFile(fd_client, myId) == -1){
+                    // File open error, send error to client
+                    if(writen(fd_client, &errno, sizeof(int )) == -1){
+                        fprintf(stderr, "ERROR - Sending info to client fault, errno = %d", errno);
+                    }
+                    if(errno == EBADMSG){
+                        if(CloseConnection(fd_client, myId) == -1)
+                            fprintf(stderr, "ERROR - Closing connection to client fault, errno = %d", errno);
+                    }
+                } else{
+                    int r = 0;
+                    if(writen(fd_client, &r, sizeof(int)) == -1){
+                        fprintf(stderr, "ERROR - Sending info to client fault, errno = %d", errno);
+                    }
+                }
                 break;
             }   // openFile
             case wr:{
@@ -69,10 +83,11 @@ void taskExecute(void* argument){
                 break;
             }   // append to file
         }
-    }
+    }*/
 }
 
-static int CloseConnection(int fd_client, int workerid){
+/*
+static int CloseConnection(int fd_client, int workerId){
     if(fd_client == -1 || workerid == -1){
         errno = EINVAL;
         return -1;
@@ -86,3 +101,6 @@ static int CloseConnection(int fd_client, int workerid){
     int i = 0;
 
 }
+*/
+//static int OpenFile(int fd_client, int workerId){
+//}

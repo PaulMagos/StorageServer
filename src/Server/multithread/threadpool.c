@@ -39,29 +39,28 @@ static void *threadPoolWorker(void* arg){
     queueTask* tmpTask;
     while (1){
         pthread_mutex_lock(&(tmpPool->lock));
-        while ( tmpPool->taskHead == NULL && tmpPool->stop>0){
+        while ( tmpPool->taskHead == NULL && tmpPool->stop==0){
             pthread_cond_wait(&(tmpPool->work_cond), &(tmpPool->lock));
         }
 
-        if(tmpPool->stop>0) break;
+        if(tmpPool->stop>1) break;
+
+        if(tmpPool->stop==1 && tmpPool->taskN == 0) break;
+
 
         tmpTask = getTask(tmpPool);
-        tmpPool->taskN++;
-
+        tmpPool->taskN--;
         pthread_mutex_unlock(&(tmpPool->lock));
+
 
         if(tmpTask != NULL){
             tmpTask->func(tmpTask->arguments);
             threadPoolTaskDestroy(tmpTask);
         }
-
-        pthread_mutex_lock(&(tmpPool->lock));
-        tmpPool->taskN--;
-        pthread_mutex_unlock(&(tmpPool->lock));
     }
-    tmpPool->taskN--;
+    appendOnLog(ServerLog, "Thread %d: Stopped\n", pthread_self());
     pthread_mutex_unlock(&(tmpPool->lock));
-    return NULL;
+    pthread_exit(NULL);
 }
 
 threadPool* initThreadPool(int threads){
@@ -70,7 +69,7 @@ threadPool* initThreadPool(int threads){
         return NULL;
     }
 
-    threadPool* threadPool1 = malloc(sizeof (threadPool));
+    threadPool* threadPool1 = (threadPool*)calloc(1, sizeof (threadPool));
     if ( threadPool1 == NULL ) {
         return NULL;
     }
@@ -81,20 +80,20 @@ threadPool* initThreadPool(int threads){
     threadPool1->maxTasks = 0;
     threadPool1->taskRunning = 0;
     threadPool1->maxThreads = threads;
-
-    threadPool1->workers = (pthread_t*)malloc(threads * sizeof(pthread_t));
+    threadPool1->workers = (pthread_t*)calloc(threads, sizeof(pthread_t));
     if(threadPool1->workers == NULL){
         free(threadPool1);
         return NULL;
     }
     if((pthread_mutex_init(&(threadPool1->lock), NULL) != 0) ||
-            (pthread_cond_init(&(threadPool1->work_cond), NULL) != 0) ){
+       (pthread_cond_init(&(threadPool1->work_cond), NULL) != 0) ){
         stopThreadPool(threadPool1,true);
         return NULL;
     }
-    for (int i = 0; i < threads; i++){
+
+    for (int i = 0; i < threadPool1->maxThreads; i++){
         if(pthread_create(&(threadPool1->workers[i]), NULL, threadPoolWorker, (void*)threadPool1) != 0){
-            stopThreadPool(threadPool1, true);
+            stopThreadPool(threadPool1, 1);
             errno = EFAULT;
             return NULL;
         }
@@ -104,7 +103,7 @@ threadPool* initThreadPool(int threads){
 }
 
 void freePool(threadPool* tPool){
-    if(tPool->workers){
+    if(tPool->workers != NULL){
         free(tPool->workers);
 
         pthread_mutex_destroy(&(tPool->lock));
@@ -114,18 +113,16 @@ void freePool(threadPool* tPool){
     return;
 }
 
-int stopThreadPool(threadPool* tPool, bool hard_off){
+int stopThreadPool(threadPool* tPool, int hard_off){
     if(tPool == NULL){
         errno = EINVAL;
         return -1;
     }
 
-    tPool->stop = 1 + ((hard_off)? 1:0);
-
     SYSCALL_RETURN(stopThreadPool_mutex_lock, pthread_mutex_lock(&(tPool->lock)),
                    "ERROR : pthread_mutex_lock failed, errno = %d", errno);
 
-    tPool->stop = true;
+    tPool->stop = 1 + ((hard_off)? 1:0);
 
     if(pthread_cond_broadcast(&(tPool->work_cond)) != 0){
         SYSCALL_RETURN(stopThreadPool_mutex_unlock, pthread_mutex_unlock(&(tPool->lock)),
@@ -133,8 +130,15 @@ int stopThreadPool(threadPool* tPool, bool hard_off){
         errno = EFAULT;
         return -1;
     }
+
     SYSCALL_RETURN(stopThreadPool_mutex_unlock, pthread_mutex_unlock(&(tPool->lock)),
                    "ERROR : pthread_mutex_unlock failed, errno = %d", errno);
+
+    while(tPool->taskN>0){
+        queueTask* tmpTask = getTask(tPool);
+        free(tmpTask);
+        tPool->taskN--;
+    }
 
     for(int i = 0; i < tPool->threadCnt; i++){
         if(pthread_join(tPool->workers[i], NULL) != 0){
@@ -142,7 +146,10 @@ int stopThreadPool(threadPool* tPool, bool hard_off){
             return -1;
         }
     }
+
     freePool(tPool);
+
+    appendOnLog(ServerLog, "ThreadPool: Stopped\n");
     return 0;
 }
 
@@ -151,8 +158,6 @@ int enqueue(threadPool* tPool, void (*func)(void*), void* arguments){
         errno = EINVAL;
         return -1;
     }
-
-    if(tPool->maxThreads == 1 && tPool->taskHead!=NULL) return -1;
 
     SYSCALL_RETURN(enqueue_mutex_lock, pthread_mutex_lock(&(tPool->lock)),
                    "ERROR : pthread_mutex_lock failed, errno = %d", errno);
@@ -170,7 +175,9 @@ int enqueue(threadPool* tPool, void (*func)(void*), void* arguments){
         tPool->taskTail->next = tmpTask;
         tPool->taskTail = tmpTask;
     }
-    
+
+    tPool->taskN++;
+
     SYSCALL_EXIT(enqueue_pthread_cond_broadcast, res, pthread_cond_broadcast(&(tPool->work_cond)),
                  "ERROR : pthread_cond_broadcast failed, errno = %d", errno);
     SYSCALL_RETURN(enqueue_mutex_unlock, pthread_mutex_unlock(&(tPool->lock)),
