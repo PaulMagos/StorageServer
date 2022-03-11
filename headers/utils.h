@@ -34,6 +34,11 @@
 #define MAX_DIM_LEN 1024
 #define UNIX_PATH_MAX 108 /* man 7 unix */
 
+# define tSpecCmp(a, b, CMP)                                                  \
+   (((a)->tv_sec == (b)->tv_sec) ?                                             \
+   ((a)->tv_nsec CMP (b)->tv_nsec) :                                          \
+   ((a)->tv_sec CMP (b)->tv_sec))
+
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
 // ES 5 LEZIONI

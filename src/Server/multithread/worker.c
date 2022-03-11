@@ -103,3 +103,37 @@ static int CloseConnection(int fd_client, int workerId){
 */
 //static int OpenFile(int fd_client, int workerId){
 //}
+
+
+int lockFile(serverFile* file, int mode, int locker){
+    SYSCALL_RETURN(lock, pthread_mutex_lock(&file->order), "ERROR - Mutex lock of file failed, %s\n", file->path);
+    SYSCALL_RETURN(lock, pthread_mutex_lock(&file->lock), "ERROR - Mutex lock of file failed, %s\n", file->path);
+    while (file->writers!=0 || ((mode==0)? 1 : file->readers!=0)){
+        SYSCALL_RETURN(cond_wait, pthread_cond_wait(&(file->condition), &(file->lock)) ,
+                       "ERROR - Condition wait for file %s failed\n", file->path);
+    }
+    file->readers++;
+    if(locker!=-1) newAccessFrom(file, locker);
+    SYSCALL_RETURN(unlock, pthread_mutex_unlock(&(file->order)),
+                   "ERROR - Mutex unlock of file failed, %s\n", file->path);
+    SYSCALL_RETURN(unlock, pthread_mutex_unlock(&(file->lock)),
+                   "ERROR - Mutex unlock of file failed, %s\n", file->path);
+    return 0;
+}
+
+int unlockFile(serverFile* file, int mode, int locker){
+    SYSCALL_RETURN(lock, pthread_mutex_lock(&file->lock), "ERROR - Mutex lock of file failed, %s\n", file->path);
+    if(mode == 0) {
+        file->readers--;
+        if(file->readers == 0) SYSCALL_RETURN(cond_broad, pthread_cond_broadcast(&(file->condition)),
+                                              "ERROR - Condition broadcast reader release file %s", file->path);
+    }
+    else {
+        file->writers--;
+        SYSCALL_RETURN(cond_broad, pthread_cond_broadcast(&(file->condition)),
+                       "ERROR - Condition broadcast writer release file %s", file->path);
+    }
+    SYSCALL_RETURN(unlock, pthread_mutex_unlock(&(file->lock)),
+                   "ERROR - Mutex unlock of file failed, %s\n", file->path);
+    return 0;
+}

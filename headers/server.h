@@ -62,6 +62,8 @@ typedef struct {
     int writers;                            // Number of writers at a given moment
     int readers;                            // Number of readers at a given moment
     int* client_fds;                        // List of all clients who have accessed this file
+    int clients;                            // Number of client who have accessed this file
+    int deletable;                          // 1 if deletable, 0 if not
     operation latsOp;                       // Last Operation
     struct timespec creationTime;           // Creation time of the file
     struct timespec lastOpTime;             // Last operation time
@@ -125,7 +127,7 @@ extern clientList* fd_clients;
 // ------------------------------------ Thread Pool Functions ------------------------------------
 
 
-/*
+/**
  *   @func  initThreadPool
  *   @effects creates a threadPool structure and returns it
  *   @param threads -> number of workers of the thread-pool
@@ -133,7 +135,7 @@ extern clientList* fd_clients;
  */
 threadPool* initThreadPool(int threads);
 
-/*
+/**
  *   @func  enqueue
  *   @effects adds the task to the pending queue or executes it immediately by assigning a thread if there is one free
  *   @param tPool -> Thread-pool structure
@@ -143,7 +145,7 @@ threadPool* initThreadPool(int threads);
  */
 int enqueue(threadPool* tPool, void (*func)(void*), void* arguments);
 
-/*
+/**
  *   @func  closeThreadPool
  *   @effects if hard_off is true it closes immediately all the threads and frees the space
  *   @param tPool -> Thread-pool structure
@@ -155,12 +157,60 @@ int stopThreadPool(threadPool* tPool, int hard_off);
 
 
 // ------------------------------------ Worker Functions ------------------------------------
-/*
+/**
  *   @func  taskExecute
  *   @effects executes the requests from the clients
  *   @param argument -> wTask variable with client fd, worker id and pipe for communications
  */
 void taskExecute (void* argument);
+
+// ------------------------------------ Worker Functions ------------------------------------
+/**
+ *   @func  lockFile
+ *   @effects locks the file
+ *   @param file -> file for the lock operation
+ *   @param mode -> lock mode, 0 read mode, 1 write mode
+ *   @param locker -> if not -1, is the client fd that wants the lock
+ */
+int lockFile(serverFile* file, int mode, int locker);
+
+/**
+ *   @func  unlockFile
+ *   @effects unlocks the file
+ *   @param file -> file for the lock operation
+ *   @param mode -> previous lock mode, 0 read mode, 1 write mode
+ *   @param locker -> if not -1, is the client fd that have locked the file before
+ */
+int unlockFile(serverFile* file, int mode, int locker);
+
+/**
+ *   @func  newAccessFrom
+ *   @effects add the fd to the file openers fds
+ *   @param file -> file for operation
+ *   @param clientFd -> is the client fd that wants to access the file
+ */
+int newAccessFrom(serverFile* file, int clientFd);
+
+/**
+ * @func  Returns a replaceable file
+ * @param file1 -- the file to which compare the time of creation or last operations
+ * @param file2 -- the second file to which compare the time of creation or last operations
+ * @param policy -- the policy to be used for the comparison
+ * @returns file to replace on success, NULL on failure.
+ */
+static serverFile* replaceFile(serverFile* file1, serverFile* file2, cachePolicy policy){
+    if(file1 == NULL && file2 == NULL) return NULL;
+    if(file1 == NULL) return file2;
+    if(file2 == NULL) return file1;
+    switch (policy) {
+        case FIFO: return tSpecCmp(file1->creationTime, file2->creationTime,>)? file2 : file1;
+        case LIFO: return tSpecCmp(file1->creationTime, file2->creationTime,>)? file1 : file2;
+        case LRU:  return tSpecCmp(file1->lastOpTime, file2->lastOpTime,>)? file2 : file1;
+        case MRU:  return tSpecCmp(file1->lastOpTime, file2->lastOpTime,>)? file1 : file2;
+        default: return NULL;
+    }
+    return NULL;
+}
 
 
 #endif //STORAGESERVER_SERVER_H
