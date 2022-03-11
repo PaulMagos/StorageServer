@@ -12,7 +12,7 @@ long timeToSleep = 0;
 int recWrite(char* dirname, char* expelledDir, long cnt, int indent);
 char* charToString(char str);
 
-void usage(){
+void Helper(){
     fprintf(stdout,
         "-h \t\t\t help (commands description)\n"
                "-f filename  \t\t socket name (AF_UNIX socket)\n"
@@ -101,7 +101,7 @@ int getCmdList(List* opList, int argc, char* argv[]){
         }
 
     }
-    if(hFlag) usage();
+    if(hFlag) Helper();
     if(timeArg!=NULL){
         SYSCALL_EXIT(StringToLong, timeToSleep, StringToLong(timeArg),
                      "ERROR - Time Char '%s' to Long Conversion gone wrong, errno=%d\n", timeArg, errno);

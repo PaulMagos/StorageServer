@@ -126,7 +126,13 @@ int main(int argc, char* argv[]){
     // ----------------------------------- MainThreadFunc ------------------------------------
     while (ServerStorage->status == E){
         readySet = allSet;
-        SYSCALL_EXIT(select, res, select(max_fd, &readySet,NULL, NULL, NULL), "ERROR - Select failed, errno = %d", errno);
+        SYSCALL_EXIT(select, res, select(max_fd+1, &readySet,NULL, NULL, NULL), "ERROR - Select failed, errno = %d", errno);
+        for(int i = 0; i <= max_fd; i++){
+            if(FD_ISSET(i, &readySet)){
+                printf("Client %d\n", i);
+                FD_CLR(i, &readySet);
+            }
+        }
     }
 
 

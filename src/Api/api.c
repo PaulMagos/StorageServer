@@ -71,6 +71,7 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
                      "ERROR - getting current time, errno = %d\n", errno);
         fprintf(stdout, "Trying connection... %d\n", (int)(currenTime.tv_sec-iniTime.tv_sec+1));
     }
+
     if(connRes==-1){
         fd_socket = -1;
         errno = ETIMEDOUT;
