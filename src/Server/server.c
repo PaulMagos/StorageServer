@@ -423,3 +423,37 @@ static void defaultConfig(serverConfig* config){
     config->policy = FIFO;
     strncpy(config->serverSocketName, "../../tmp/cs_socket", UNIX_PATH_MAX);
 }
+
+static serverFile* replaceFile(serverFile* file1, serverFile* file2, cachePolicy policy){
+    if(file1 == NULL && file2 == NULL) return NULL;
+    if(file1 == NULL) return file2;
+    if(file2 == NULL) return file1;
+    switch (policy) {
+        case FIFO: return tSpecCmp(file1->creationTime, file2->creationTime,>)? file2 : file1;
+        case LIFO: return tSpecCmp(file1->creationTime, file2->creationTime,>)? file1 : file2;
+        case LRU:  return tSpecCmp(file1->lastOpTime, file2->lastOpTime,>)? file2 : file1;
+        case MRU:  return tSpecCmp(file1->lastOpTime, file2->lastOpTime,>)? file1 : file2;
+        default: return NULL;
+    }
+    return NULL;
+}
+
+serverFile
+* icl_hash_toReplace(icl_hash_t *ht, cachePolicy policy){
+    icl_entry_t *bucket, *curr;
+    int i;
+    serverFile *file1, *file2 = NULL;
+    for (int i = 0; i<ht->nbuckets; i++) {
+        bucket = ht->buckets[i];
+        for(curr = bucket; curr!=NULL; curr=curr->next){
+            file1 = (serverFile*)curr->data;
+            if(file1->deletable == 0) continue;
+            lockFile(file1, R);
+            lockFile(file2, R);
+            file2 = replaceFile(file1, file2, policy);
+            unlockFile(file1);
+            unlockFile(file2);
+        }
+    }
+    return file2;
+}

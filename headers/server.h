@@ -14,17 +14,17 @@
 
 // -------------------------------- SERVER STATUS --------------------------------
 typedef enum{
-    E = 0,                                  // Enabled
-    Q = 1,                                  // Quitting, serve last requests only
-    S = -1,                                 // Turned Off
+    E = 0,                                 // Enabled
+    Q = 1,                                 // Quitting, serve last requests only
+    S = -1,                                // Turned Off
 } serverStat;
 
 // Policy for replacement
 typedef enum {
-    FIFO = 0,                                   // Firs In, First Out
-    LIFO = 1,                                   // Last In First Out
-    LRU = 2,                                    // Last recently used
-    MRU = 3,                                    // Most recently used
+    FIFO = 0,                               // Firs In, First Out
+    LIFO = 1,                               // Last In First Out
+    LRU = 2,                                // Last recently used
+    MRU = 3,                                // Most recently used
 } cachePolicy;
 
 
@@ -92,23 +92,23 @@ typedef struct{
 
 // ------------------------------------ Thread Pool Struct ------------------------------------
 typedef struct task_{
-    void (*func)(void*);                // Generic function with void argument
-    void* arguments;                    // Void argument of many kinds
-    struct task_ *next;                 // Pointer to the next task
+    void (*func)(void*);                    // Generic function with void argument
+    void* arguments;                        // Void argument of many kinds
+    struct task_ *next;                     // Pointer to the next task
 } queueTask;
 
 typedef struct{
-    int stop;                           // We have to serve the last clients and close the thread pool or literally stop
-    int taskN;                          // Queue Len
-    int maxTasks;                       // Max number of task executed
-    int threadCnt;                      // Thread counter
-    int maxThreads;                     // Max number of threads allowed
-    int taskRunning;                    // Current number of running tasks
-    queueTask *taskHead;                // Head of tasks list
-    queueTask *taskTail;                // Tail of tasks list
-    pthread_t* workers;                 // Workers ids
-    pthread_mutex_t lock;               // Lock variable for mutex access
-    pthread_cond_t work_cond;           // Signals to the threads that there is work to be done
+    int stop;                               // Serve the last clients and close the thread pool or literally stop
+    int taskN;                              // Queue Len
+    int maxTasks;                           // Max number of task executed
+    int threadCnt;                          // Thread counter
+    int maxThreads;                         // Max number of threads allowed
+    int taskRunning;                        // Current number of running tasks
+    queueTask *taskHead;                    // Head of tasks list
+    queueTask *taskTail;                    // Tail of tasks list
+    pthread_t* workers;                     // Workers ids
+    pthread_mutex_t lock;                   // Lock variable for mutex access
+    pthread_cond_t work_cond;               // Signals to the threads that there is work to be done
 } threadPool;
 
 // -------------------------------- Worker arguments --------------------------------
@@ -164,7 +164,7 @@ int stopThreadPool(threadPool* tPool, int hard_off);
  */
 void taskExecute (void* argument);
 
-// ------------------------------------ Worker Functions ------------------------------------
+// ------------------------------------ Files Functions ------------------------------------
 /**
  *   @func  lockFile
  *   @effects locks the file
@@ -192,25 +192,22 @@ int unlockFile(serverFile* file, int mode, int locker);
 int newAccessFrom(serverFile* file, int clientFd);
 
 /**
- * @func  Returns a replaceable file
+ * @func  Returns the file that can be replaced between file1 and file2
  * @param file1 -- the file to which compare the time of creation or last operations
  * @param file2 -- the second file to which compare the time of creation or last operations
  * @param policy -- the policy to be used for the comparison
+ * @returns file1 or file2 to replace on success, NULL on failure.
+ */
+static serverFile* replaceFile(serverFile* file1, serverFile* file2, cachePolicy policy);
+
+/**
+ * @func  Returns a replaceable file
+ * @param ht -- the icl_hash table of files
+ * @param policy -- the policy to be used for the comparison
  * @returns file to replace on success, NULL on failure.
  */
-static serverFile* replaceFile(serverFile* file1, serverFile* file2, cachePolicy policy){
-    if(file1 == NULL && file2 == NULL) return NULL;
-    if(file1 == NULL) return file2;
-    if(file2 == NULL) return file1;
-    switch (policy) {
-        case FIFO: return tSpecCmp(file1->creationTime, file2->creationTime,>)? file2 : file1;
-        case LIFO: return tSpecCmp(file1->creationTime, file2->creationTime,>)? file1 : file2;
-        case LRU:  return tSpecCmp(file1->lastOpTime, file2->lastOpTime,>)? file2 : file1;
-        case MRU:  return tSpecCmp(file1->lastOpTime, file2->lastOpTime,>)? file1 : file2;
-        default: return NULL;
-    }
-    return NULL;
-}
+serverFile
+* icl_hash_toReplace(icl_hash_t *ht, cachePolicy policy);
 
 
 #endif //STORAGESERVER_SERVER_H

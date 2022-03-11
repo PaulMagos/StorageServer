@@ -258,27 +258,3 @@ icl_hash_dump(FILE* stream, icl_hash_t* ht)
 
     return 0;
 }
-
-
-
-
-icl_entry_t
-* icl_hash_toReplace(icl_hash_t *ht, cachePolicy policy){
-    icl_entry_t *bucket, *curr;
-    int i;
-    serverFile *file1, *file2;
-    for (int i = 0; i<ht->nbuckets; i++) {
-        bucket = ht->buckets[i];
-        for(curr = bucket; curr!=NULL; curr=curr->next){
-            file1 = (serverFile*)curr->data;
-            if(file1->deletable == 0) continue;
-            lockFile(file1, R);
-            lockFile(file2, R);
-            file2 = replaceFile(file1, file2, policy);
-            unlockFile(file1);
-            unlockFile(file2);
-        }
-    }
-
-    return file2;
-}
