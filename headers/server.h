@@ -14,17 +14,17 @@
 
 // -------------------------------- SERVER STATUS --------------------------------
 typedef enum{
-    E = 0,                                 // Enabled
-    Q = 1,                                 // Quitting, serve last requests only
-    S = -1,                                // Turned Off
+    E,                                      // Enabled
+    Q,                                      // Quitting, serve last requests only
+    S,                                      // Turned Off
 } serverStat;
 
 // Policy for replacement
-typedef enum {
-    FIFO = 0,                               // Firs In, First Out
-    LIFO = 1,                               // Last In First Out
-    LRU = 2,                                // Last recently used
-    MRU = 3,                                // Most recently used
+typedef enum cPolicy {
+    FIFO,                                   // Firs In, First Out
+    LIFO,                                   // Last In First Out
+    LRU,                                    // Last recently used
+    MRU,                                    // Most recently used
 } cachePolicy;
 
 
@@ -113,11 +113,10 @@ typedef struct{
 
 // -------------------------------- Worker arguments --------------------------------
 typedef struct {
-    int pipe;
+    int pipeT;
     int client_fd;
     int worker_id;
 } wTask;
-
 
 extern serverConfig ServerConfig;
 extern fileServer* ServerStorage;
@@ -164,6 +163,25 @@ int stopThreadPool(threadPool* tPool, int hard_off);
  */
 void taskExecute (void* argument);
 
+/**
+ *   @func  taskCreate
+ *   @effects creates a variable that describes who has to be served
+ *   @param pipe -> pipe for threads communication
+ *   @param workerId -> workerId, then used
+ *   @param client_fd -> client to serve
+ *   @return returns the task in case everything goes right, NULL if an error occurs
+*/
+wTask* taskCreate (int pipe, int workerId, int client_fd);
+
+
+/**
+ *   @func  taskDestroy
+ *   @effects frees the task
+ *   @param task -> task to destroy
+ *   @return returns 0 in case everything goes right, -1 if an error occurs
+*/
+int taskDestroy(wTask* task);
+
 // ------------------------------------ Files Functions ------------------------------------
 /**
  *   @func  lockFile
@@ -198,7 +216,7 @@ int newAccessFrom(serverFile* file, int clientFd);
  * @param policy -- the policy to be used for the comparison
  * @returns file1 or file2 to replace on success, NULL on failure.
  */
-static serverFile* replaceFile(serverFile* file1, serverFile* file2, cachePolicy policy);
+serverFile* replaceFile(serverFile* file1, serverFile* file2, cachePolicy policy);
 
 /**
  * @func  Returns a replaceable file
@@ -209,5 +227,18 @@ static serverFile* replaceFile(serverFile* file1, serverFile* file2, cachePolicy
 serverFile
 * icl_hash_toReplace(icl_hash_t *ht, cachePolicy policy);
 
+/**
+ * @func  Returns a string with the policy in "policy"
+ * @param policy -- the policy
+ * @returns policy in string on success, NULL on failure.
+ */
+char* fromEnumCachePolicyToString(cachePolicy policy);
+
+/**
+ * @func  Returns a enum cachePolicy with the policy in "str"
+ * @param str -- the string with policy
+ * @returns policy in cachePolicy on success, FIFO on failure.
+ */
+cachePolicy fromStringToEnumCachePolicy(char* str);
 
 #endif //STORAGESERVER_SERVER_H

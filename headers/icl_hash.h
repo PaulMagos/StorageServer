@@ -33,18 +33,6 @@ typedef struct icl_hash_s {
 icl_hash_t *
 icl_hash_create( int nbuckets, unsigned int (*hash_function)(void*), int (*hash_key_compare)(void*, void*) );
 
-// ------------- Paul Magos EDIT ------------
-/**
- * Finds a file that can be ignored.
- *
- * @returns Replaceable File on success, NULL on failure.
- */
-icl_entry_t
-* icl_hash_toReplace(icl_hash_t *ht);
-
-
-// ------------- Paul Magos EDIT ------------
-
 void
 * icl_hash_find(icl_hash_t *, void* );
 

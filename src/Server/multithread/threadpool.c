@@ -31,6 +31,7 @@ static queueTask* threadPoolTaskCreate(void (*func)(void*), void* arguments){
 }
 
 static void threadPoolTaskDestroy(queueTask* task){
+    //if(task->arguments!=NULL) free(task->arguments);
     free(task);
 }
 
@@ -38,7 +39,7 @@ static void *threadPoolWorker(void* arg){
     threadPool* tmpPool  = arg;
     queueTask* tmpTask;
     pthread_t self = pthread_self();
-    int id;
+    int id = -1;
     for(int i = 0; i < tmpPool->threadCnt; i++){
         if(pthread_equal(self, tmpPool->workers[i])) {
             id = i;
@@ -62,14 +63,14 @@ static void *threadPoolWorker(void* arg){
         tmpPool->taskN--;
         pthread_mutex_unlock(&(tmpPool->lock));
 
-
         if(tmpTask != NULL){
+            ((wTask*)tmpTask->arguments)->worker_id = id;
             tmpTask->func(tmpTask->arguments);
             threadPoolTaskDestroy(tmpTask);
         }
     }
-    appendOnLog(ServerLog, "Thread %d: Stopped\n", id);
     pthread_mutex_unlock(&(tmpPool->lock));
+    appendOnLog(ServerLog, "Thread %d: Stopped\n", id);
     pthread_exit(NULL);
 }
 
@@ -147,6 +148,8 @@ int stopThreadPool(threadPool* tPool, int hard_off){
 
     while(tPool->taskN>0){
         queueTask* tmpTask = getTask(tPool);
+        //threadPoolTaskDestroy(tmpTask);
+        free(tmpTask->arguments);
         free(tmpTask);
         tPool->taskN--;
     }

@@ -40,8 +40,10 @@ void createLog(char* dir, logFile* log){
         exit(EXIT_FAILURE);
     }
 
+    pthread_mutex_lock(&((*log)->mutex));
     fprintf(((*log)->file), "-------------------- LOG FILE --------------------\n");
     fflush((*log)->file);
+    pthread_mutex_unlock(&((*log)->mutex));
 }
 
 int appendOnLog(logFile log, char* strBuf,...){
@@ -49,16 +51,18 @@ int appendOnLog(logFile log, char* strBuf,...){
         errno = EINVAL;
         return -1;
     }
-    char* time;
-    getTime(&time);
-    if(time == NULL) return -1;
-    fprintf(log->file, "%s -> ", time);
 
     SYSCALL_RETURN(pthread_mutex_init, pthread_mutex_lock(&(log->mutex)),
                    "ERROR - Log File Lock, errno = %d\n", errno);
 
     va_list argList;
     va_start(argList, strBuf);
+
+    char* time;
+    getTime(&time);
+    if(time == NULL) return -1;
+    fprintf(log->file, "%s -> ", time);
+
     vfprintf(log->file, strBuf, argList);
     fflush(log->file);
     va_end(argList);

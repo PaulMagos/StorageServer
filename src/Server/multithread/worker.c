@@ -14,13 +14,15 @@ void taskExecute(void* argument){
         fprintf(stderr, "ERROR - Invalid Worker Argument, errno = %d", EINVAL);
         exit(EXIT_FAILURE);
     }
-/*
+
     wTask *tmpArgs = argument;
     int myId = tmpArgs->worker_id;
     int fd_client = tmpArgs->client_fd;
-    int pipe = tmpArgs->pipe;
+    //int pipe = tmpArgs->pipeT;
     free(argument);
 
+    appendOnLog(ServerLog, "Thread %d: Client %d serving\n", myId, fd_client);
+/*
     operation operation1;
 
     int readed;
@@ -123,17 +125,44 @@ int lockFile(serverFile* file, int mode, int locker){
 
 int unlockFile(serverFile* file, int mode, int locker){
     SYSCALL_RETURN(lock, pthread_mutex_lock(&file->lock), "ERROR - Mutex lock of file failed, %s\n", file->path);
-    if(mode == 0) {
+    if((locker!=-1)? file->client_fds[file->clients-1] == locker : 1){
+        if(mode == 0) {
         file->readers--;
         if(file->readers == 0) SYSCALL_RETURN(cond_broad, pthread_cond_broadcast(&(file->condition)),
                                               "ERROR - Condition broadcast reader release file %s", file->path);
-    }
-    else {
-        file->writers--;
-        SYSCALL_RETURN(cond_broad, pthread_cond_broadcast(&(file->condition)),
-                       "ERROR - Condition broadcast writer release file %s", file->path);
-    }
+        }
+        else {
+            file->writers--;
+            SYSCALL_RETURN(cond_broad, pthread_cond_broadcast(&(file->condition)),
+                           "ERROR - Condition broadcast writer release file %s", file->path);
+        }
+    } else return -1;
     SYSCALL_RETURN(unlock, pthread_mutex_unlock(&(file->lock)),
                    "ERROR - Mutex unlock of file failed, %s\n", file->path);
     return 0;
+}
+
+int newAccessFrom(serverFile* file, int clientFd){
+    if(!file || clientFd==-1){
+        return -1;
+    }
+    return 0;
+}
+
+wTask* taskCreate (int pipe, int workerId, int client_fd){
+    if(client_fd == -1 || workerId != -1) return NULL;
+    wTask *task;
+    task = (wTask*)malloc(sizeof(wTask));
+    task->pipeT = pipe;
+    task->worker_id = workerId;
+    task->client_fd = client_fd;
+    return task;
+}
+
+int taskDestroy(wTask* task){
+    if(task != NULL) {
+        free(task);
+        return 0;
+    }
+    return -1;
 }

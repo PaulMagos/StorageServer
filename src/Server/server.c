@@ -25,7 +25,7 @@ int main(int argc, char* argv[]){
     // Log, Config and Server Init
     if(argc == 1){
         serverInit(NULL, NULL);
-        fprintf(stderr, "No arguments, Server will start with default parameters\n");
+        fprintf(stdout, "No arguments, Server will start with default parameters\n");
     }else if(argc == 2){
         serverInit(argv[1], NULL);
     }else if(argc == 3){
@@ -35,10 +35,6 @@ int main(int argc, char* argv[]){
         fprintf(stderr, "ERROR - Too many argument, max 2 arguments: \n");
         printf("Example: ./server config_path log_directory\n");
     }
-
-
-
-
 
     // SYSCALL RESPONSE VARIABLE
     int res = 0;
@@ -75,9 +71,7 @@ int main(int argc, char* argv[]){
                            signalHandler,
                            &args
                            ),
-                   "ERROR - Signal Handler Thread Creation Failure, errno = %d", errno)
-
-
+                   "ERROR - Signal Handler Thread Creation Failure, errno = %d", errno);
     // ------------------------------------- ThreadPool -------------------------------------
     // ThreadPool Pipe
     int threadsPipe[2];
@@ -110,6 +104,11 @@ int main(int argc, char* argv[]){
     SYSCALL_EXIT(listen, res, listen(fd_server_socket, SOMAXCONN),
             "ERROR - Socket listen failure, errno = %d\n", errno)
 
+    wTask *task = malloc(sizeof(wTask));
+    task->pipeT= threadsPipe[0];
+    task->worker_id = -1;
+    task->client_fd = 1;
+    enqueue(threadPool1, taskExecute, (void*)task);
 
 
     // ------------------------------------- Clients Fds -------------------------------------
@@ -123,18 +122,18 @@ int main(int argc, char* argv[]){
     max_fd = MAX(fd_server_socket, sigHandler_Pipe[0]);
     max_fd = MAX(max_fd, threadsPipe[0]);
 
+    if(ServerStorage->stdOutput) fprintf(stdout, "Server Started Well, Waiting For Connections\n");
     // ----------------------------------- MainThreadFunc ------------------------------------
-    while (ServerStorage->status == E){
-        readySet = allSet;
-        SYSCALL_EXIT(select, res, select(max_fd+1, &readySet,NULL, NULL, NULL), "ERROR - Select failed, errno = %d", errno);
-        for(int i = 0; i <= max_fd; i++){
-            if(FD_ISSET(i, &readySet)){
-                printf("Client %d\n", i);
-                FD_CLR(i, &readySet);
-            }
-        }
-    }
-
+    /* while (ServerStorage->status == E){
+         readySet = allSet;
+         SYSCALL_EXIT(select, res, select(max_fd+1, &readySet,NULL, NULL, NULL), "ERROR - Select failed, errno = %d", errno);
+         for(int i = 0; i <= max_fd; i++){
+             if(FD_ISSET(i, &readySet)){
+                 printf("Client %d\n", i);
+                 FD_CLR(i, &readySet);
+             }
+         }
+     }*/
 
     if(stopThreadPool(threadPool1, 1) != 0){
         printf("Error - stopthreadpool, %d %d", max_fd, fd_client_socket);
@@ -314,7 +313,19 @@ static int serverConfigParser(char* path){
                 fprintf(stderr, "ERROR - Threads must be set once, multiple assignments detected\n");
                 return -1;
             }
-        } else if(strncmp(token, "Socket", 6) == 0){
+        } else if(strncmp(token, "Policy", 6) == 0){
+            if(threads == 0){
+                token = strtok_r(NULL, "\n\0", &rest);
+                if(token == NULL) return -1;
+                ServerConfig.policy = fromStringToEnumCachePolicy(token);
+            } else{
+                SYSCALL_RETURN(config_fclose, fclose(configFile),
+                               "ERROR - Closing file, errno = %d", errno)
+                fprintf(stderr, "ERROR - Policy must be set once, multiple assignments detected\n");
+                return -1;
+            }
+        }
+        else if(strncmp(token, "Socket", 6) == 0){
             if(socketSet == 0) {
                 token = strtok_r(NULL, "\n\0", &rest);
                 if (token == NULL) break;
@@ -369,7 +380,7 @@ int serverInit(char* configPath, char* logPath){
 
     ServerStorage = malloc(sizeof (fileServer));
 
-    ServerStorage->stdOutput = 0;
+    ServerStorage->stdOutput = 1;
     ServerStorage->status = E;
 
     ServerStorage->expelledFiles = 0;           // Int
@@ -424,7 +435,7 @@ static void defaultConfig(serverConfig* config){
     strncpy(config->serverSocketName, "../../tmp/cs_socket", UNIX_PATH_MAX);
 }
 
-static serverFile* replaceFile(serverFile* file1, serverFile* file2, cachePolicy policy){
+serverFile* replaceFile(serverFile* file1, serverFile* file2, cachePolicy policy){
     if(file1 == NULL && file2 == NULL) return NULL;
     if(file1 == NULL) return file2;
     if(file2 == NULL) return file1;
@@ -441,19 +452,36 @@ static serverFile* replaceFile(serverFile* file1, serverFile* file2, cachePolicy
 serverFile
 * icl_hash_toReplace(icl_hash_t *ht, cachePolicy policy){
     icl_entry_t *bucket, *curr;
-    int i;
     serverFile *file1, *file2 = NULL;
     for (int i = 0; i<ht->nbuckets; i++) {
         bucket = ht->buckets[i];
         for(curr = bucket; curr!=NULL; curr=curr->next){
             file1 = (serverFile*)curr->data;
             if(file1->deletable == 0) continue;
-            lockFile(file1, R);
-            lockFile(file2, R);
+            lockFile(file1, 0, -1);
+            lockFile(file2, 0, -1);
             file2 = replaceFile(file1, file2, policy);
-            unlockFile(file1);
-            unlockFile(file2);
+            unlockFile(file1, 0, -1);
+            unlockFile(file2, 0, -1);
         }
     }
     return file2;
+}
+
+char* fromEnumCachePolicyToString(cachePolicy policy){
+    switch (policy) {
+        case FIFO: return "FIFO";
+        case LIFO: return "LIFO";
+        case LRU: return "LRU";
+        case MRU: return "MRU";
+        default: return NULL;
+    }
+}
+
+cachePolicy fromStringToEnumCachePolicy(char* str){
+    if(strncmp(str, "FIFO", 4) == 0) return FIFO;
+    if(strncmp(str, "LIFO", 4) == 0) return LIFO;
+    if(strncmp(str, "LRU", 3) == 0) return LRU;
+    if(strncmp(str, "MRU", 3) == 0) return MRU;
+    return FIFO;
 }

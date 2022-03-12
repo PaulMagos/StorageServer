@@ -31,7 +31,7 @@ static inline void getTime(char** val){
     // filled with the corresponding values
     struct tm *local = localtime(&now);
 
-    snprintf(*val, 20, "%d-%d-%d@%d:%d:%d", local->tm_mday, local->tm_mon+1, local->tm_year+1900,
+    snprintf(*val, 20, "%d-%d-%d_%d:%d:%d", local->tm_mday, local->tm_mon+1, local->tm_year+1900,
              local->tm_hour, local->tm_min, local->tm_sec);
 }
 

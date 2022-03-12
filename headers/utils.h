@@ -11,10 +11,10 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stddef.h>
-#include <stdarg.h>
 #include <getopt.h>
 #include <dirent.h>
 #include <limits.h>
+#include <stdarg.h>
 #include <sys/un.h>
 #include <unistd.h>
 #include <libgen.h>
@@ -35,9 +35,9 @@
 #define UNIX_PATH_MAX 108 /* man 7 unix */
 
 # define tSpecCmp(a, b, CMP)                                                  \
-   (((a)->tv_sec == (b)->tv_sec) ?                                             \
-   ((a)->tv_nsec CMP (b)->tv_nsec) :                                          \
-   ((a)->tv_sec CMP (b)->tv_sec))
+   (((a).tv_sec == (b).tv_sec) ?                                             \
+   ((a).tv_nsec CMP (b).tv_nsec) :                                          \
+   ((a).tv_sec CMP (b).tv_sec))
 
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
