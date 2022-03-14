@@ -10,15 +10,10 @@ fileServer* ServerStorage;
 logFile ServerLog;
 clientList* fd_clients;
 
-int clientInit();
 int serverDestroy();
-int clientDestroy();
-int clientGetCount();
-int clientAdd(int fd);
 static void* signalHandler(void* arguments);
 int signalHandlerDestroy(pthread_t* pthread);
 int serverInit(char* configPath, char* logPath);
-static void defaultConfig(serverConfig* config);
 
 int main(int argc, char* argv[]){
     // -------------------------------------    Server   -------------------------------------
@@ -85,7 +80,6 @@ int main(int argc, char* argv[]){
         exit(EXIT_FAILURE);
     }
 
-
    // ------------------------------------- ServerSocket -------------------------------------
     // Socket creation
     int max_fd = 0;
@@ -104,11 +98,6 @@ int main(int argc, char* argv[]){
     SYSCALL_EXIT(listen, res, listen(fd_server_socket, SOMAXCONN),
             "ERROR - Socket listen failure, errno = %d\n", errno)
 
-    wTask *task = malloc(sizeof(wTask));
-    task->pipeT= threadsPipe[0];
-    task->worker_id = -1;
-    task->client_fd = 1;
-    enqueue(threadPool1, taskExecute, (void*)task);
 
 
     // ------------------------------------- Clients Fds -------------------------------------
@@ -135,6 +124,7 @@ int main(int argc, char* argv[]){
          }
      }*/
 
+    msleep(2000);
     if(stopThreadPool(threadPool1, 1) != 0){
         printf("Error - stopthreadpool, %d %d", max_fd, fd_client_socket);
     }
@@ -203,12 +193,28 @@ int clientAdd(int fd){
                    "ERROR - fd_clients unlock failure, errno = %d\n", errno)
     return 0;
 }
+int clientRemove(int fd){
+    SYSCALL_RETURN(pthread_mutex_lock, pthread_mutex_lock(&(fd_clients->lock)),
+                   "ERROR - fd_clients lock failure, errno = %d\n", errno);
+
+    int* tmp = &fd;
+    if(pullByData(&fd_clients->ClientsFds, (void*)tmp, type_int) != 0){
+        errno = EISCONN;
+        SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(fd_clients->lock)),
+                       "ERROR - fd_clients unlock failure, errno = %d\n", errno)
+        return -1;
+    }
+
+    SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(fd_clients->lock)),
+                   "ERROR - fd_clients unlock failure, errno = %d\n", errno)
+    return 0;
+}
 static void* signalHandler(void *arguments){
     sigset_t *workingSet = ((sigHandlerArgs*)arguments)->sigSet;
     int pipeFd = ((sigHandlerArgs*)arguments)->pipe;
     int signal;
     int res;
-    appendOnLog(ServerLog, "SignalHandler: Started\n");
+    appendOnLog(ServerLog, "[SignalHandler]: Started\n");
     while(1){
         pthread_exit(NULL);
         res = sigwait(workingSet, &signal);
@@ -241,7 +247,7 @@ static void* signalHandler(void *arguments){
     pthread_exit(NULL);
 }
 int signalHandlerDestroy(pthread_t* pthread){
-    appendOnLog(ServerLog, "Signal Handler: Stopped\n");
+    appendOnLog(ServerLog, "[SignalHandler]: Stopped\n");
     return pthread_join((*pthread), NULL);
 }
 static int serverConfigParser(char* path){
@@ -251,12 +257,16 @@ static int serverConfigParser(char* path){
         errno = EINVAL;
         return -1;
     }*/
+    if(path == NULL) {
+        defaultConfig(&ServerConfig);
+        return 0;
+    }
 
     // Define variables
     FILE *configFile;
     char* token, *rest;
     char fileBuffer[256];
-    int socketSet = 0;
+    int socketSet = 0, policySet = 0;
     // Config variables
     long threads = 0, max_file = 0;
     long max_bytes = 0;
@@ -314,9 +324,19 @@ static int serverConfigParser(char* path){
                 return -1;
             }
         } else if(strncmp(token, "Policy", 6) == 0){
-            if(threads == 0){
+            if( policySet == 0){
                 token = strtok_r(NULL, "\n\0", &rest);
                 if(token == NULL) return -1;
+                // De blank string
+                int c = 0, j = 0;
+                while(token[c]!='\0'){
+                    if(token[c]!=' '){
+                        token[j++]=token[c];
+                    }
+                    c++;
+                }
+                token[j]='\0';
+                policySet = 1;
                 ServerConfig.policy = fromStringToEnumCachePolicy(token);
             } else{
                 SYSCALL_RETURN(config_fclose, fclose(configFile),
@@ -360,20 +380,13 @@ static int serverConfigParser(char* path){
 }
 int serverInit(char* configPath, char* logPath){
 
-    if (configPath == NULL) defaultConfig(&ServerConfig);
-    else {
-        if (serverConfigParser(configPath) != 0) {
-            fprintf(stderr, "ERROR - Parsing config, err = %d", errno);
-        }
+    if (serverConfigParser(configPath) != 0) {
+        fprintf(stderr, "ERROR - Parsing config, err = %d", errno);
     }
-    if(logPath == NULL){
-        createLog(NULL, &ServerLog);
-    } else{
-        createLog(logPath, &ServerLog);
-    }
-
+    createLog(logPath, &ServerLog);
 
     if(clientInit() != 0){
+        closeLogStr(ServerLog);
         free(fd_clients);
         return -1;
     }
@@ -408,6 +421,7 @@ int serverInit(char* configPath, char* logPath){
     appendOnLog(ServerLog, "Max_Files: %d\n", ServerConfig.maxFile);
     appendOnLog(ServerLog, "Max_Bytes: %d\n", ServerConfig.maxByte);
     appendOnLog(ServerLog, "Thread: %d\n", ServerConfig.threadNumber);
+    appendOnLog(ServerLog, "Replacement Policy: %s\n", fromEnumCachePolicyToString(ServerConfig.policy));
     appendOnLog(ServerLog, "Socket: %s\n", ServerConfig.serverSocketName);
     logSeparator(ServerLog);
     return 0;
@@ -425,14 +439,6 @@ int serverDestroy(){
                    "ERROR - Icl_Hash destroy fault, errno = %d", errno);
     free(ServerStorage);
     return clientDestroy();
-}
-
-static void defaultConfig(serverConfig* config){
-    config->maxFile = 100;
-    config->maxByte = 15728640;
-    config->threadNumber = 15;
-    config->policy = FIFO;
-    strncpy(config->serverSocketName, "../../tmp/cs_socket", UNIX_PATH_MAX);
 }
 
 serverFile* replaceFile(serverFile* file1, serverFile* file2, cachePolicy policy){
@@ -458,11 +464,11 @@ serverFile
         for(curr = bucket; curr!=NULL; curr=curr->next){
             file1 = (serverFile*)curr->data;
             if(file1->deletable == 0) continue;
-            lockFile(file1, 0, -1);
-            lockFile(file2, 0, -1);
+            incrementLockFile(file1, 0, -1);
+            incrementLockFile(file2, 0, -1);
             file2 = replaceFile(file1, file2, policy);
-            unlockFile(file1, 0, -1);
-            unlockFile(file2, 0, -1);
+            decrementLockFile(file1, 0, -1);
+            decrementLockFile(file2, 0, -1);
         }
     }
     return file2;

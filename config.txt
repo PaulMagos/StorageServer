@@ -1,4 +1,5 @@
 Files: 100
 Bytes: 100000
-Threads: 10
+Threads: 1
+Policy: LIFO
 Socket:

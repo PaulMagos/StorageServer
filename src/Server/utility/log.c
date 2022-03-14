@@ -16,7 +16,7 @@ void createLog(char* dir, logFile* log){
     }
 
     char* time;
-    getTime(&time);
+    getTime(&time,0);
     if(time == NULL) return;
     int pathLen = strlen(directory) + strlen(time) + strlen(".txt") + 1;
     char* path = malloc(pathLen);
@@ -59,9 +59,9 @@ int appendOnLog(logFile log, char* strBuf,...){
     va_start(argList, strBuf);
 
     char* time;
-    getTime(&time);
+    getTime(&time,1);
     if(time == NULL) return -1;
-    fprintf(log->file, "%s -> ", time);
+    fprintf(log->file, "%s ->\t", time);
 
     vfprintf(log->file, strBuf, argList);
     fflush(log->file);

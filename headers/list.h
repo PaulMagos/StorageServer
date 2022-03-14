@@ -15,6 +15,12 @@ typedef struct el{
     unsigned int len;
 } list;
 
+typedef enum {
+    type_int,
+    type_char,
+    type_string,
+} Type_;
+
 typedef list* List;
 
 List returnNewList();
@@ -30,6 +36,8 @@ int pushBottom(List* myList, char* index, void* data);
 int pullTop(List* myList, char** index, void** data);
 
 int pullBottom(List* myList, char** index, void** data);
+
+int pullByData(List* myList, void* data, Type_ type);
 
 int deleteList(List* myList);
 

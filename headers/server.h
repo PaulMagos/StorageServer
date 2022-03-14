@@ -61,8 +61,7 @@ typedef struct {
     // File accessing info
     int writers;                            // Number of writers at a given moment
     int readers;                            // Number of readers at a given moment
-    int* client_fds;                        // List of all clients who have accessed this file
-    int clients;                            // Number of client who have accessed this file
+    int client_fd;                          // Fd of the client who locked the file
     int deletable;                          // 1 if deletable, 0 if not
     operation latsOp;                       // Last Operation
     struct timespec creationTime;           // Creation time of the file
@@ -182,32 +181,59 @@ wTask* taskCreate (int pipe, int workerId, int client_fd);
 */
 int taskDestroy(wTask* task);
 
+
+/**
+ *   @func  CloseConnection
+ *   @effects closes the connection to the client on fd_client, if needed unlocks all the files locked by fd_client
+ *   @param fd_client -> client_fd
+ *   @param workerId-> thread id
+ *   @return returns 0 in case everything goes right, -1 if an error occurs
+*/
+int CloseConnection(int fd_client, int workerId);
+
+/**
+ *   @func  OpenFile
+ *   @effects read from the fd_client the path and the flags for opening a file
+ *   @param fd_client -> client_fd
+ *   @param workerId-> thread id
+ *   @return returns 0 in case everything goes right, -1 if an error occurs
+*/
+int OpenFile(int fd_client, int workerId);
+
+int CloseFile(int fd_client, int workerId);
+int DeleteFile(int fd_client, int workerId);
+int ReceiveFile(int fd_client, int workerId);
+int SendFile(int fd_client, int workerId);
+int SendNFiles(int fd_client, int workerId);
+int LockFile(int fd_client, int workerId);
+int UnLockFile(int fd_client, int workerId);
+int AppendOnFile(int fd_client, int workerId);
 // ------------------------------------ Files Functions ------------------------------------
 /**
- *   @func  lockFile
- *   @effects locks the file
- *   @param file -> file for the lock operation
+ *   @func  incrementLockFile
+ *   @effects increments the writers o readers counter
+ *   @param file -> file for the operation
  *   @param mode -> lock mode, 0 read mode, 1 write mode
  *   @param locker -> if not -1, is the client fd that wants the lock
  */
-int lockFile(serverFile* file, int mode, int locker);
+int incrementLockFile(serverFile* file, int mode, int locker);
 
 /**
- *   @func  unlockFile
- *   @effects unlocks the file
- *   @param file -> file for the lock operation
+ *   @func  decrementLockFile
+ *   @effects decrements the writers o readers counter
+ *   @param file -> file for the operation
  *   @param mode -> previous lock mode, 0 read mode, 1 write mode
  *   @param locker -> if not -1, is the client fd that have locked the file before
  */
-int unlockFile(serverFile* file, int mode, int locker);
+int decrementLockFile(serverFile* file, int mode, int locker);
 
 /**
  *   @func  newAccessFrom
  *   @effects add the fd to the file openers fds
  *   @param file -> file for operation
  *   @param clientFd -> is the client fd that wants to access the file
- */
-int newAccessFrom(serverFile* file, int clientFd);
+
+int newAccessFrom(serverFile* file, int clientFd);*/
 
 /**
  * @func  Returns the file that can be replaced between file1 and file2
@@ -240,5 +266,44 @@ char* fromEnumCachePolicyToString(cachePolicy policy);
  * @returns policy in cachePolicy on success, FIFO on failure.
  */
 cachePolicy fromStringToEnumCachePolicy(char* str);
+
+// ------------------------------------ Client Functions ------------------------------------
+
+/** clientInit
+ * @func  initialize the connected clients structure
+ * @returns returns 0 in case everything goes right, -1 if an error occurs
+ */
+int clientInit();
+/** clientAdd
+ * @func  adds the client to the list of connected clients
+ * @param fd client file descriptor
+ * @returns returns 0 in case everything goes right, -1 if an error occurs
+ */
+int clientAdd(int fd);
+/** clientGetCount
+ * @func  returns the connected clients number
+ * @returns returns a number in case everything goes right, -1 if an error occurs
+ */
+int clientGetCount();
+/** clientRemove
+ * @func  removes the client from the list of connected clients
+ * @param fd client file descriptor
+ * @returns returns 0 in case everything goes right, -1 if an error occurs
+ */
+int clientRemove(int fd);
+/** clientDestroy
+ * @func  destroys the clients list ( free )
+ * @returns returns 0 in case everything goes right, -1 if an error occurs
+ */
+int clientDestroy();
+
+// ------------------------------------ Server Functions ------------------------------------
+ void defaultConfig(serverConfig* config){
+    config->maxFile = 100;
+    config->maxByte = 15728640;
+    config->threadNumber = 15;
+    config->policy = FIFO;
+    strncpy(config->serverSocketName, "../../tmp/cs_socket", UNIX_PATH_MAX);
+}
 
 #endif //STORAGESERVER_SERVER_H

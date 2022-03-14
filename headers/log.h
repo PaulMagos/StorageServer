@@ -16,7 +16,7 @@ typedef struct{
 typedef logF* logFile;
 
 // From : https://www.techiedelight.com/print-current-date-and-time-in-c/
-static inline void getTime(char** val){
+static inline void getTime(char** val, int type){
     *val = malloc(20*sizeof(char));
     if(!(*val)) return;
     // `time_t` is an arithmetic time type
@@ -31,8 +31,11 @@ static inline void getTime(char** val){
     // filled with the corresponding values
     struct tm *local = localtime(&now);
 
+    if(type == 0)
     snprintf(*val, 20, "%d-%d-%d_%d:%d:%d", local->tm_mday, local->tm_mon+1, local->tm_year+1900,
              local->tm_hour, local->tm_min, local->tm_sec);
+    else
+        snprintf(*val, 20, "%d:%d:%d", local->tm_hour, local->tm_min, local->tm_sec);
 }
 
 

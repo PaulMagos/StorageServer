@@ -69,5 +69,87 @@ static inline int writen(long fd, void *buf, size_t size) {
     return 1;
 }
 
+/** Sends operation intention to fd
+ *
+ *   \retval -1   error (errno settato)
+ *   \retval  0   if success
+ */
+int sendOp(int fd, operation op){
+    if(writen((long)fd, &op,sizeof(operation)) == -1){
+        fprintf(stderr,"ERROR: Send operation - Sending operation to %d, errno = %d\n", fd, errno);
+        errno = EBADMSG;
+        return -1;
+    }
+    return 0;
+}
+
+/** Reads the operation intention from fd
+ *
+ *   \retval -1   error (errno settato)
+ *   \retval  0   if client disconnected
+ *   \retval  readen size if success
+ */
+int readOp(int fd, operation* op){
+    int res = 0;
+    if((res = readn((long)fd, &(*op),sizeof(operation))) == -1){
+        if(writen((long)fd, &errno, sizeof(int)) == -1){
+            fprintf(stderr,"ERROR: Read operation - Send error to %d, errno = %d\n", fd, errno);
+        }
+        fprintf(stderr,"ERROR: Read operation - Read operation from %d, errno = %d\n", fd, errno);
+        errno = EBADMSG;
+        return -1;
+    } else if(res == 0){
+        // Client disconnected
+        return 0;
+    }
+    return res;
+}
+
+/** Reads Data from fd and saves them in len and buffer
+ *
+ *   \retval -1   error (errno settato)
+ *   \retval  0   if success
+ */
+int readDataLength(int fd, int* len, void* buffer){
+    if(readn((long)fd, &len, sizeof(int)) == -1) {
+        fprintf(stderr, "ERROR - Reading length from %d, errno = %d", fd, EBADMSG);
+        errno = EBADMSG;
+        return -1;
+    }
+    buffer = malloc(*len);
+    if(!(buffer)) {
+        errno = ENOMEM;
+        return -1;
+    }
+    if( readn((long)fd, &(buffer), *len) == -1) {
+        fprintf(stderr, "ERROR - Reading content from %d, errno = %d", fd, EBADMSG);
+        errno = EBADMSG;
+        return -1;
+    }
+    return 0;
+}
+
+/** Sends data to the server, from len and buffer
+ *
+ *   \retval -1   error (errno settato)
+ *   \retval  0   if success
+ */
+int writeDataLength(int fd, int* len, void* buffer){
+    if(!(buffer) || *len < 0) {
+        errno = EINVAL;
+        return -1;
+    }
+    if(writen((long)fd, &len, sizeof(int)) == -1) {
+        fprintf(stderr, "ERROR - Sending length to %d, errno = %d", fd, EBADMSG);
+        errno = EBADMSG;
+        return -1;
+    }
+    if(writen((long)fd, &(buffer), *len) == -1) {
+        fprintf(stderr, "ERROR - Sending content to %d, errno = %d", fd, EBADMSG);
+        errno = EBADMSG;
+        return -1;
+    }
+    return 0;
+}
 
 #endif /* CONN_H */

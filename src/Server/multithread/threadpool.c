@@ -4,6 +4,11 @@
 
 #include "../../../headers/server.h"
 
+typedef struct {
+    threadPool* tPool;
+    int id;
+} threadIdAndThreadPool;
+
 static queueTask* getTask(threadPool* tPool){
     queueTask* tmpTask;
 
@@ -36,29 +41,19 @@ static void threadPoolTaskDestroy(queueTask* task){
 }
 
 static void *threadPoolWorker(void* arg){
-    threadPool* tmpPool  = arg;
+    threadPool* tmpPool  = ((threadIdAndThreadPool*)arg)->tPool;
+    int id = ((threadIdAndThreadPool*)arg)->id;
+    free(arg);
     queueTask* tmpTask;
-    pthread_t self = pthread_self();
-    int id = -1;
-    for(int i = 0; i < tmpPool->threadCnt; i++){
-        if(pthread_equal(self, tmpPool->workers[i])) {
-            id = i;
-            break;
-        }
-    }
-    appendOnLog(ServerLog, "Thread %d: Started\n", id);
+    appendOnLog(ServerLog, "[Thread %d]: Started\n", id);
 
     while (1){
         pthread_mutex_lock(&(tmpPool->lock));
         while ( tmpPool->taskHead == NULL && tmpPool->stop==0){
             pthread_cond_wait(&(tmpPool->work_cond), &(tmpPool->lock));
         }
-
         if(tmpPool->stop>1) break;
-
         if(tmpPool->stop==1 && tmpPool->taskN == 0) break;
-
-
         tmpTask = getTask(tmpPool);
         tmpPool->taskN--;
         pthread_mutex_unlock(&(tmpPool->lock));
@@ -70,7 +65,7 @@ static void *threadPoolWorker(void* arg){
         }
     }
     pthread_mutex_unlock(&(tmpPool->lock));
-    appendOnLog(ServerLog, "Thread %d: Stopped\n", id);
+    appendOnLog(ServerLog, "[Thread %d]: Stopped\n", id);
     pthread_exit(NULL);
 }
 
@@ -102,15 +97,20 @@ threadPool* initThreadPool(int threads){
         return NULL;
     }
 
+    threadIdAndThreadPool* args[threadPool1->maxThreads];
     for (int i = 0; i < threadPool1->maxThreads; i++){
-        if(pthread_create(&(threadPool1->workers[i]), NULL, threadPoolWorker, (void*)threadPool1) != 0){
+        args[i] = malloc(sizeof(threadIdAndThreadPool));
+        args[i]->tPool = threadPool1;
+        args[i]->id = i;
+        if(pthread_create(&(threadPool1->workers[i]), NULL, threadPoolWorker, (void*)args[i]) != 0){
+            for(int j = 0; j<i; j++) free(args[j]);
             stopThreadPool(threadPool1, 1);
             errno = EFAULT;
             return NULL;
         }
         threadPool1->threadCnt++;
     }
-    appendOnLog(ServerLog, "ThreadPool: Started\n");
+    appendOnLog(ServerLog, "[ThreadPool]: Started\n");
     return threadPool1;
 }
 
@@ -163,7 +163,7 @@ int stopThreadPool(threadPool* tPool, int hard_off){
 
     freePool(tPool);
 
-    appendOnLog(ServerLog, "ThreadPool: Stopped\n");
+    appendOnLog(ServerLog, "[ThreadPool]: Stopped\n");
     return 0;
 }
 

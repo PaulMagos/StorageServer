@@ -14,11 +14,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-
-#include "../../headers/icl_hash.h"
-
-#include "../../headers/server.h"
 #include <limits.h>
+#include "../../headers/icl_hash.h"
 
 
 #define BITS_IN_int     ( sizeof(int) * CHAR_BIT )
