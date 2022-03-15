@@ -15,7 +15,7 @@ List returnNewList(){
 
 
 int createList(List* myList){
-    *myList =  calloc (1, sizeof (list));
+    *myList =  calloc( 1, sizeof (list));
     if(!(*myList)) {
         // ERRORE DOVUTO ALL'ALLOCAZIONE NON ANDATA A BUON FINE
         errno = ENOMEM;

@@ -29,6 +29,7 @@ typedef enum{
     O_UNLOCK = 4,
     O_WRITE = 8,
     O_READ = 16,
+    O_APPND = 32,
 } fileFlags;
 
 // Lezione 9 laboratorio, funzione di scrittura e lettura per evitare che rimangano dati sul buffer non gestiti
@@ -81,7 +82,7 @@ static inline int writen(long fd, void *buf, size_t size) {
  *   \retval -1   error (errno settato)
  *   \retval  0   if success
  */
-int sendOp(int fd, operation op){
+static inline int sendOp(int fd, operation op){
     if(writen((long)fd, &op,sizeof(operation)) == -1){
         fprintf(stderr,"ERROR: Send operation - Sending operation to %d, errno = %d\n", fd, errno);
         errno = EBADMSG;
@@ -96,7 +97,7 @@ int sendOp(int fd, operation op){
  *   \retval  0   if client disconnected
  *   \retval  readen size if success
  */
-int readOp(int fd, operation* op){
+static inline int readOp(int fd, operation* op){
     int res = 0;
     if((res = readn((long)fd, &(*op),sizeof(operation))) == -1){
         if(writen((long)fd, &errno, sizeof(int)) == -1){
@@ -117,7 +118,7 @@ int readOp(int fd, operation* op){
  *   \retval -1   error (errno settato)
  *   \retval  0   if success
  */
-int readDataLength(int fd, int* len, void* buffer){
+static inline int readDataLength(int fd, int* len, void* buffer){
     if(readn((long)fd, &len, sizeof(int)) == -1) {
         fprintf(stderr, "ERROR - Reading length from %d, errno = %d", fd, EBADMSG);
         errno = EBADMSG;
@@ -128,7 +129,7 @@ int readDataLength(int fd, int* len, void* buffer){
         errno = ENOMEM;
         return -1;
     }
-    if(len>0){
+    if(len!=0){
         if( readn((long)fd, &(buffer), *len) == -1) {
             fprintf(stderr, "ERROR - Reading content from %d, errno = %d", fd, EBADMSG);
             errno = EBADMSG;
@@ -143,7 +144,7 @@ int readDataLength(int fd, int* len, void* buffer){
  *   \retval -1   error (errno settato)
  *   \retval  0   if success
  */
-int writeDataLength(int fd, int* len, void* buffer){
+static inline int writeDataLength(int fd, int* len, void* buffer){
     if(!(buffer) || *len < 0) {
         errno = EINVAL;
         return -1;

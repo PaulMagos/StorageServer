@@ -348,7 +348,6 @@ int writeFile(const char* pathname, const char* dirname){
     return 0;
 }
 
-
 int appendToFile(const char* pathname, void* buf, size_t size, const char* dirname){
     if (pathname == NULL){
         errno = EINVAL;
@@ -568,8 +567,8 @@ int removeFile(const char* pathname){
 }
 
 int saveIntoDir(const char* dir, int numOfFiles){
-    bool errors = false;
-    bool save = (dir==NULL)? false : true;
+    int errors = 0;
+    int save = (dir==NULL)? 0 : 1;
     int len, readed;
     void* path;
     size_t fileDim;

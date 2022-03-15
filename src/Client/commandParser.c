@@ -272,8 +272,12 @@ void commandHandler(List* commandList){
                     } else{
                         stat(path, &dir_Details);
                         if(S_ISREG(dir_Details.st_mode)){
+                            SYSCALL_EXIT(openFile, scRes, openFile(path, 0), (pFlag) ?
+                                         "ERROR - Couldn't open file %s from server, errno = %d\n" : "", token, errno);
                             SYSCALL_EXIT(lockFile, scRes, lockFile(path),
                                          "ERROR - lock file %s, errno = %d", token, path);
+                            SYSCALL_EXIT(closeFile, scRes, closeFile(path), (pFlag) ?
+                                        "ERROR - Couldn't close file %s on server, errno = %d\n" : "", token, errno);
                             if(pFlag) fprintf(stdout, "SUCCESS - %s file locked", token);
                         }else{
                             fprintf(stderr, "ERROR - '%s' not a file", token);
@@ -293,8 +297,12 @@ void commandHandler(List* commandList){
                     } else{
                         stat(path, &dir_Details);
                         if(S_ISREG(dir_Details.st_mode)){
+                            SYSCALL_EXIT(openFile, scRes, openFile(path, 0), (pFlag) ?
+                                         "ERROR - Couldn't open file %s from server, errno = %d\n" : "", token, errno);
                             SYSCALL_EXIT(unlockFile, scRes, unlockFile(path),
                                          "ERROR - Unlock file %s, errno = %d", token, path);
+                            SYSCALL_EXIT(closeFile, scRes, closeFile(path), (pFlag) ?
+                                        "ERROR - Couldn't close file %s on server, errno = %d\n" : "", token, errno);
                             if(pFlag) fprintf(stdout, "SUCCESS - %s file unlocked", token);
                         }else{
                             fprintf(stderr, "ERROR - '%s' not a file", token);

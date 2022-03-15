@@ -4,7 +4,6 @@
 
 #ifndef STORAGESERVER_SERVER_H
 #define STORAGESERVER_SERVER_H
-#define DEFAULT_CONFIG {100, 15728640, 15, 0, "../../tmp/cs_socket"}
 
 #include "list.h"
 #include "conn.h"
@@ -285,56 +284,44 @@ void freeFile(void* file);
 
 /** clientInit
  * @func  initialize the connected clients structure
- * @param clientList1 thread safe list of clients
  * @returns returns 0 in case everything goes right, -1 if an error occurs
  */
-int clientInit(clientList* clientList1);
+int clientInit();
 /** clientAdd
  * @func  adds the client to the list of connected clients
- * @param clientList1 thread safe list of clients
  * @param fd client file descriptor
  * @returns returns 0 in case everything goes right, -1 if an error occurs
  */
-int clientAdd(clientList* clientList1, int fd);
+int clientAdd(int fd);
 /** clientGetCount
  * @func  returns the connected clients number
- * @param clientList1 thread safe list of clients
  * @returns returns a number in case everything goes right, -1 if an error occurs
  */
-int clientGetCount(clientList* clientList1);
+int clientGetCount();
 /** clientRemove
  * @func  removes the client from the list of connected clients
- * @param clientList1 thread safe list of clients
  * @param fd client file descriptor
  * @returns returns 0 in case everything goes right, -1 if an error occurs
  */
-int clientRemove(clientList* clientList1, int fd);
+int clientRemove(int fd);
 /** clientDestroy
  * @func  destroys the clients list ( free )
- * @param clientList1 thread safe list of clients
  * @returns returns 0 in case everything goes right, -1 if an error occurs
  */
-int clientDestroy(clientList* clientList1);
+int clientDestroy();
 /** clientContains
  * @func  destroys the clients list ( free )
- * @param clientList1 thread safe list of clients
  * @param fd client file descriptor
  * @returns returns 0 in case fd is in clientList1, -1 if not
  */
-int clientContains(clientList* clientList1, int fd);
+int clientContains(int fd);
 
 // ------------------------------------ Server Functions ------------------------------------
 /** defaultConfig
  * @func  Sets the Server config with default settings
  * @param config Config structure to set
  */
- void defaultConfig(serverConfig* config){
-    config->maxFile = 100;
-    config->maxByte = 15728640;
-    config->threadNumber = 15;
-    config->policy = FIFO;
-    strncpy(config->serverSocketName, "../../tmp/cs_socket", UNIX_PATH_MAX);
-}
+ void defaultConfig(serverConfig* config);
 
 /** fileNumIncrement
  * @func  Increments the Server momentum number of files

@@ -136,89 +136,91 @@ int main(int argc, char* argv[]){
 }
 
 
-int clientInit(clientList* clientList1){
-    SYSCALL_RETURN(listCreation, createList(&clientList1->ClientsFds),
+int clientInit(){
+    fd_clients = malloc(sizeof(clientList));
+    if(fd_clients == NULL) return -1;
+    SYSCALL_RETURN(listCreation, createList(&fd_clients->ClientsFds),
                    "ERROR - Client fd list creation, errno = %d\n", errno)
-    SYSCALL_RETURN(pthread_mutex_init, pthread_mutex_init(&(clientList1->lock), NULL),
+    SYSCALL_RETURN(pthread_mutex_init, pthread_mutex_init(&(fd_clients->lock), NULL),
                    "ERROR - Mutex init Failure clients_fd structure, errno = %d\n", errno);
     return 0;
 }
-int clientDestroy(clientList* clientList1){
+int clientDestroy(){
     void * fdToClose;
-    while (pullTop(&(clientList1->ClientsFds), NULL, &fdToClose) == 0){
+    while (pullTop(&(fd_clients->ClientsFds), NULL, &fdToClose) == 0){
         SYSCALL_RETURN(fdClose, close(*(int*)(fdToClose)),
                        "ERROR - Closing fd %d", *(int*)(fdToClose));
     }
-    SYSCALL_RETURN(deleteList, deleteList(&(clientList1->ClientsFds)),
+    SYSCALL_RETURN(deleteList, deleteList(&(fd_clients->ClientsFds)),
                    "ERROR - Deleting client list, errno = %d", errno);
-    pthread_mutex_destroy(&(clientList1->lock));
-    free(clientList1);
+    pthread_mutex_destroy(&(fd_clients->lock));
+    free(fd_clients);
     return 0;
 }
-int clientGetCount(clientList* clientList1){
-    SYSCALL_RETURN(pthread_mutex_lock, pthread_mutex_lock(&(clientList1->lock)),
+int clientGetCount(){
+    SYSCALL_RETURN(pthread_mutex_lock, pthread_mutex_lock(&(fd_clients->lock)),
                    "ERROR - fd_clients lock failure, errno = %d\n", errno)
-    int tmp = clientList1->ClientsFds->len;
-    SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(clientList1->lock)),
+    int tmp = fd_clients->ClientsFds->len;
+    SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(fd_clients->lock)),
                    "ERROR - fd_clients unlock failure, errno = %d\n", errno)
     return tmp;
 }
-int clientAdd(clientList* clientList1, int fd){
-    SYSCALL_RETURN(pthread_mutex_lock, pthread_mutex_lock(&(clientList1->lock)),
+int clientAdd(int fd){
+    SYSCALL_RETURN(pthread_mutex_lock, pthread_mutex_lock(&(fd_clients->lock)),
                    "ERROR - fd_clients lock failure, errno = %d\n", errno)
 
-    if(searchInt(clientList1->ClientsFds->head, fd) == 1){
+    if(searchInt(fd_clients->ClientsFds->head, fd) == 1){
         errno = EISCONN;
-        SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(clientList1->lock)),
+        SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(fd_clients->lock)),
                        "ERROR - fd_clients unlock failure, errno = %d\n", errno)
         return -1;
     }
 
     int* newFd = malloc(sizeof(int));
     if(newFd == NULL){
-        SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(clientList1->lock)),
+        SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(fd_clients->lock)),
                        "ERROR - fd_clients unlock failure, errno = %d\n", errno)
         return -1;
     }
 
     *newFd = fd;
-    if(pushBottom(&(clientList1->ClientsFds), NULL, newFd) != 0){
-        SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(clientList1->lock)),
+    if(pushBottom(&(fd_clients->ClientsFds), NULL, newFd) != 0){
+        SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(fd_clients->lock)),
                        "ERROR - fd_clients unlock failure, errno = %d\n", errno)
         return -1;
     }
-    SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(clientList1->lock)),
+    SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(fd_clients->lock)),
                    "ERROR - fd_clients unlock failure, errno = %d\n", errno)
     return 0;
 }
-int clientRemove(clientList* clientList1, int fd){
-    SYSCALL_RETURN(pthread_mutex_lock, pthread_mutex_lock(&(clientList1->lock)),
+int clientRemove(int fd){
+    SYSCALL_RETURN(pthread_mutex_lock, pthread_mutex_lock(&(fd_clients->lock)),
                    "ERROR - fd_clients lock failure, errno = %d\n", errno);
 
     int* tmp = &fd;
-    if(pullByData(&clientList1->ClientsFds, (void*)tmp, type_int) != 0){
+    if(pullByData(&fd_clients->ClientsFds, (void*)tmp, type_int) != 0){
         errno = EISCONN;
-        SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(clientList1->lock)),
+        SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(fd_clients->lock)),
                        "ERROR - fd_clients unlock failure, errno = %d\n", errno)
         return -1;
     }
 
-    SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(clientList1->lock)),
+    SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(fd_clients->lock)),
                    "ERROR - fd_clients unlock failure, errno = %d\n", errno)
     return 0;
 }
-int clientContains(clientList* clientList1, int fd){
-    SYSCALL_RETURN(pthread_mutex_lock, pthread_mutex_lock(&(clientList1->lock)),
+int clientContains(int fd){
+    SYSCALL_RETURN(pthread_mutex_lock, pthread_mutex_lock(&(fd_clients->lock)),
                    "ERROR - fd_clients lock failure, errno = %d\n", errno)
 
-    if(searchInt(clientList1->ClientsFds->head, fd) != 1){
+    if(searchInt(fd_clients->ClientsFds->head, fd) != 1){
         errno = EINVAL;
-        SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(clientList1->lock)),
+        SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(fd_clients->lock)),
                        "ERROR - fd_clients unlock failure, errno = %d\n", errno)
         return -1;
     }
 
-    SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(clientList1->lock)),
+    SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(fd_clients->lock)),
                    "ERROR - fd_clients unlock failure, errno = %d\n", errno)
     return 0;
 }
@@ -451,7 +453,7 @@ int serverDestroy(){
     SYSCALL_RETURN(ServerInit_hashDestroy, icl_hash_destroy(ServerStorage->filesTable, free, free),
                    "ERROR - Icl_Hash destroy fault, errno = %d", errno);
     free(ServerStorage);
-    return clientDestroy(fd_clients);
+    return clientDestroy();
 }
 
 serverFile* replaceFile(serverFile* file1, serverFile* file2, cachePolicy policy){
@@ -467,8 +469,7 @@ serverFile* replaceFile(serverFile* file1, serverFile* file2, cachePolicy policy
     }
 }
 
-serverFile
-* icl_hash_toReplace(icl_hash_t *ht, cachePolicy policy){
+serverFile * icl_hash_toReplace(icl_hash_t *ht, cachePolicy policy){
     icl_entry_t *bucket, *curr;
     serverFile *file1, *file2 = NULL;
     for (int i = 0; i<ht->nbuckets; i++) {
@@ -535,4 +536,12 @@ void fileBytesIncrement(size_t size){
 
 void fileBytesDecrement(size_t size){
     ServerStorage->actualFilesNumber -= size;
+}
+
+void defaultConfig(serverConfig* config){
+    config->maxFile = 100;
+    config->maxByte = 15728640;
+    config->threadNumber = 15;
+    config->policy = FIFO;
+    strncpy(config->serverSocketName, "../../tmp/cs_socket", UNIX_PATH_MAX);
 }

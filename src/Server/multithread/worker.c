@@ -5,7 +5,7 @@
 #include "../../../headers/server.h"
 
 
-int opExecute(int fd, int workerId, operation op);
+int opExecute(int fd, int workerId, int mainPipe, operation op);
 int ExpelledHandler(int fd, int workerId, List expelled);
 
 void taskExecute(void* argument){
@@ -18,7 +18,7 @@ void taskExecute(void* argument){
     wTask *tmpArgs = argument;
     int myId = tmpArgs->worker_id;
     int fd_client = (int)tmpArgs->client_fd;
-    //int pipe = tmpArgs->pipeT;
+    int pipeM = tmpArgs->pipeT;
     free(argument);
 
     appendOnLog(ServerLog, "\t[Thread %d]:\t Client %d serving\n", myId, fd_client);
@@ -35,17 +35,17 @@ void taskExecute(void* argument){
             fprintf(stderr, "ERROR - Closing connection to client fault, errno = %d", errno);
         return;
     } else{
-        if(opExecute(fd_client, myId, operation1) == 1) {
+        if(opExecute(fd_client, myId, pipeM,operation1) == 1) {
             int success = 0;
             if(writen(fd_client, &success, sizeof(int)) == -1){
                 fprintf(stderr, "ERROR - Sending success to %d, errno = %d", fd_client, errno);
             }
         }
     }
-
+    appendOnLog(ServerLog, "\t[Thread %d]:\t Client %d served\n", myId, fd_client);
 }
 
-int opExecute(int fd, int workerId, operation op){
+int opExecute(int fd, int workerId, int mainPipe, operation op){
     int res;
     switch (op) {
         case of:{
@@ -87,11 +87,14 @@ int opExecute(int fd, int workerId, operation op){
     }
 
     if(res == -1){
-        // File open error, send error to client
+        // Operation error error, send error to client
         if(writen((int)fd, &errno, sizeof(int )) == -1){
             fprintf(stderr, "ERROR - Sending info to client fault, errno = %d", errno);
         }
         if(errno == EBADMSG){
+            if(writen(mainPipe, &fd, sizeof(int))==-1){
+                fprintf(stderr, "ERROR - Thread %d: writing on pipe", workerId);
+            }
             if(CloseConnection((int)fd, (int)workerId) == -1)
                 fprintf(stderr, "ERROR - Closing connection to client fault, errno = %d", errno);
         }
@@ -109,7 +112,6 @@ int opExecute(int fd, int workerId, operation op){
     }
     return 0;
 }
-
 
 int CloseConnection(int fd_client, int workerId){
     if(fd_client == -1 || workerId == -1){
@@ -142,7 +144,7 @@ int CloseConnection(int fd_client, int workerId){
                    "Error - Server unLock failure, errno = %d", errno);
 
     // Removing client from connected clients
-    if(clientRemove(fd_clients, fd_client) != 0) return -1;
+    if(clientRemove(fd_client) != 0) return -1;
     return 0;
 }
 
@@ -486,9 +488,90 @@ int OpenFile(int fd_client, int workerId){
         }
     }
 }
+int CloseFile(int fd_client, int workerId){
+    if(fd_client == -1 || workerId == -1) {
+        errno = EINVAL;
+        return -1;
+    }
 
-int CloseFile(int fd_client, int workerId);
-int DeleteFile(int fd_client, int workerId);
+    int length;
+    void* buffer;
+    readDataLength(fd_client, &length, &buffer);
+
+    SYSCALL_RETURN(pthred_lock, pthread_mutex_lock(&(ServerStorage->lock)),
+                   "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
+    serverFile* File = icl_hash_find(ServerStorage->filesTable, buffer);
+    if(File==NULL){
+        free(buffer);
+        errno = ENOENT;
+        SYSCALL_RETURN(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
+                       "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
+        return -1;
+    }
+    fileWritersIncrement(File);
+
+    SYSCALL_RETURN(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
+                   "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
+    if(searchInt(File->client_fd->head, fd_client) == 0){
+        free(buffer);
+        errno = EACCES;
+        fileWritersDecrement(File);
+        return -1;
+    }
+    int* tmp = &fd_client;
+    if(pullByData(&File->client_fd, tmp, type_int)==-1){
+        free(buffer);
+        fileWritersDecrement(File);
+        return -1;
+    }
+    free(buffer);
+    fileWritersDecrement(File);
+    appendOnLog(ServerLog, "[Thread %d]: File %s closed by client %d", workerId, File->path, fd_client);
+    return 0;
+}
+int DeleteFile(int fd_client, int workerId){
+    if(fd_client == -1 || workerId == -1) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    int length;
+    void* buffer;
+    readDataLength(fd_client, &length, &buffer);
+
+    SYSCALL_RETURN(pthred_lock, pthread_mutex_lock(&(ServerStorage->lock)),
+                   "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
+    serverFile* File = icl_hash_find(ServerStorage->filesTable, buffer);
+    if(File==NULL){
+        free(buffer);
+        errno = ENOENT;
+        SYSCALL_RETURN(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
+                       "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
+        return -1;
+    }
+    fileWritersIncrement(File);
+    if(searchInt(File->client_fd->head, fd_client) == 0){
+        free(buffer);
+        errno = EACCES;
+        fileWritersDecrement(File);
+        return -1;
+    }
+    int size = File->size;
+    if(icl_hash_delete(ServerStorage->filesTable, buffer, free, freeFile) == -1){
+        free(buffer);
+        fileWritersDecrement(File);
+        SYSCALL_RETURN(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
+                       "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
+        return -1;
+    }
+    fileBytesDecrement((size_t)size);
+    fileNumDecrement();
+    SYSCALL_RETURN(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
+                   "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
+    appendOnLog(ServerLog,"[Thread %d]: File %s deleted by client %d", workerId, buffer, fd_client);
+    free(buffer);
+    return 0;
+}
 int ReceiveFile(int fd_client, int workerId){
     if(fd_client == -1 || workerId == -1) {
         errno = EINVAL;
@@ -538,7 +621,6 @@ int ReceiveFile(int fd_client, int workerId){
                        "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
         return -1;
     }
-
     List expelled;
     createList(&expelled);
     while (ServerStorage->actualFilesBytes+(size_t)length > ServerConfig.maxByte){
@@ -563,8 +645,7 @@ int ReceiveFile(int fd_client, int workerId){
     File->latsOp = O_WRITE;
     File->size = (size_t)length;
     fileWritersDecrement(File);
-    // File Found, say it to Client
-    int success = 0;
+    // Success till here
     if(writen(fd_client, &success, sizeof(int)) == -1){
         fprintf(stderr, "ERROR - Sending success to %d, errno = %d", fd_client, errno);
     }
@@ -597,6 +678,13 @@ int SendFile(int fd_client, int workerId){
     }
     free(buffer);
     fileReadersIncrement(File);
+    if(File->lockFd != -1 && File->lockFd != fd_client){
+        errno = EACCES;
+        fileReadersDecrement(File);
+        SYSCALL_RETURN(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
+                       "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
+        return -1;
+    }
     SYSCALL_RETURN(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
                    "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
 
@@ -620,14 +708,263 @@ int SendFile(int fd_client, int workerId){
     return 0;
 
 }
-int SendNFiles(int fd_client, int workerId);
-int LockFile(int fd_client, int workerId);
-int UnLockFile(int fd_client, int workerId);
-int AppendOnFile(int fd_client, int workerId);
+int SendNFiles(int fd_client, int workerId){
+    if(fd_client == -1 || workerId == -1) {
+        errno = EINVAL;
+        return -1;
+    }
 
+    int readed;
+    int numberOfFiles;
+    if((readed = readn(fd_client, &numberOfFiles, sizeof(int))) == -1){
+        fprintf(stderr, "ERROR - Reading number of files to send from client %d", fd_client);
+        errno = EBADMSG;
+        return -1;
+    }
+    SYSCALL_RETURN(pthred_lock, pthread_mutex_lock(&(ServerStorage->lock)),
+                   "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
+    numberOfFiles = (ServerStorage->actualFilesNumber>numberOfFiles)? ServerStorage->actualFilesNumber:numberOfFiles;
+    List expelled;
+    createList(&expelled);
+
+    icl_entry_t *bucket, *curr;
+    serverFile* file;
+    for(int i = 0; i < ServerStorage->filesTable->nbuckets && (int)expelled->len<numberOfFiles; i++){
+        bucket = ServerStorage->filesTable->buckets[i];
+        for(curr = bucket; curr!=NULL && (int)expelled->len<numberOfFiles; curr=curr->next){
+            file = (serverFile*) curr->data;
+            fileReadersIncrement(file);
+            if(file->lockFd!=-1 && file->lockFd!=fd_client) {
+                fileReadersDecrement(file);
+                continue;
+            }
+            if(pushTop(&expelled, file->path, NULL) == -1){
+                fprintf(stderr, "ERROR - List push failure for sendNFiles, %d", errno);
+                fileReadersDecrement(file);
+                return -1;
+            }
+        }
+    }
+
+    SYSCALL_RETURN(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
+                   "ERROR - ServerStorage lock release failure, errno = %d", errno)
+    // Success till here, say it to Client
+    int success = 0;
+    if(writen(fd_client, &success, sizeof(int)) == -1){
+        fprintf(stderr, "ERROR - Sending success to %d, errno = %d", fd_client, errno);
+    }
+
+    appendOnLog(ServerLog, "[Thread %d]: Send %d files to client %d", workerId, numberOfFiles, fd_client);
+    if(ExpelledHandler(fd_client, workerId, expelled)!=0){
+        deleteList(&expelled);
+        errno = EBADMSG;
+        return -1;
+    }
+    return 0;
+}
+int LockFile(int fd_client, int workerId){
+    if(fd_client == -1 || workerId == -1) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    int length;
+    void* buffer;
+    readDataLength(fd_client, &length, &buffer);
+    SYSCALL_RETURN(pthred_lock, pthread_mutex_lock(&(ServerStorage->lock)),
+                   "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
+    serverFile* File = icl_hash_find(ServerStorage->filesTable, buffer);
+    if(File==NULL){
+        free(buffer);
+        errno = ENOENT;
+        SYSCALL_RETURN(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
+                       "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
+        return -1;
+    }
+    free(buffer);
+    fileWritersIncrement(File);
+    SYSCALL_RETURN(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
+                   "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
+    if(File->lockFd!=-1){
+        if(File->lockFd != fd_client){
+            errno = EBUSY;
+            fileWritersDecrement(File);
+            SYSCALL_RETURN(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
+                           "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
+            return -1;
+        }
+    }
+    File->lockFd = fd_client;
+    fileWritersDecrement(File);
+    appendOnLog(ServerLog, "[Thread %d]: File %s locked by client %d", workerId, File->path, fd_client);
+    return 0;
+}
+int UnLockFile(int fd_client, int workerId){
+    if(fd_client == -1 || workerId == -1) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    int length;
+    void* buffer;
+    readDataLength(fd_client, &length, &buffer);
+    SYSCALL_RETURN(pthred_lock, pthread_mutex_lock(&(ServerStorage->lock)),
+                   "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
+    serverFile* File = icl_hash_find(ServerStorage->filesTable, buffer);
+    if(File==NULL){
+        free(buffer);
+        errno = ENOENT;
+        SYSCALL_RETURN(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
+                       "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
+        return -1;
+    }
+    free(buffer);
+    fileWritersIncrement(File);
+    SYSCALL_RETURN(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
+                   "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
+    if(File->lockFd!=-1){
+        if(File->lockFd != fd_client){
+            errno = EBUSY;
+            fileWritersDecrement(File);
+            SYSCALL_RETURN(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
+                           "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
+            return -1;
+        }
+    }
+    if(File->lockFd==-1){
+        errno = EPERM;
+        fileWritersDecrement(File);
+        SYSCALL_RETURN(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
+                       "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
+        return -1;
+    }
+    File->lockFd = -1;
+    fileWritersDecrement(File);
+    appendOnLog(ServerLog, "[Thread %d]: File %s unlocked by client %d", workerId, File->path, fd_client);
+    return 0;
+}
+int AppendOnFile(int fd_client, int workerId){
+    if(fd_client == -1 || workerId == -1) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    int length;
+    void* buffer;
+    readDataLength(fd_client, &length, &buffer);
+
+    SYSCALL_RETURN(pthred_lock, pthread_mutex_lock(&(ServerStorage->lock)),
+                   "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
+    serverFile* File = icl_hash_find(ServerStorage->filesTable, buffer);
+    if(File==NULL){
+        free(buffer);
+        errno = ENOENT;
+        SYSCALL_RETURN(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
+                       "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
+        return -1;
+    }
+    free(buffer);
+    fileWritersIncrement(File);
+
+    if(searchInt(File->client_fd->head, fd_client)==0 || (File->lockFd!=-1 && File->lockFd!=fd_client)){
+        // File already exists, use append to add new content
+        fileWritersDecrement(File);
+        SYSCALL_RETURN(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
+                       "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
+        return -1;
+    }
+
+    // File Ready, say it to Client
+    int success = 0;
+    if(writen(fd_client, &success, sizeof(int)) == -1){
+        fprintf(stderr, "ERROR - Sending success to %d, errno = %d", fd_client, errno);
+    }
+
+
+    readDataLength(fd_client, &length, &buffer);
+
+    if((size_t)length > ServerConfig.maxByte){
+        errno = EFBIG;
+        free(buffer);
+        fileWritersDecrement(File);
+        SYSCALL_RETURN(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
+                       "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
+        return -1;
+    }
+
+    List expelled;
+    createList(&expelled);
+    while (ServerStorage->actualFilesBytes-File->size+(size_t)length > ServerConfig.maxByte){
+        serverFile* file = icl_hash_toReplace(ServerStorage->filesTable, ServerConfig.policy);
+        if(file == NULL) {
+            free(buffer);
+            fileWritersDecrement(File);
+            SYSCALL_RETURN(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
+                           "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
+            return -1;
+        }
+        pushTop(&expelled, file->path, NULL);
+    }
+
+    fileBytesIncrement((size_t)length);
+    SYSCALL_RETURN(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
+                   "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
+
+    if(File->content!=NULL) free(File->content);
+    File->content = malloc(sizeof((size_t)length));
+    memcpy(File->content, buffer, (size_t)length);
+    free(buffer);
+    File->latsOp = O_APPND;
+    File->size = (size_t)length;
+    fileWritersDecrement(File);
+    // Success till here
+    if(writen(fd_client, &success, sizeof(int)) == -1){
+        fprintf(stderr, "ERROR - Sending success to %d, errno = %d", fd_client, errno);
+    }
+    appendOnLog(ServerLog, "[Thread %d]: File %s updated by client %d", workerId, File->path, fd_client);
+    if(ExpelledHandler(fd_client, workerId, expelled)==-1){
+        deleteList(&expelled);
+        errno = EBADMSG;
+        return -1;
+    }
+    return 0;
+}
 
 int ExpelledHandler(int fd, int workerId, List expelled){
+    if(expelled==NULL) return -1;
+    if(writen(fd, &(expelled->len), sizeof(int)) == -1){
+        fprintf(stderr, "ERROR - Sending number of files to %d", fd);
+        return -1;
+    }
+    int num = 0;
 
+    char* index;
+    int len;
+    serverFile* File;
+    while (expelled->len!=0){
+        pullTop(&expelled, &index, NULL);
+        File = icl_hash_find(ServerStorage->filesTable, index);
+        if(File==NULL){
+            errno = ENOENT;
+            SYSCALL_RETURN(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
+                           "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
+            return -1;
+        }
+        len = strlen(index)+1;
+
+        writeDataLength(fd, &len, &index);
+        len = (int)File->size;
+        writeDataLength(fd, &len, &File->content);
+
+        num++;
+        if(File->toDelete==1) {
+            icl_hash_delete(ServerStorage->filesTable, index, free, freeFile);
+            appendOnLog(ServerLog, "[Thread %d]: File %s expelled, of %d files sent to client %d", workerId, index, num,fd);
+        }
+        else appendOnLog(ServerLog, "[Thread %d]: File %s, of %d files sent to client %d", workerId, index, num, fd);
+        memset(index, 0, sizeof (char ) * strlen(index));
+    }
+    deleteList(&expelled);
     return 0;
 }
 
@@ -685,7 +1022,7 @@ int isLocked(serverFile* file, long fd){
         SYSCALL_RETURN(unlock, pthread_mutex_unlock(&(file->lock)),
                        "ERROR - Mutex unlock of file failed, %s\n", file->path);
         return 0;
-    }if(file->lock!=-1){
+    }if(file->lockFd!=-1){
         SYSCALL_RETURN(unlock, pthread_mutex_unlock(&(file->lock)),
                        "ERROR - Mutex unlock of file failed, %s\n", file->path);
         return 1;

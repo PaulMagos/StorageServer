@@ -7,7 +7,9 @@
 
 #endif //STORAGESERVER_NODE_H
 
-#include "utils.h"
+#include <errno.h>
+#include <stdlib.h>
+#include <stdio.h>
 
 typedef struct element{
     char* index;
