@@ -226,7 +226,7 @@ void commandHandler(List* commandList){
                 while (token) {
                     if ((path = realpath(token, path)) == NULL) fprintf(stderr, "ERROR - Opening File %s\n", token);
                     else {
-                        SYSCALL_EXIT(openFile, scRes, openFile(path, 1), (pFlag) ?
+                        SYSCALL_EXIT(openFile, scRes, openFile(path, 0), (pFlag) ?
                             "ERROR - Couldn't send file %s to server, errno = %d\n" : "", token, errno);
                         char *buffer;
                         size_t size;

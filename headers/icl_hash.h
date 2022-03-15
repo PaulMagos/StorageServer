@@ -11,6 +11,8 @@
 #define icl_hash_h
 
 #include <stdio.h>
+#include <pthread.h>
+
 
 #if defined(c_plusplus) || defined(__cplusplus)
 extern "C" {

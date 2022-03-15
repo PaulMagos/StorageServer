@@ -8,7 +8,7 @@
 #include <time.h>
 #include <stdio.h>
 #include <errno.h>
-#include <fcntl.h>
+//#include <fcntl.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stddef.h>

@@ -23,6 +23,13 @@ typedef enum{
     ap, // append to file
 } operation;
 
+typedef enum{
+    O_CREAT = 1,
+    O_LOCK = 2,
+    O_UNLOCK = 4,
+    O_WRITE = 8,
+    O_READ = 16,
+} fileFlags;
 
 // Lezione 9 laboratorio, funzione di scrittura e lettura per evitare che rimangano dati sul buffer non gestiti
 /** Evita letture parziali
@@ -121,10 +128,12 @@ int readDataLength(int fd, int* len, void* buffer){
         errno = ENOMEM;
         return -1;
     }
-    if( readn((long)fd, &(buffer), *len) == -1) {
-        fprintf(stderr, "ERROR - Reading content from %d, errno = %d", fd, EBADMSG);
-        errno = EBADMSG;
-        return -1;
+    if(len>0){
+        if( readn((long)fd, &(buffer), *len) == -1) {
+            fprintf(stderr, "ERROR - Reading content from %d, errno = %d", fd, EBADMSG);
+            errno = EBADMSG;
+            return -1;
+        }
     }
     return 0;
 }
@@ -144,10 +153,12 @@ int writeDataLength(int fd, int* len, void* buffer){
         errno = EBADMSG;
         return -1;
     }
-    if(writen((long)fd, &(buffer), *len) == -1) {
-        fprintf(stderr, "ERROR - Sending content to %d, errno = %d", fd, EBADMSG);
-        errno = EBADMSG;
-        return -1;
+    if(len!=0){
+        if(writen((long)fd, &(buffer), *len) == -1) {
+            fprintf(stderr, "ERROR - Sending content to %d, errno = %d", fd, EBADMSG);
+            errno = EBADMSG;
+            return -1;
+        }
     }
     return 0;
 }
