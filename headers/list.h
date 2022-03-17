@@ -37,8 +37,6 @@ int pullTop(List* myList, char** index, void** data);
 
 int pullBottom(List* myList, char** index, void** data);
 
-int pullByData(List* myList, void* data, Type_ type);
-
 int deleteList(List* myList);
 
 int search(Node head, char* str);

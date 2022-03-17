@@ -54,15 +54,20 @@ static void *threadPoolWorker(void* arg){
         }
         if(tmpPool->stop>1) break;
         if(tmpPool->stop==1 && tmpPool->taskN == 0) break;
+        tmpPool->threadCnt++;
         tmpTask = getTask(tmpPool);
         tmpPool->taskN--;
         pthread_mutex_unlock(&(tmpPool->lock));
 
         if(tmpTask != NULL){
             ((wTask*)tmpTask->arguments)->worker_id = id;
+            ((wTask*)tmpTask->arguments)->pipeT = tmpPool->workersPipes[id][1];
             tmpTask->func(tmpTask->arguments);
             threadPoolTaskDestroy(tmpTask);
         }
+        pthread_mutex_lock(&(tmpPool->lock));
+        tmpPool->threadCnt--;
+        pthread_mutex_unlock(&(tmpPool->lock));
     }
     pthread_mutex_unlock(&(tmpPool->lock));
     appendOnLog(ServerLog, "[Thread %d]: Stopped\n", id);
@@ -84,6 +89,7 @@ threadPool* initThreadPool(int threads){
     threadPool1->stop = 0;
     threadPool1->taskN = 0;
     threadPool1->maxTasks = 0;
+    threadPool1->threadCnt = 0;
     threadPool1->taskRunning = 0;
     threadPool1->maxThreads = threads;
     threadPool1->workers = (pthread_t*)calloc(threads, sizeof(pthread_t));
@@ -97,18 +103,28 @@ threadPool* initThreadPool(int threads){
         return NULL;
     }
 
+    threadPool1->workersPipes = malloc(threads * sizeof(int*));
+
     threadIdAndThreadPool* args[threadPool1->maxThreads];
     for (int i = 0; i < threadPool1->maxThreads; i++){
+        // Allocation of pipes and args for threads
+        threadPool1->workersPipes[i] = malloc(2 * sizeof(int));
         args[i] = malloc(sizeof(threadIdAndThreadPool));
+        // Pipes initialization
+        threadPool1->workersPipes[i][0] = -1;
+        threadPool1->workersPipes[i][1] = -1;
+        // ThreadPool pointer and Thread id set
         args[i]->tPool = threadPool1;
         args[i]->id = i;
-        if(pthread_create(&(threadPool1->workers[i]), NULL, threadPoolWorker, (void*)args[i]) != 0){
-            for(int j = 0; j<i; j++) free(args[j]);
+        if(pthread_create(&(threadPool1->workers[i]), NULL, threadPoolWorker, (void*)args[i]) != 0 || pipe(threadPool1->workersPipes[i]) == -1){
+            for(int j = 0; j<i; j++) {
+                free(threadPool1->workersPipes[j]);
+                free(args[j]);
+            }
             stopThreadPool(threadPool1, 1);
             errno = EFAULT;
             return NULL;
         }
-        threadPool1->threadCnt++;
     }
     appendOnLog(ServerLog, "[ThreadPool]: Started\n");
     return threadPool1;
@@ -134,7 +150,7 @@ int stopThreadPool(threadPool* tPool, int hard_off){
     SYSCALL_RETURN(stopThreadPool_mutex_lock, pthread_mutex_lock(&(tPool->lock)),
                    "ERROR : pthread_mutex_lock failed, errno = %d", errno);
 
-    tPool->stop = 1 + ((hard_off)? 1:0);
+    tPool->stop = 1 + hard_off;
 
     if(pthread_cond_broadcast(&(tPool->work_cond)) != 0){
         SYSCALL_RETURN(stopThreadPool_mutex_unlock, pthread_mutex_unlock(&(tPool->lock)),
@@ -145,7 +161,6 @@ int stopThreadPool(threadPool* tPool, int hard_off){
 
     SYSCALL_RETURN(stopThreadPool_mutex_unlock, pthread_mutex_unlock(&(tPool->lock)),
                    "ERROR : pthread_mutex_unlock failed, errno = %d", errno);
-
     while(tPool->taskN>0){
         queueTask* tmpTask = getTask(tPool);
         //threadPoolTaskDestroy(tmpTask);
@@ -154,7 +169,12 @@ int stopThreadPool(threadPool* tPool, int hard_off){
         tPool->taskN--;
     }
 
-    for(int i = 0; i < tPool->threadCnt; i++){
+    for(int i = 0; i < tPool->maxThreads && tPool->workersPipes[i]!=NULL; i++){
+        free(tPool->workersPipes[i]);
+    }
+    free(tPool->workersPipes);
+
+    for(int i = 0; i < tPool->maxThreads; i++){
         if(pthread_join(tPool->workers[i], NULL) != 0){
             errno = EFAULT;
             return -1;
@@ -176,12 +196,13 @@ int enqueue(threadPool* tPool, void (*func)(void*), void* arguments){
     SYSCALL_RETURN(enqueue_mutex_lock, pthread_mutex_lock(&(tPool->lock)),
                    "ERROR : pthread_mutex_lock failed, errno = %d", errno);
 
-
+    wTask * task = malloc(sizeof(wTask));
+    task->client_fd = *(int*)arguments;
 
     int res = 0;
 
     queueTask* tmpTask;
-    tmpTask = threadPoolTaskCreate(func, arguments);
+    tmpTask = threadPoolTaskCreate(func, task);
     if(tPool->taskHead == NULL){
         tPool->taskHead = tmpTask;
         tPool->taskTail = tPool->taskHead;

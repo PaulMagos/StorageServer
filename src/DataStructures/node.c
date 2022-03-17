@@ -10,9 +10,13 @@ Node createNode(char* index, void* data){
         perror("malloc");
         return NULL;
     }
-
-    tmp->index = index;
-    tmp->data = data;
+    if(index != NULL) {
+        tmp->index = index;
+        tmp->data = data;
+    } else{
+        tmp->index = NULL;
+        tmp->dataInt = *(int*)data;
+    }
     tmp->next=NULL;
     tmp->prev=NULL;
 
@@ -24,7 +28,7 @@ void freeNode(Node* nodeToFree){
         //if(nodeToFree->index) free(nodeToFree->index);
         if((*nodeToFree)->prev) (*nodeToFree)->prev->next = NULL;
         if((*nodeToFree)->next) (*nodeToFree)->next->prev = NULL;
-        //if(nodeToFree->data) free(nodeToFree->data);
+        //if((*nodeToFree)->data!= NULL) free((*nodeToFree)->data);
         free(*nodeToFree);
     }
 }

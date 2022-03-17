@@ -5,7 +5,10 @@
 #ifndef STORAGESERVER_CLIENT_H
 #define STORAGESERVER_CLIENT_H
 
-#include "utils.h"
-#include "commandParser.h"
+#include "list.h"
+#include "api.h"
+
+int getCmdList(List* opList, int argc, char* argv[]);
+void commandHandler(List* commandList);
 
 #endif //STORAGESERVER_CLIENT_H

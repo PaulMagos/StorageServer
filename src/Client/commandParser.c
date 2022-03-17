@@ -2,7 +2,7 @@
 // Created by paul magos on 18/01/22.
 //
 
-#include "../../headers/commandParser.h"
+#include "../../headers/client.h"
 
 
 bool pFlag, fFlag, dFlag, DFlag;
@@ -153,14 +153,14 @@ void commandHandler(List* commandList){
     int scRes;
 
     // Command and argument for each element of opList
-    char* command;
-    void* argument;
+    char* command = NULL;
+    void* argument = NULL;
 
     // Path details, to establish if it's a directory
     struct stat dir_Details;
     char* token; // For strtok_r
     char* rest; // For strtok_r
-    char* path;
+    char* path = NULL;
     char* temporary;
 
     // Control if given arguments for expelled files, and readen files from server are directories
@@ -204,14 +204,14 @@ void commandHandler(List* commandList){
             case 'W':{
                 token = strtok_r(argument, ",", &rest);
                 stat(token, &dir_Details);
-                char* path = NULL;
+                path = NULL;
                 if((path = realpath(token, path)) == NULL) fprintf(stderr, "ERROR - Opening File %s\n", token);
                 else{
-                    SYSCALL_EXIT(openFile, scRes, openFile(path, 1),
+                    SYSCALL_EXITFREE(openFile, path, scRes, openFile(path, O_CREAT),
                         "ERROR - Couldn't send file %s to server, errno = %d\n", token, errno);
-                    SYSCALL_EXIT(writeFile, scRes, writeFile(path, expelledDir),
+                    SYSCALL_EXITFREE(writeFile, path, scRes, writeFile(path, expelledDir),
                         "ERROR - Couldn't write file %s on server, errno = %d\n", token, errno);
-                    SYSCALL_EXIT(closeFile, scRes, closeFile(path),
+                    SYSCALL_EXITFREE(closeFile, path, scRes, closeFile(path),
                         "ERROR - Couldn't close file %s on server, errno = %d\n", token, errno);
                     if(pFlag) fprintf(stdout,"%s -> WRITE SUCCESS\n", token);
                 }
@@ -222,15 +222,15 @@ void commandHandler(List* commandList){
             case 'r':{
                 token = strtok_r(argument, ",", &rest);
                 stat(token, &dir_Details);
-                char* path = NULL;
+                path = NULL;
                 while (token) {
                     if ((path = realpath(token, path)) == NULL) fprintf(stderr, "ERROR - Opening File %s\n", token);
                     else {
-                        SYSCALL_EXIT(openFile, scRes, openFile(path, 0), (pFlag) ?
-                            "ERROR - Couldn't send file %s to server, errno = %d\n" : "", token, errno);
+                        SYSCALL_EXITFREE(openFile, path, scRes, openFile(path, 0), (pFlag) ?
+                            "ERROR - Couldn't get file %s to server, errno = %d\n" : "", token, errno);
                         char *buffer;
                         size_t size;
-                        SYSCALL_EXIT(readFile, scRes, readFile(path, (void **) &buffer, &size), (pFlag) ?
+                        SYSCALL_EXITFREE(readFile, path, scRes, readFile(path, (void **) &buffer, &size), (pFlag) ?
                             "ERROR - Couldn't write file %s on server, errno = %d\n" : "", token, errno);
                         if (readDir != NULL){
                             char clientPath[UNIX_PATH_MAX];
@@ -244,7 +244,7 @@ void commandHandler(List* commandList){
                             fclose(clientFile);
                         }
 
-                        SYSCALL_EXIT(closeFile, scRes, closeFile(path), (pFlag) ?
+                        SYSCALL_EXITFREE(closeFile, path, scRes, closeFile(path), (pFlag) ?
                             "ERROR - Couldn't close file %s on server, errno = %d\n" : "", token, errno);
                         if (pFlag) fprintf(stdout, "%s -> WRITE SUCCESS\n", token);
                     }
@@ -266,19 +266,20 @@ void commandHandler(List* commandList){
             }
             case 'l':{
                 token = strtok_r(argument, ",", &rest);
+                path = NULL;
                 while (token){
                     if(!(path = realpath(token, path))){
                         fprintf(stderr, "ERROR - file '%s' not exits", token);
                     } else{
                         stat(path, &dir_Details);
                         if(S_ISREG(dir_Details.st_mode)){
-                            SYSCALL_EXIT(openFile, scRes, openFile(path, 0), (pFlag) ?
+                            SYSCALL_EXITFREE(openFile, path, scRes, openFile(path, 0), (pFlag) ?
                                          "ERROR - Couldn't open file %s from server, errno = %d\n" : "", token, errno);
-                            SYSCALL_EXIT(lockFile, scRes, lockFile(path),
-                                         "ERROR - lock file %s, errno = %d", token, path);
-                            SYSCALL_EXIT(closeFile, scRes, closeFile(path), (pFlag) ?
+                            SYSCALL_EXITFREE(lockFile, path, scRes, lockFile(path),
+                                         "ERROR - lock file %s, errno = %d", token, errno);
+                            SYSCALL_EXITFREE(closeFile, path, scRes, closeFile(path), (pFlag) ?
                                         "ERROR - Couldn't close file %s on server, errno = %d\n" : "", token, errno);
-                            if(pFlag) fprintf(stdout, "SUCCESS - %s file locked", token);
+                            if(pFlag) fprintf(stdout, "LockFile: File %s Success", token);
                         }else{
                             fprintf(stderr, "ERROR - '%s' not a file", token);
                         }
@@ -286,22 +287,24 @@ void commandHandler(List* commandList){
                     token = strtok_r(NULL, ",", &rest);
                     msleep(timeToSleep);
                 }
+                free(path);
                 memset(&dir_Details, 0, sizeof(dir_Details));
                 break;
             }
             case 'u':{
                 token = strtok_r(argument, ",", &rest);
+                path = NULL;
                 while (token){
                     if(!(path = realpath(token, path))){
                         fprintf(stderr, "ERROR - file '%s' not exits", token);
                     } else{
                         stat(path, &dir_Details);
                         if(S_ISREG(dir_Details.st_mode)){
-                            SYSCALL_EXIT(openFile, scRes, openFile(path, 0), (pFlag) ?
+                            SYSCALL_EXITFREE(openFile, path, scRes, openFile(path, 0), (pFlag) ?
                                          "ERROR - Couldn't open file %s from server, errno = %d\n" : "", token, errno);
-                            SYSCALL_EXIT(unlockFile, scRes, unlockFile(path),
-                                         "ERROR - Unlock file %s, errno = %d", token, path);
-                            SYSCALL_EXIT(closeFile, scRes, closeFile(path), (pFlag) ?
+                            SYSCALL_EXITFREE(unlockFile, path, scRes, unlockFile(path),
+                                         "ERROR - Unlock file %s, errno = %d", token, errno);
+                            SYSCALL_EXITFREE(closeFile, path, scRes, closeFile(path), (pFlag) ?
                                         "ERROR - Couldn't close file %s on server, errno = %d\n" : "", token, errno);
                             if(pFlag) fprintf(stdout, "SUCCESS - %s file unlocked", token);
                         }else{
@@ -311,19 +314,21 @@ void commandHandler(List* commandList){
                     token = strtok_r(NULL, ",", &rest);
                     msleep(timeToSleep);
                 }
+                free(path);
                 memset(&dir_Details, 0, sizeof(dir_Details));
                 break;
             }
             case 'c':{
                 token = strtok_r(argument, ",", &rest);
+                path = NULL;
                 while (token){
                     if(!(path = realpath(token, path))){
                         fprintf(stderr, "ERROR - file '%s' not exits", token);
                     } else{
                         stat(path, &dir_Details);
                         if(S_ISREG(dir_Details.st_mode)){
-                            SYSCALL_EXIT(removeFile, scRes, removeFile(path),
-                                         "ERROR - Remove file %s, errno = %d", token, path);
+                            SYSCALL_EXITFREE(removeFile, path, scRes, removeFile(path),
+                                         "ERROR - Remove file %s, errno = %d", token, errno);
                             if(pFlag) fprintf(stdout, "SUCCESS - %s file removed", token);
                         }else{
                             fprintf(stderr, "ERROR - '%s' not a file", token);
@@ -332,7 +337,9 @@ void commandHandler(List* commandList){
                     token = strtok_r(NULL, ",", &rest);
                     msleep(timeToSleep);
                 }
+                free(path);
                 memset(&dir_Details, 0, sizeof(dir_Details));
+                break;
             }
             case 'D':{
                 break;
@@ -350,7 +357,6 @@ void commandHandler(List* commandList){
     SYSCALL_EXIT(closeConnection, scRes, closeConnection(socket), "ERROR closing connection to %s, errno = %d", socket, errno);
     return;
 }
-
 
 int recWrite(char* dirname, char* expelledDir, long cnt, int indent){
     DIR* directory;
@@ -398,7 +404,6 @@ int recWrite(char* dirname, char* expelledDir, long cnt, int indent){
     closedir(directory);
     return cnt - filesToWrite;
 }
-
 
 char* charToString(char str){
     switch (str) {

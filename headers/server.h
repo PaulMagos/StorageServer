@@ -58,14 +58,14 @@ typedef struct {
     void* content;                          // The actual content of the file
 
     // File accessing info
+    int lockFd;                             // Fd of the client who locked the file
     int writers;                            // Number of writers at a given moment
     int readers;                            // Number of readers at a given moment
-    List client_fd;                         // Fd of the clients who have opened the file
-    int lockFd;                             // Fd of the client who locked the file
     int toDelete;                           // 1 if toDelete, 0 if not
+    List clients_fd;                        // Fd of the clients who have opened the file
     fileFlags latsOp;                       // Last Operation
-    struct timespec creationTime;           // Creation time of the file
     struct timespec lastOpTime;             // Last operation time
+    struct timespec creationTime;           // Creation time of the file
 
 
     // Mutex variables
@@ -77,6 +77,7 @@ typedef struct {
  // -------------------------------- WORKER WORKING STRUCT --------------------------------
 typedef struct{
     int stdOutput;                          // Bool variable to see operations on the terminal
+    int connected;                          // The number of clients connected now
     serverStat status;                      // Server status
     int expelledFiles;                      // Number of expelled files
     int maxConnections;                     // The max number of client connected in one session
@@ -103,6 +104,7 @@ typedef struct{
     int threadCnt;                          // Thread counter
     int maxThreads;                         // Max number of threads allowed
     int taskRunning;                        // Current number of running tasks
+    int** workersPipes;                     // ThreadPool thread's pipes for communication with main thread
     queueTask *taskHead;                    // Head of tasks list
     queueTask *taskTail;                    // Tail of tasks list
     pthread_t* workers;                     // Workers ids
@@ -113,8 +115,8 @@ typedef struct{
 // -------------------------------- Worker arguments --------------------------------
 typedef struct {
     int pipeT;
-    int client_fd;
     int worker_id;
+    int client_fd;
 } wTask;
 
 extern serverConfig ServerConfig;
@@ -165,12 +167,10 @@ void taskExecute (void* argument);
 /**
  *   @func  taskCreate
  *   @effects creates a variable that describes who has to be served
- *   @param pipe -> pipe for threads communication
- *   @param workerId -> workerId, then used
  *   @param client_fd -> client to serve
  *   @return returns the task in case everything goes right, NULL if an error occurs
 */
-wTask* taskCreate (int pipe, int workerId, int client_fd);
+wTask* taskCreate (int client_fd);
 
 
 /**
@@ -237,7 +237,7 @@ int fileWritersDecrement(serverFile* file);
  *   @func  isLocked
  *   @param file -> file for the operation
  *   @param fd -> file descriptor to test
- *   @return 0 if fd locked the file, -1 if not
+ *   @return 0 if fd locked the file previously, 1 if is locked by another client, -1 if not locked
  */
 int isLocked(serverFile* file, long fd);
 
@@ -280,41 +280,6 @@ cachePolicy fromStringToEnumCachePolicy(char* str);
  */
 void freeFile(void* file);
 
-// ------------------------------------ Client Functions ------------------------------------
-
-/** clientInit
- * @func  initialize the connected clients structure
- * @returns returns 0 in case everything goes right, -1 if an error occurs
- */
-int clientInit();
-/** clientAdd
- * @func  adds the client to the list of connected clients
- * @param fd client file descriptor
- * @returns returns 0 in case everything goes right, -1 if an error occurs
- */
-int clientAdd(int fd);
-/** clientGetCount
- * @func  returns the connected clients number
- * @returns returns a number in case everything goes right, -1 if an error occurs
- */
-int clientGetCount();
-/** clientRemove
- * @func  removes the client from the list of connected clients
- * @param fd client file descriptor
- * @returns returns 0 in case everything goes right, -1 if an error occurs
- */
-int clientRemove(int fd);
-/** clientDestroy
- * @func  destroys the clients list ( free )
- * @returns returns 0 in case everything goes right, -1 if an error occurs
- */
-int clientDestroy();
-/** clientContains
- * @func  destroys the clients list ( free )
- * @param fd client file descriptor
- * @returns returns 0 in case fd is in clientList1, -1 if not
- */
-int clientContains(int fd);
 
 // ------------------------------------ Server Functions ------------------------------------
 /** defaultConfig

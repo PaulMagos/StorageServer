@@ -9,10 +9,14 @@ serverConfig ServerConfig;
 fileServer* ServerStorage;
 logFile ServerLog;
 clientList* fd_clients;
+pthread_t sigHandler_t;
+threadPool* threadPool1;
 
-int serverDestroy();
+void serverDestroy();
+void newClient();
+void removeClient();
 static void* signalHandler(void* arguments);
-int signalHandlerDestroy(pthread_t* pthread);
+int signalHandlerDestroy();
 int serverInit(char* configPath, char* logPath);
 
 int main(int argc, char* argv[]){
@@ -33,6 +37,7 @@ int main(int argc, char* argv[]){
 
     // SYSCALL RESPONSE VARIABLE
     int res = 0;
+
 
     // ------------------------------------- SigHandler -------------------------------------
     // Signal Handler & Respective Pipe Init
@@ -57,7 +62,7 @@ int main(int argc, char* argv[]){
     SYSCALL_RETURN(pipe, pipe(sigHandler_Pipe),
                    "ERROR - pipe failure, errno = %d", errno)
 
-    pthread_t sigHandler_t;
+    //pthread_t sigHandler_t;
     sigHandlerArgs args = {(sigHandler_Pipe)[1], &mask};
     SYSCALL_RETURN(sigHandler_pthread_creation,
                    pthread_create(
@@ -68,13 +73,8 @@ int main(int argc, char* argv[]){
                            ),
                    "ERROR - Signal Handler Thread Creation Failure, errno = %d", errno);
     // ------------------------------------- ThreadPool -------------------------------------
-    // ThreadPool Pipe
-    int threadsPipe[2];
-    SYSCALL_EXIT(thradspipe, res, pipe(threadsPipe),
-                 "ERROR - Pipe init failure, errno = %d\n",errno)
-
     // ThreadPool Initialize
-    threadPool* threadPool1 = initThreadPool(ServerConfig.threadNumber);
+    threadPool1 = initThreadPool(ServerConfig.threadNumber);
     if(!threadPool1){
         fprintf(stderr, "ERROR - threadPool init failure");
         exit(EXIT_FAILURE);
@@ -99,131 +99,84 @@ int main(int argc, char* argv[]){
             "ERROR - Socket listen failure, errno = %d\n", errno)
 
 
+    atexit(serverDestroy);
 
     // ------------------------------------- Clients Fds -------------------------------------
-    fd_set readySet, allSet;
-    FD_ZERO(&allSet);
+    fd_set readySet, currSet;
+    FD_ZERO(&currSet);
     FD_ZERO(&readySet);
-    FD_SET(fd_server_socket, &allSet);
-    FD_SET(sigHandler_Pipe[0], &allSet);
-    FD_SET(threadsPipe[0], &allSet);
+    FD_SET(fd_server_socket, &currSet);
+    FD_SET(sigHandler_Pipe[0], &currSet);
+    if(fd_server_socket>max_fd) max_fd = fd_server_socket;
+    for(int i = 0; i<ServerConfig.threadNumber; i++){
+        FD_SET(threadPool1->workersPipes[i][0], &currSet);
+        if(i > max_fd) max_fd = i;
+    }
 
-    max_fd = MAX(fd_server_socket, sigHandler_Pipe[0]);
-    max_fd = MAX(max_fd, threadsPipe[0]);
+    int threadId = 0;
 
     if(ServerStorage->stdOutput) fprintf(stdout, "Server Started Well, Waiting For Connections\n");
     // ----------------------------------- MainThreadFunc ------------------------------------
-    /* while (ServerStorage->status == E){
-         readySet = allSet;
+    while (ServerStorage->status == E){
+         readySet = currSet;
          SYSCALL_EXIT(select, res, select(max_fd+1, &readySet,NULL, NULL, NULL), "ERROR - Select failed, errno = %d", errno);
          for(int i = 0; i <= max_fd; i++){
-             if(FD_ISSET(i, &readySet)){
-                 printf("Client %d\n", i);
-                 FD_CLR(i, &readySet);
+             if(!FD_ISSET(i, &readySet)) continue;
+             if(i==fd_server_socket && ServerStorage->status==E){
+
+                 SYSCALL_EXIT(acceptNewConn, fd_client_socket, accept(fd_server_socket, NULL, NULL),
+                              "ERROR - Accept new connection to server, errno = %d", errno);
+                 newClient();
+                 FD_SET(fd_client_socket, &currSet);
+                 if(fd_client_socket > max_fd) max_fd = fd_client_socket;
+                 continue;
+             }
+
+             if(i == sigHandler_Pipe[0]){
+                 if(ServerStorage->status==S){
+                     break;
+                 } else{
+                     continue;
+                 }
+             }
+
+             int cont = 1;
+             for(threadId = 0; threadId < ServerConfig.threadNumber; threadId++){
+                 if(i == threadPool1->workersPipes[threadId][0]){
+                     if(readn(threadPool1->workersPipes[threadId][0], &fd_client_socket, sizeof(int)) == -1){
+                         fprintf(stderr, "ERROR - Reading Thread %d Pipe", threadId);
+                         continue;
+                     }
+                     newClient();
+                     FD_SET(fd_client_socket, &currSet);
+                     if(fd_client_socket > max_fd) max_fd = fd_client_socket;
+                     cont = 0;
+                 }
+             }
+             if(!cont) continue;
+
+             enqueue(threadPool1, taskExecute, &i);
+
+             FD_CLR(i, &currSet);
+             removeClient();
+             if(i == max_fd){
+                 for(int j = max_fd; j>=0; j--){
+                     if(FD_ISSET(j, &currSet)){
+                         max_fd = j;
+                         break;
+                     }
+                 }
              }
          }
-     }*/
+    }
+
 
     msleep(2000);
-    if(stopThreadPool(threadPool1, 1) != 0){
-        printf("Error - stopthreadpool, %d %d", max_fd, fd_client_socket);
-    }
-    signalHandlerDestroy(&sigHandler_t);
-    closeLogStr(ServerLog);
-    serverDestroy();
+    //serverDestroy();
     free(sigHandler_Pipe);
     return 0;
 }
 
-
-int clientInit(){
-    fd_clients = malloc(sizeof(clientList));
-    if(fd_clients == NULL) return -1;
-    SYSCALL_RETURN(listCreation, createList(&fd_clients->ClientsFds),
-                   "ERROR - Client fd list creation, errno = %d\n", errno)
-    SYSCALL_RETURN(pthread_mutex_init, pthread_mutex_init(&(fd_clients->lock), NULL),
-                   "ERROR - Mutex init Failure clients_fd structure, errno = %d\n", errno);
-    return 0;
-}
-int clientDestroy(){
-    void * fdToClose;
-    while (pullTop(&(fd_clients->ClientsFds), NULL, &fdToClose) == 0){
-        SYSCALL_RETURN(fdClose, close(*(int*)(fdToClose)),
-                       "ERROR - Closing fd %d", *(int*)(fdToClose));
-    }
-    SYSCALL_RETURN(deleteList, deleteList(&(fd_clients->ClientsFds)),
-                   "ERROR - Deleting client list, errno = %d", errno);
-    pthread_mutex_destroy(&(fd_clients->lock));
-    free(fd_clients);
-    return 0;
-}
-int clientGetCount(){
-    SYSCALL_RETURN(pthread_mutex_lock, pthread_mutex_lock(&(fd_clients->lock)),
-                   "ERROR - fd_clients lock failure, errno = %d\n", errno)
-    int tmp = fd_clients->ClientsFds->len;
-    SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(fd_clients->lock)),
-                   "ERROR - fd_clients unlock failure, errno = %d\n", errno)
-    return tmp;
-}
-int clientAdd(int fd){
-    SYSCALL_RETURN(pthread_mutex_lock, pthread_mutex_lock(&(fd_clients->lock)),
-                   "ERROR - fd_clients lock failure, errno = %d\n", errno)
-
-    if(searchInt(fd_clients->ClientsFds->head, fd) == 1){
-        errno = EISCONN;
-        SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(fd_clients->lock)),
-                       "ERROR - fd_clients unlock failure, errno = %d\n", errno)
-        return -1;
-    }
-
-    int* newFd = malloc(sizeof(int));
-    if(newFd == NULL){
-        SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(fd_clients->lock)),
-                       "ERROR - fd_clients unlock failure, errno = %d\n", errno)
-        return -1;
-    }
-
-    *newFd = fd;
-    if(pushBottom(&(fd_clients->ClientsFds), NULL, newFd) != 0){
-        SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(fd_clients->lock)),
-                       "ERROR - fd_clients unlock failure, errno = %d\n", errno)
-        return -1;
-    }
-    SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(fd_clients->lock)),
-                   "ERROR - fd_clients unlock failure, errno = %d\n", errno)
-    return 0;
-}
-int clientRemove(int fd){
-    SYSCALL_RETURN(pthread_mutex_lock, pthread_mutex_lock(&(fd_clients->lock)),
-                   "ERROR - fd_clients lock failure, errno = %d\n", errno);
-
-    int* tmp = &fd;
-    if(pullByData(&fd_clients->ClientsFds, (void*)tmp, type_int) != 0){
-        errno = EISCONN;
-        SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(fd_clients->lock)),
-                       "ERROR - fd_clients unlock failure, errno = %d\n", errno)
-        return -1;
-    }
-
-    SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(fd_clients->lock)),
-                   "ERROR - fd_clients unlock failure, errno = %d\n", errno)
-    return 0;
-}
-int clientContains(int fd){
-    SYSCALL_RETURN(pthread_mutex_lock, pthread_mutex_lock(&(fd_clients->lock)),
-                   "ERROR - fd_clients lock failure, errno = %d\n", errno)
-
-    if(searchInt(fd_clients->ClientsFds->head, fd) != 1){
-        errno = EINVAL;
-        SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(fd_clients->lock)),
-                       "ERROR - fd_clients unlock failure, errno = %d\n", errno)
-        return -1;
-    }
-
-    SYSCALL_RETURN(pthread_mutex_unlock, pthread_mutex_unlock(&(fd_clients->lock)),
-                   "ERROR - fd_clients unlock failure, errno = %d\n", errno)
-    return 0;
-}
 static void* signalHandler(void *arguments){
     sigset_t *workingSet = ((sigHandlerArgs*)arguments)->sigSet;
     int pipeFd = ((sigHandlerArgs*)arguments)->pipe;
@@ -231,40 +184,53 @@ static void* signalHandler(void *arguments){
     int res;
     appendOnLog(ServerLog, "[SignalHandler]: Started\n");
     while(1){
-        pthread_exit(NULL);
         res = sigwait(workingSet, &signal);
         if(res != 0){
             fprintf(stderr, "ERROR - sigWait failure, errno = %d\n", res);
             return NULL;
         }
         switch (signal) {
-            case SIGINT:
-            case SIGQUIT:{
-                appendOnLog(ServerLog, "Signal Handler: %s signal received, quitting\n",
-                            (signal==SIGQUIT)? SIGQUIT:SIGINT);
+            case SIGINT:{
+                appendOnLog(ServerLog, "[SignalHandler]: %d signal received, quitting\n", SIGINT);
                 if(writen(pipeFd, &signal, sizeof(int)) == -1){
                     fprintf(stderr, "ERROR - SigHandler Pipe writing failure\n");
                 }
+                ServerStorage->status = S;
                 close(pipeFd);
+                pipeFd = -1;
+                pthread_exit(NULL);
+            }
+            case SIGQUIT:{
+                appendOnLog(ServerLog, "[SignalHandler]: %d signal received, "
+                                       "quitting after serving last clients\n", SIGQUIT);
+                if(writen(pipeFd, &signal, sizeof(int)) == -1){
+                    fprintf(stderr, "ERROR - SigHandler Pipe writing failure\n");
+                }
+                ServerStorage->status = Q;
+                close(pipeFd);
+                pipeFd = -1;
                 pthread_exit(NULL);
             }
             case SIGHUP:{
-                appendOnLog(ServerLog, "Signal Handler: %s signal received, quitting after serving last clients\n",
-                            (signal==SIGQUIT)? SIGQUIT:SIGINT);
+                appendOnLog(ServerLog, "[SignalHandler]: %d signal received, "
+                                       "quitting after serving last clients\n", SIGHUP);
                 if(writen(pipeFd, &signal, sizeof(int)) == -1){
                     fprintf(stderr, "ERROR - SigHandler Pipe writing failure\n");
                 }
+                ServerStorage->status = Q;
                 close(pipeFd);
+                pipeFd = -1;
                 pthread_exit(NULL);
             }
         }
     }
     pthread_exit(NULL);
 }
-int signalHandlerDestroy(pthread_t* pthread){
+int signalHandlerDestroy(){
     appendOnLog(ServerLog, "[SignalHandler]: Stopped\n");
-    return pthread_join((*pthread), NULL);
+    return pthread_join(sigHandler_t, NULL);
 }
+
 static int serverConfigParser(char* path){
     /* SUPERFLUO
      * // Test arguments
@@ -400,17 +366,12 @@ int serverInit(char* configPath, char* logPath){
     }
     createLog(logPath, &ServerLog);
 
-    if(clientInit(fd_clients) != 0){
-        closeLogStr(ServerLog);
-        free(fd_clients);
-        return -1;
-    }
-
     ServerStorage = malloc(sizeof (fileServer));
 
     ServerStorage->stdOutput = 1;
     ServerStorage->status = E;
 
+    ServerStorage->connected = 0;               // Int
     ServerStorage->expelledFiles = 0;           // Int
     ServerStorage->maxConnections = 0;          // Int
     ServerStorage->sessionMaxBytes = 0;         // Size_t
@@ -441,19 +402,23 @@ int serverInit(char* configPath, char* logPath){
     logSeparator(ServerLog);
     return 0;
 }
-
-int serverDestroy(){
+void serverDestroy(){
+    int res;
+    if(stopThreadPool(threadPool1, (ServerStorage->status==S)? 1:0) != 0){
+        printf("Error - StopThreadPool, %d", errno);
+    }
+    signalHandlerDestroy();
+    closeLogStr(ServerLog);
     if(pthread_mutex_destroy(&(ServerStorage->lock)) != 0){
-        SYSCALL_RETURN(ServerInit_hashDestroy, icl_hash_destroy(ServerStorage->filesTable, free, free),
+        SYSCALL_EXIT(ServerInit_hashDestroy, res, icl_hash_destroy(ServerStorage->filesTable, free, free),
                        "ERROR - Icl_Hash destroy fault, errno = %d", errno);
         free(ServerStorage);
-        return -1;
+        exit(0);
     }
 
-    SYSCALL_RETURN(ServerInit_hashDestroy, icl_hash_destroy(ServerStorage->filesTable, free, free),
+    SYSCALL_EXIT(ServerInit_hashDestroy, res, icl_hash_destroy(ServerStorage->filesTable, free, freeFile),
                    "ERROR - Icl_Hash destroy fault, errno = %d", errno);
     free(ServerStorage);
-    return clientDestroy();
 }
 
 serverFile* replaceFile(serverFile* file1, serverFile* file2, cachePolicy policy){
@@ -508,8 +473,8 @@ cachePolicy fromStringToEnumCachePolicy(char* str){
 void freeFile(void* file) {
     serverFile *file1 = (serverFile *) file;
     if (file1->content != NULL) free(file1->content);
-    if (file1->path != NULL) free(file1->path);
-    if (file1->client_fd != NULL) deleteList(&(file1->client_fd));
+    //if (file1->path != NULL) free(file1->path);
+    if (file1->clients_fd != NULL) deleteList(&(file1->clients_fd));
     pthread_mutex_destroy(&(file1->lock));
     pthread_mutex_destroy(&(file1->order));
     pthread_cond_destroy(&(file1->condition));
@@ -544,4 +509,40 @@ void defaultConfig(serverConfig* config){
     config->threadNumber = 15;
     config->policy = FIFO;
     strncpy(config->serverSocketName, "../../tmp/cs_socket", UNIX_PATH_MAX);
+}
+
+void newClient(){
+    ServerStorage->connected++;
+    if(ServerStorage->connected>ServerStorage->maxConnections){
+        ServerStorage->maxConnections = ServerStorage->connected;
+    }
+}
+
+void removeClient(){
+    if(ServerStorage->connected>0) ServerStorage->connected--;
+}
+
+/**
+ * Search for an entry in a hash table.
+ *
+ * @param ht -- the hash table to be searched
+ * @param key -- the key of the item to search for
+ *
+ * @returns pointer to the data corresponding to the key.
+ *   If the key was not found, returns NULL.
+ */
+void* icl_hash_find(icl_hash_t *ht, void* key)
+{
+    icl_entry_t* curr;
+    unsigned int hash_val;
+
+    if(ServerStorage->actualFilesNumber==0) return NULL;
+    if(!ht || !key) return NULL;
+    hash_val = (* ht->hash_function)(key) % ht->nbuckets;
+
+    for (curr=ht->buckets[hash_val]; curr != NULL; curr=curr->next)
+        if ( ht->hash_key_compare(curr->key, key)){
+            return(curr->data);
+        }
+    return NULL;
 }

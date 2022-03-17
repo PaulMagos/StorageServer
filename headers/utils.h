@@ -51,6 +51,14 @@
 	exit(errno_copy);			                \
     }                                           \
 
+#define SYSCALL_EXITFREE(name, toFree,r, sc, str, ...)	    \
+    if ((r=sc) == -1) {				            \
+	perror(#name);				                \
+	int errno_copy = errno;			            \
+	print_error(str, __VA_ARGS__);              \
+    free(toFree),                               \
+	exit(errno_copy);			                \
+    }                                           \
 
 #define SYSCALL_RETURN(name, sc, str, ...)	    \
     if (sc == -1) {				                \

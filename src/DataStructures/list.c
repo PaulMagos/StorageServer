@@ -2,6 +2,8 @@
 // Created by paul magos on 07/01/22.
 //
 #include "../../headers/list.h"
+#include <stdlib.h>
+#include <string.h>
 
 List returnNewList(){
     List myList =  malloc (sizeof (list));
@@ -95,8 +97,10 @@ int pullTop(List* myList, char** index, void** data){
         (*myList)->head = (*myList)->head->next;
     }
 
-    *index = tmp->index;
-    *data = tmp->data;
+    if(tmp->index!= NULL) {
+        *index = tmp->index;
+        *data = tmp->data;
+    }
 
     freeNode(&tmp);
     return 0;
@@ -149,7 +153,7 @@ int pullBottom(List* myList, char** index, void** data){
 void freeNodes(Node* head){
     if((*head) == NULL) return;
     freeNodes(&(*head)->next);
-    freeNode(&(*head));
+    freeNode(head);
     return;
 }
 
@@ -173,7 +177,9 @@ int search(Node head, char* str){
 
 int searchInt(Node head, int num){
     if(head == NULL) return 0;
-    if (*(int*)(head->data) == num) return 1;
+    if (head->dataInt == num){
+        return 1;
+    }
     return searchInt(head->next, num);
 }
 
@@ -181,49 +187,4 @@ void getArg(Node head, char* str, char** dir){
     if(head == NULL) return;
     if (*head->index == *str) *dir = head->data;
     getArg(head->next, str, &(*dir));
-}
-
-int pullByData(List* myList, void* data, Type_ type){
-    if((*myList)->head == NULL) return -1;
-    Node curr, prev;
-    curr = (*myList)->head;
-    switch (type) {
-        case type_int:{
-            while (*(int*)curr->next->data != *(int*)data || curr->next == NULL){
-                prev = curr;
-                curr = curr->next;
-            }
-            if(curr == (*myList)->head || curr == (*myList)->tail){
-                if((*myList)->len-1 == 0) {
-                    (*myList)->head = NULL;
-                    (*myList)->tail = NULL;
-                } else if(curr == (*myList)->head){
-                    (*myList)->head = (*myList)->head->next;
-                } else{
-                    (*myList)->tail = (*myList)->tail->prev;
-                }
-            }
-            if(curr->next == (*myList)->tail){
-                prev->next = (*myList)->tail;
-                (*myList)->tail->prev = prev;
-            } else if(curr->prev == (*myList)->head){
-                (*myList)->head->next = curr->next;
-                curr->next->prev = (*myList)->head;
-            } else {
-                prev->next = curr->next;
-                curr->next->prev = prev;
-            }
-            (*myList)->len--;
-            return 0;
-        }
-        case type_char:{
-            fprintf(stderr, "ERROR - Not Implemented, exiting...");
-            exit(0);
-        }
-        case type_string:{
-            fprintf(stderr, "ERROR - Not Implemented, exiting...");
-            exit(0);
-        }
-    }
-    return -1;
 }

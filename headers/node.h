@@ -13,7 +13,10 @@
 
 typedef struct element{
     char* index;
-    void* data;
+    union{
+        int dataInt;
+        void* data;
+    };
     struct element* next;
     struct element* prev;
 } node;
@@ -30,4 +33,8 @@ Node createNode(char* index, void* data);
  * Node allocation method
  * */
 
+/**
+ * @effect frees the node
+ * @param nodeToFree
+ */
 void freeNode(Node* nodeToFree);

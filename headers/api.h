@@ -6,6 +6,7 @@
 #define STORAGESERVER_API_H
 
 #include "utils.h"
+#include "conn.h"
 
 int openConnection(const char* sockname, int msec, const struct timespec abstime);
 /*

@@ -3,7 +3,6 @@
 //
 
 #include "../../headers/api.h"
-#include "../../headers/conn.h"
 
 // Socket name
 const char* sName;
@@ -110,9 +109,23 @@ int openFile(const char* pathname, int flags){
     // Variabile per testare le SC
     int scRes;
 
+    message msg = calloc(1, sizeof (message));
+    msg->size = strlen(pathname) + 1;
+    msg->content = (char *) pathname;
+    msg->request = flags;
+    msg->feedback = 0;
+    msg->error = 0;
+
+    SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
+                 "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+
+    SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
+                 "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+
+/*
     // Invio al server il tipo di operazione richiesta
     operation op = of;
-    SYSCALL_EXIT(writen, scRes, writen(fd_socket, &op,sizeof(op)),
+    SYSCALL_EXIT(writen, scRes, writen(fd_socket, &op,sizeof(operation)),
                  "ERROR OpenFile - Sending operation to server, errno = %d\n", errno);
 
     // Invio dimensione del path, path e i flags al server
@@ -136,7 +149,13 @@ int openFile(const char* pathname, int flags){
     if(scRes!=0){
         errno = scRes; // Errore che il server ci passa
         return -1;
+    }*/
+    if(msg.feedback!=SUCCESS){
+        errno = msg.error;
+        freeMessage(&msg);
+        return -1;
     }
+    freeMessage(&msg);
     // File aperto correttamente
     return 0;
 }
@@ -153,7 +172,7 @@ int readFile(const char* pathname, void** buf, size_t* size){
     int scRes;
     // Invio al server il tipo di operazione richiesta
     operation op = r;
-    SYSCALL_EXIT(writen, scRes, writen(fd_socket, &op,sizeof(op)),
+    SYSCALL_EXIT(writen, scRes, writen(fd_socket, &op,sizeof(operation)),
                  "ERROR ReadFile - Sending operation to server, errno = %d\n", errno);
 
     // Invio dimensione del path e path al server
@@ -211,7 +230,7 @@ int readNFiles(int N, const char* dirname){
     int scRes;
     // Comunico al server l'operazione e il numero di file
     operation op = rn;
-    SYSCALL_EXIT(writen, scRes, writen(fd_socket, &op,sizeof(op)),
+    SYSCALL_EXIT(writen, scRes, writen(fd_socket, &op,sizeof(operation)),
                  "ERROR ReadNFiles - Sending operation to server, errno = %d\n", errno);
     SYSCALL_EXIT(writen, scRes, writen(fd_socket, &N, sizeof(int )),
                  "ERROR ReadNFiles - Sending N to the server, errno = %d", errno);
@@ -239,7 +258,7 @@ int readNFiles(int N, const char* dirname){
         return -1;
     }
     // Salvo i file se devono essere salvati, li leggo altrimenti
-    if(saveIntoDir(dirname, readed) == -1) return -1;
+    if(saveIntoDir(dirname, scRes) == -1) return -1;
     return 0;
 }
 
@@ -265,7 +284,7 @@ int writeFile(const char* pathname, const char* dirname){
     size_t fileSize = fileDet.st_size;
 
     // Alloco un buffer della dimensione del file e verifico che sia andata a buon fine l'allocazione
-    void* fileBuf = malloc(sizeof(fileSize));
+    void* fileBuf = malloc(fileSize);
     if(fileBuf == NULL) {
         errno = ENOMEM;
         return -1;
@@ -290,7 +309,7 @@ int writeFile(const char* pathname, const char* dirname){
     // Se non va a buon fine libero il buffer del file e ritorno -1
     operation op = wr;
     int length = strlen(pathname) + 1;
-    if(writen(fd_socket, &op,sizeof(op)) == -1  ||
+    if(writen(fd_socket, &op,sizeof(operation)) == -1  ||
         writen(fd_socket, &length, sizeof(int)) == -1 ||
         writen(fd_socket, (void*) pathname, length) == -1){
         free(fileBuf);
@@ -310,6 +329,7 @@ int writeFile(const char* pathname, const char* dirname){
         errno = res;
         return -1;
     }
+    printf("%s, PATH\n", pathname);
 
     // Invio dimensione del file e file
     if(writen(fd_socket, &fileSize, sizeof(int)) == -1){
@@ -344,7 +364,7 @@ int writeFile(const char* pathname, const char* dirname){
         return -1;
     }
 
-    if(saveIntoDir(dirname, readed) == -1) return -1;
+    if(saveIntoDir(dirname, res) == -1) return -1;
     return 0;
 }
 
@@ -360,7 +380,7 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
     int scRes;
     // Invio al server il tipo di operazione richiesta
     operation op = ap;
-    SYSCALL_EXIT(writen, scRes, writen(fd_socket, &op,sizeof(op)),
+    SYSCALL_EXIT(writen, scRes, writen(fd_socket, &op,sizeof(operation)),
                  "ERROR AppendToFile - Sending operation to server, errno = %d\n", errno);
 
     // Invio dimensione del path e path al server
@@ -409,7 +429,7 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
         return -1;
     }
     // Salvo i file se devono essere salvati
-    if(saveIntoDir(dirname, readed) == -1) return -1;
+    if(saveIntoDir(dirname, scRes) == -1) return -1;
     return 0;
 }
 
@@ -424,7 +444,7 @@ int lockFile(const char* pathname){
     }
     int scRes;
     operation op = lk;
-    SYSCALL_EXIT(writen, scRes, writen(fd_socket, &op,sizeof(op)),
+    SYSCALL_EXIT(writen, scRes, writen(fd_socket, &op,sizeof(operation)),
                  "ERROR LockFile - Sending operation to server, errno = %d\n", errno);
 
     // Invio dimensione del path e path al server
@@ -462,7 +482,7 @@ int unlockFile(const char* pathname){
     }
     int scRes;
     operation op = unlk;
-    SYSCALL_EXIT(writen, scRes, writen(fd_socket, &op,sizeof(op)),
+    SYSCALL_EXIT(writen, scRes, writen(fd_socket, &op,sizeof(operation)),
                  "ERROR UnLockFile - Sending operation to server, errno = %d\n", errno);
 
     // Invio dimensione del path e path al server
@@ -501,7 +521,7 @@ int closeFile(const char* pathname){
     }
     int scRes;
     operation op = cl;
-    SYSCALL_EXIT(writen, scRes, writen(fd_socket, &op,sizeof(op)),
+    SYSCALL_EXIT(writen, scRes, writen(fd_socket, &op,sizeof(operation)),
                  "ERROR CloseFile - Sending operation to server, errno = %d\n", errno);
 
     // Invio dimensione del path e path al server
@@ -517,6 +537,7 @@ int closeFile(const char* pathname){
     SYSCALL_EXIT(readn, readed, readn(fd_socket, &scRes, sizeof(int)),
                  "ERROR CloseFile - Closing file on server, errno = %d\n", errno);
     if(readed == 0){
+        printf("%d\n", scRes);
         errno = EBADMSG;
         return -1;
     }
@@ -539,7 +560,7 @@ int removeFile(const char* pathname){
     }
     int scRes;
     operation op = del;
-    SYSCALL_EXIT(writen, scRes, writen(fd_socket, &op,sizeof(op)),
+    SYSCALL_EXIT(writen, scRes, writen(fd_socket, &op,sizeof(operation)),
                  "ERROR RemoveFile - Sending operation to server, errno = %d\n", errno);
 
     // Invio dimensione del path e path al server
@@ -622,7 +643,7 @@ int saveIntoDir(const char* dir, int numOfFiles){
         }
         if(save){
             if(storeFile(path, dir, fileDim, fileBuf)==-1){
-                errors = true;
+                errors = 1;
             }
         }
         free(path);

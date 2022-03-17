@@ -35,8 +35,7 @@
  *
  * @returns the hash index
  */
-static unsigned int
-hash_pjw(void* key)
+static unsigned int hash_pjw(void* key)
 {
     char *datum = (char *)key;
     unsigned int hash_value, i;
@@ -91,31 +90,7 @@ icl_hash_create( int nbuckets, unsigned int (*hash_function)(void*), int (*hash_
     return ht;
 }
 
-/**
- * Search for an entry in a hash table.
- *
- * @param ht -- the hash table to be searched
- * @param key -- the key of the item to search for
- *
- * @returns pointer to the data corresponding to the key.
- *   If the key was not found, returns NULL.
- */
 
-void *
-icl_hash_find(icl_hash_t *ht, void* key)
-{
-    icl_entry_t* curr;
-    unsigned int hash_val;
-
-    if(!ht || !key) return NULL;
-    hash_val = (* ht->hash_function)(key) % ht->nbuckets;
-
-    for (curr=ht->buckets[hash_val]; curr != NULL; curr=curr->next)
-        if ( ht->hash_key_compare(curr->key, key)){
-            return(curr->data);
-        }
-    return NULL;
-}
 
 /**
  * Insert an item into the hash table.
