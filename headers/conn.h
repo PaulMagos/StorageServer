@@ -15,14 +15,17 @@ typedef enum{
     O_PEN = 0,
     O_CREAT = 1,
     O_LOCK = 2,
+    O_CREAT_LOCK = 3,
     O_UNLOCK = 4,
     O_WRITE = 8,
     O_READ = 16,
     O_APPND = 32,
     O_DEL = 64,
-    O_CLOS = 128,
+    O_CLOSE = 128,
     O_DATA = 256,
-    O_NULL = 512,
+    O_SEND = 512,
+    O_READN = 1024,
+    O_NULL = 2048,
 } fileFlags;
 
 typedef enum {
@@ -31,9 +34,9 @@ typedef enum {
 } fileResponse;
 
 typedef struct{
-    int error;
     size_t size;
     void* content;
+    int additional;
     fileFlags request;
     fileResponse feedback;
 } message;
@@ -90,9 +93,9 @@ static inline int writen(long fd, void *buf, size_t size) {
  *   \retval  0   se durante la lettura ritorna 0
  *   \retval  size se la lettura termina con successo
  */
-static int readMessage(int fd, message* message1){
+static inline int readMessage(int fd, message* message1){
     if(fd == -1 || message1 == NULL){
-        errno = EINVAL
+        errno = EINVAL;
         return -1;
     }
 
@@ -100,12 +103,13 @@ static int readMessage(int fd, message* message1){
         return -1;
     }
 
-    message1->content = calloc(1, message1->size+1);
+    message1->content = malloc(message1->size + 1);
+    memset(message1->content, 0, message1->size+1);
     int readed;
     if((readed = readn(fd, message1->content, message1->size)) == -1){
         fprintf(stderr, "Reading from %d fd", fd);
-        return -1;
     }
+
     return readed;
 }
 /**  scrive a fd message1
@@ -114,9 +118,9 @@ static int readMessage(int fd, message* message1){
  *   \retval  0   se durante la scrittura ritorna 0
  *   \retval  1   se la scrittura termina con successo
  */
-static int writeMessage(int fd, message* message1){
+static inline int writeMessage(int fd, message* message1){
     if(fd == -1 || message1 == NULL){
-        errno = EINVAL
+        errno = EINVAL;
         return -1;
     }
 
@@ -124,12 +128,10 @@ static int writeMessage(int fd, message* message1){
         return -1;
     }
 
-    message1->content = calloc(1, message1->size+1);
-    int written;
+    int written = 0;
     if(message1->size>0) {
         if ((written = writen(fd, message1->content, message1->size)) == -1) {
             fprintf(stderr, "Writing on %d fd", fd);
-            return -1;
         }
     }
     return written;
@@ -138,21 +140,28 @@ static int writeMessage(int fd, message* message1){
 /**  Valori default message1
  *
  */
-static void emptyMessage(message* message1){
+static inline void emptyMessage(message* message1){
     message1->size = 0;
-    message1->error = 0;
     message1->feedback = 0;
+    message1->additional = 0;
     message1->request = O_NULL;
 
     if(message1->content!=NULL){
-        free(message1->content);
+        //free(message1->content);
         message1->content = NULL;
     }
+}
+
+/**  Libero content
+ *
+ */
+static inline void freeMessageContent(message* message1){
+    free(message1->content);
 }
 /**  Libero memoria
  *
  */
-static void freeMessage(message* message1){
+static inline void freeMessage(message* message1){
     if(message1->content!=NULL) free(message1->content);
     free(message1);
 }

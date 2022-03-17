@@ -54,9 +54,8 @@ static void *threadPoolWorker(void* arg){
         }
         if(tmpPool->stop>1) break;
         if(tmpPool->stop==1 && tmpPool->taskN == 0) break;
-        tmpPool->threadCnt++;
         tmpTask = getTask(tmpPool);
-        tmpPool->taskN--;
+        if(tmpPool->taskN>0) tmpPool->taskN--;
         pthread_mutex_unlock(&(tmpPool->lock));
 
         if(tmpTask != NULL){
@@ -65,9 +64,6 @@ static void *threadPoolWorker(void* arg){
             tmpTask->func(tmpTask->arguments);
             threadPoolTaskDestroy(tmpTask);
         }
-        pthread_mutex_lock(&(tmpPool->lock));
-        tmpPool->threadCnt--;
-        pthread_mutex_unlock(&(tmpPool->lock));
     }
     pthread_mutex_unlock(&(tmpPool->lock));
     appendOnLog(ServerLog, "[Thread %d]: Stopped\n", id);
@@ -89,7 +85,6 @@ threadPool* initThreadPool(int threads){
     threadPool1->stop = 0;
     threadPool1->taskN = 0;
     threadPool1->maxTasks = 0;
-    threadPool1->threadCnt = 0;
     threadPool1->taskRunning = 0;
     threadPool1->maxThreads = threads;
     threadPool1->workers = (pthread_t*)calloc(threads, sizeof(pthread_t));
@@ -173,8 +168,14 @@ int stopThreadPool(threadPool* tPool, int hard_off){
         free(tPool->workersPipes[i]);
     }
     free(tPool->workersPipes);
-
-    for(int i = 0; i < tPool->maxThreads; i++){
+    if(tPool->stop>1){
+        for(int i = 0; i < tPool->maxThreads; i++){
+            if(pthread_detach(tPool->workers[i]) != 0){
+                errno = EFAULT;
+                return -1;
+            }
+        }
+    } else for(int i = 0; i < tPool->maxThreads; i++){
         if(pthread_join(tPool->workers[i], NULL) != 0){
             errno = EFAULT;
             return -1;

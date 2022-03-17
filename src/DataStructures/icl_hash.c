@@ -114,13 +114,13 @@ icl_hash_insert(icl_hash_t *ht, void* key, void *data)
 
     for (curr=ht->buckets[hash_val]; curr != NULL; curr=curr->next)
         if ( ht->hash_key_compare(curr->key, key)){
-            return(NULL); /* key already exists */
+            break;
         }
 
     /* if key was not found */
-    curr = (icl_entry_t*)malloc(sizeof(icl_entry_t));
     if(!curr) {
-        return NULL;
+        curr = (icl_entry_t*)malloc(sizeof(icl_entry_t));
+        if(!curr) return NULL;
     }
 
     curr->key = key;

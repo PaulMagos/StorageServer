@@ -101,7 +101,6 @@ typedef struct{
     int stop;                               // Serve the last clients and close the thread pool or literally stop
     int taskN;                              // Queue Len
     int maxTasks;                           // Max number of task executed
-    int threadCnt;                          // Thread counter
     int maxThreads;                         // Max number of threads allowed
     int taskRunning;                        // Current number of running tasks
     int** workersPipes;                     // ThreadPool thread's pipes for communication with main thread
@@ -198,16 +197,16 @@ int CloseConnection(int fd_client, int workerId);
  *   @param workerId-> thread id
  *   @return returns 0 in case everything goes right, -1 if an error occurs
 */
-int OpenFile(int fd_client, int workerId);
+void OpenFile(int fd_client, int workerId, message* message1);
 
-int CloseFile(int fd_client, int workerId);
-int DeleteFile(int fd_client, int workerId);
-int ReceiveFile(int fd_client, int workerId);
-int SendFile(int fd_client, int workerId);
-int SendNFiles(int fd_client, int workerId);
-int LockFile(int fd_client, int workerId);
-int UnLockFile(int fd_client, int workerId);
-int AppendOnFile(int fd_client, int workerId);
+void CloseFile(int fd_client, int workerId, message* message1);
+void DeleteFile(int fd_client, int workerId, message* message1);
+void ReceiveFile(int fd_client, int workerId, message* message1);
+void SendFile(int fd_client, int workerId, message* message1);
+void SendNFiles(int fd_client, int workerId, message* message1);
+void LockFile(int fd_client, int workerId, message* message1);
+void UnLockFile(int fd_client, int workerId, message* message1);
+void AppendOnFile(int fd_client, int workerId, message* message1);
 // ------------------------------------ Files Functions ------------------------------------
 /**
  *   @func  fileReadersIncrement

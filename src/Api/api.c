@@ -109,19 +109,22 @@ int openFile(const char* pathname, int flags){
     // Variabile per testare le SC
     int scRes;
 
-    message msg = calloc(1, sizeof (message));
-    msg->size = strlen(pathname) + 1;
-    msg->content = (char *) pathname;
-    msg->request = flags;
-    msg->feedback = 0;
-    msg->error = 0;
+    message msg;
+    memset(&msg, 0, sizeof(message));
+    msg.size = strlen(pathname) + 1;
+    msg.content = (char *) pathname;
+    msg.request = (flags==O_LOCK)? O_CREAT_LOCK:flags;
+    msg.feedback = 0;
+    msg.additional = 0;
 
     SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
                  "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
 
+    emptyMessage(&msg);
     SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
                  "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
 
+    freeMessageContent(&msg);
 /*
     // Invio al server il tipo di operazione richiesta
     operation op = of;
@@ -151,12 +154,12 @@ int openFile(const char* pathname, int flags){
         return -1;
     }*/
     if(msg.feedback!=SUCCESS){
-        errno = msg.error;
-        freeMessage(&msg);
+        errno = msg.additional;
+        //freeMessage(&msg);
         return -1;
     }
-    freeMessage(&msg);
     // File aperto correttamente
+    //freeMessage(&msg);
     return 0;
 }
 
@@ -170,6 +173,48 @@ int readFile(const char* pathname, void** buf, size_t* size){
         return -1;
     }
     int scRes;
+
+    message msg;
+    memset(&msg, 0, sizeof(message));
+    msg.size = strlen(pathname) + 1;
+    msg.content = (char *) pathname;
+    msg.request = O_READ;
+    msg.feedback = 0;
+    msg.additional = 0;
+
+    // Send request for reading file
+    SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
+                 "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+
+    emptyMessage(&msg);
+    SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
+                 "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+
+    // If any Error return
+    if(msg.feedback!=SUCCESS){
+        errno = msg.additional;
+        freeMessage(&msg);
+        return -1;
+    }
+    freeMessageContent(&msg);
+
+
+    emptyMessage(&msg);
+    // Receive File
+    SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
+                 "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+    if(msg.feedback!=SUCCESS && msg.request!=O_DATA){
+        errno = msg.additional;
+        //freeMessage(&msg);
+        return -1;
+    }
+    *buf = malloc(msg.size+1);
+    printf("%d\n", (int )msg.size);
+    memset(*buf, 0, msg.size+1);
+    *buf = msg.content;
+    *size = msg.size;
+
+    /*
     // Invio al server il tipo di operazione richiesta
     operation op = r;
     SYSCALL_EXIT(writen, scRes, writen(fd_socket, &op,sizeof(operation)),
@@ -218,7 +263,8 @@ int readFile(const char* pathname, void** buf, size_t* size){
     }
     // Dimensione file nella size e stream ricevuto nel buffer
     *size = fileDim;
-    *buf = buffer;
+    *buf = buffer;*/
+    //freeMessage(&msg);
     return 0;
 }
 
@@ -228,7 +274,28 @@ int readNFiles(int N, const char* dirname){
         return -1;
     }
     int scRes;
-    // Comunico al server l'operazione e il numero di file
+
+    message msg;
+    memset(&msg, 0, sizeof(message));
+    msg.size = 0;
+    msg.content = NULL;
+    msg.request = O_READN;
+    msg.feedback = 0;
+    msg.additional = N;
+
+    // Send request for reading file
+    SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
+                 "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+
+    SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
+                 "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+    if(msg.feedback!=SUCCESS){
+        errno = msg.additional;
+        freeMessage(&msg);
+        return -1;
+    }
+
+/*    // Comunico al server l'operazione e il numero di file
     operation op = rn;
     SYSCALL_EXIT(writen, scRes, writen(fd_socket, &op,sizeof(operation)),
                  "ERROR ReadNFiles - Sending operation to server, errno = %d\n", errno);
@@ -248,7 +315,6 @@ int readNFiles(int N, const char* dirname){
         return -1;
     }
 
-
     // Verifico quanti file vengono effettivamente letti (se sul server sono presenti n < N file?)
     SYSCALL_EXIT(readn, readed, readn(fd_socket, &scRes, sizeof(int)),
                  "ERROR ReadNFiles - Retrieving files from server, errno = %d\n", errno);
@@ -256,9 +322,10 @@ int readNFiles(int N, const char* dirname){
     if(readed == 0){
         errno = EBADMSG;
         return -1;
-    }
+    }*/
     // Salvo i file se devono essere salvati, li leggo altrimenti
-    if(saveIntoDir(dirname, scRes) == -1) return -1;
+    if(saveIntoDir(dirname, msg.additional) == -1) return -1;
+    freeMessage(&msg);
     return 0;
 }
 
@@ -305,6 +372,56 @@ int writeFile(const char* pathname, const char* dirname){
 
     if(fclose(fil3) != 0 ) return -1;
 
+    int scRes = 0;
+
+    message msg;
+    memset(&msg, 0, sizeof(message));
+    msg.size = strlen(pathname) + 1;
+    msg.content = (char *) pathname;
+    msg.request = O_WRITE;
+    msg.feedback = 0;
+    msg.additional = 0;
+
+    SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
+                 "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+
+
+    SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
+                 "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+
+    if(msg.feedback != SUCCESS){
+        errno = msg.additional;
+        freeMessage(&msg);
+        return -1;
+    }
+
+    freeMessageContent(&msg);
+    //emptyMessage(&msg);
+
+    msg.size = fileSize;
+    msg.content = fileBuf;
+    msg.request = O_DATA;
+    msg.feedback = 0;
+    msg.additional = 0;
+
+
+    SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
+                 "ERROR OpenFile - Sending file to server, errno = %d\n", errno);
+
+    SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
+                 "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+
+    if(msg.feedback != SUCCESS){
+        free(fileBuf);
+        errno = msg.additional;
+        freeMessageContent(&msg);
+        //freeMessage(&msg);
+        return -1;
+    }
+    free(fileBuf);
+
+    freeMessageContent(&msg);
+    /*
     // Invio operazione al server, path e lunghezza del path
     // Se non va a buon fine libero il buffer del file e ritorno -1
     operation op = wr;
@@ -356,15 +473,17 @@ int writeFile(const char* pathname, const char* dirname){
         return -1;
     }
 
+
     // Controllo quanti file sono stati espulsi; contro-intuitivamente la risposta non sta in readed, ma in res
     SYSCALL_EXIT(readn, readed, readn(fd_socket, &res, sizeof(int)),
                  "ERROR WriteFile Reading num of expelled files from server, errno = %d\n", errno);
     if(readed == 0){
         errno = EBADMSG;
         return -1;
-    }
+    }*/
 
-    if(saveIntoDir(dirname, res) == -1) return -1;
+    if(saveIntoDir(dirname, msg.additional) == -1) return -1;
+    //freeMessage(&msg);
     return 0;
 }
 
@@ -378,7 +497,29 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
         return -1;
     }
     int scRes;
-    // Invio al server il tipo di operazione richiesta
+
+    message msg;
+    memset(&msg, 0, sizeof(message));
+    msg.size = strlen(pathname) + 1;
+    msg.content = (char *) pathname;
+    msg.request = O_APPND;
+    msg.feedback = 0;
+    msg.additional = 0;
+
+    SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
+                 "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+
+    emptyMessage(&msg);
+
+    SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
+                 "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+
+    if(msg.feedback != SUCCESS){
+        errno = msg.additional;
+        freeMessage(&msg);
+        return -1;
+    }
+    /*// Invio al server il tipo di operazione richiesta
     operation op = ap;
     SYSCALL_EXIT(writen, scRes, writen(fd_socket, &op,sizeof(operation)),
                  "ERROR AppendToFile - Sending operation to server, errno = %d\n", errno);
@@ -401,8 +542,26 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
     if(scRes!=0){
         errno = scRes; // Errore che il server ci passa
         return -1;
-    }
+    }*/
 
+    emptyMessage(&msg);
+    msg.size = size;
+    msg.content = buf;
+    msg.request = O_DATA;
+    msg.feedback = 0;
+    msg.additional = 0;
+    SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
+                 "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+
+    SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
+                 "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+
+    if(msg.feedback!=SUCCESS){
+        errno = msg.additional;
+        freeMessage(&msg);
+        return -1;
+    }
+    /*
     // Se sono arrivato qua significa che posso effettuare la append sul file.
     SYSCALL_EXIT(writen, scRes, writen(fd_socket, &size, sizeof(size_t)),
                  "ERRORE AppendToFile - Sending file size to server, errno = %d\n", errno);
@@ -427,9 +586,10 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
     if(readed == 0){
         errno = EBADMSG;
         return -1;
-    }
+    }*/
     // Salvo i file se devono essere salvati
-    if(saveIntoDir(dirname, scRes) == -1) return -1;
+    if(saveIntoDir(dirname, msg.additional) == -1) return -1;
+    freeMessage(&msg);
     return 0;
 }
 
@@ -443,6 +603,26 @@ int lockFile(const char* pathname){
         return -1;
     }
     int scRes;
+    message msg;
+    memset(&msg, 0, sizeof(message));
+    msg.size = strlen(pathname) + 1;
+    msg.content = (char *) pathname;
+    msg.request = O_LOCK;
+    msg.feedback = 0;
+    msg.additional = 0;
+
+    SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
+                 "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+
+    SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
+                 "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+
+    if(msg.feedback != SUCCESS){
+        errno = msg.additional;
+        freeMessage(&msg);
+        return -1;
+    }
+    /*
     operation op = lk;
     SYSCALL_EXIT(writen, scRes, writen(fd_socket, &op,sizeof(operation)),
                  "ERROR LockFile - Sending operation to server, errno = %d\n", errno);
@@ -466,8 +646,9 @@ int lockFile(const char* pathname){
     if(scRes!=0){
         errno = scRes; // Errore che il server ci passa
         return -1;
-    }
+    }*/
     // Mutua esclusione ottenuta
+    freeMessage(&msg);
     return 0;
 }
 
@@ -481,6 +662,27 @@ int unlockFile(const char* pathname){
         return -1;
     }
     int scRes;
+
+    message msg;
+    memset(&msg, 0, sizeof(message));
+    msg.size = strlen(pathname) + 1;
+    msg.content = (char *) pathname;
+    msg.request = O_UNLOCK;
+    msg.feedback = 0;
+    msg.additional = 0;
+
+    SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
+                 "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+
+    SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
+                 "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+
+    if(msg.feedback != SUCCESS){
+        errno = msg.additional;
+        freeMessage(&msg);
+        return -1;
+    }
+    /*
     operation op = unlk;
     SYSCALL_EXIT(writen, scRes, writen(fd_socket, &op,sizeof(operation)),
                  "ERROR UnLockFile - Sending operation to server, errno = %d\n", errno);
@@ -505,8 +707,9 @@ int unlockFile(const char* pathname){
     if(scRes!=0){
         errno = scRes; // Errore che il server ci passa
         return -1;
-    }
+    }*/
     // Mutua esclusione rilasciata
+    freeMessage(&msg);
     return 0;
 }
 
@@ -520,6 +723,21 @@ int closeFile(const char* pathname){
         return -1;
     }
     int scRes;
+
+    message msg;
+    memset(&msg, 0, sizeof(message));
+    msg.size = strlen(pathname) + 1;
+    msg.content = (char *) pathname;
+    msg.request = O_CLOSE;
+    msg.feedback = 0;
+    msg.additional = 0;
+
+    SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
+                 "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+
+    SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
+                 "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+    /*
     operation op = cl;
     SYSCALL_EXIT(writen, scRes, writen(fd_socket, &op,sizeof(operation)),
                  "ERROR CloseFile - Sending operation to server, errno = %d\n", errno);
@@ -544,6 +762,12 @@ int closeFile(const char* pathname){
     if(scRes!=0){
         errno = scRes; // Errore che il server ci passa
         return -1;
+    }*/
+    freeMessageContent(&msg);
+    if(msg.feedback != SUCCESS){
+        errno = msg.additional;
+        freeMessage(&msg);
+        return -1;
     }
     // File chiuso
     return 0;
@@ -559,6 +783,26 @@ int removeFile(const char* pathname){
         return -1;
     }
     int scRes;
+
+    message msg;
+    memset(&msg, 0, sizeof(message));
+    msg.size = strlen(pathname) + 1;
+    msg.content = (char *) pathname;
+    msg.request = O_DEL;
+    msg.feedback = 0;
+    msg.additional = 0;
+
+    SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
+                 "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+
+    SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
+                 "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+
+    if(msg.feedback != SUCCESS){
+        errno = msg.additional;
+        freeMessage(&msg);
+        return -1;
+    }/*
     operation op = del;
     SYSCALL_EXIT(writen, scRes, writen(fd_socket, &op,sizeof(operation)),
                  "ERROR RemoveFile - Sending operation to server, errno = %d\n", errno);
@@ -583,18 +827,56 @@ int removeFile(const char* pathname){
         errno = scRes; // Errore che il server ci passa
         return -1;
     }
+    */
     // File cancellato
+    freeMessage(&msg);
     return 0;
 }
 
 int saveIntoDir(const char* dir, int numOfFiles){
+    if(numOfFiles==0) return 0;
     int errors = 0;
     int save = (dir==NULL)? 0 : 1;
-    int len, readed;
     void* path;
-    size_t fileDim;
+    message msg;
+    memset(&msg, 0, sizeof(message));
     for(int i = 0; i<numOfFiles; i++){
+        // Get PATH and PATHLEN
+        SYSCALL_EXIT(readMessage, errors, readMessage(fd_socket, &msg),
+                     "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+        // IF ANY ERROR LET THE SERVER KNOW
+        if(msg.request!=O_SEND){
+            msg.feedback = ERROR;
+            msg.additional = EBADMSG;
+            SYSCALL_EXIT(writeMessage, errors, writeMessage(fd_socket, &msg),
+                         "ERROR OpenFile - Sending feedback error to server, errno = %d\n", errno);
+            errno = EBADMSG;
+            return -1;
+        }
+        path = malloc(msg.size);
+        if(path == NULL){
+            errno = ENOMEM;
+            return -1;
+        }
+        emptyMessage(&msg);
 
+        // SUCCESS SEND ME THE FILE
+        msg.feedback = SUCCESS;
+        SYSCALL_EXIT(writeMessage, errors, writeMessage(fd_socket, &msg),
+                     "ERROR OpenFile - Sending feedback error to server, errno = %d\n", errno);
+
+        emptyMessage(&msg);
+        // FILE RECEIVED
+        SYSCALL_EXIT(readMessage, errors, readMessage(fd_socket, &msg),
+                     "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+
+        if(msg.feedback!=SUCCESS || msg.request!=O_DATA){
+            freeMessage(&msg);
+            free(path);
+            errno = msg.additional;
+            return -1;
+        }
+        /*
         SYSCALL_EXIT(readn, readed, readn(fd_socket, &len, sizeof(int)),
                      "ERROR - Saving files from server, errno = %d\n", errno);
         // EBADMSG indica un fallimento nella comunicazione
@@ -616,8 +898,10 @@ int saveIntoDir(const char* dir, int numOfFiles){
             if(readed == 0) errno = EBADMSG;
             return -1;
         }
+        */
 
-        // Leggo size del file
+
+        /*// Leggo size del file
         readed = readn(fd_socket, &fileDim, sizeof(size_t));
         if(readed < 1){
             free(path);
@@ -640,19 +924,31 @@ int saveIntoDir(const char* dir, int numOfFiles){
                 if(readed == 0) errno = EBADMSG;
                 return -1;
             }
-        }
+        }*/
         if(save){
-            if(storeFile(path, dir, fileDim, fileBuf)==-1){
+            if(storeFile(path, dir, msg.size, msg.content)==-1){
                 errors = 1;
             }
         }
+        emptyMessage(&msg);
         free(path);
-        if(fileBuf!=NULL) free(fileBuf);
+
+        //if(fileBuf!=NULL) free(fileBuf);
+    }
+
+    emptyMessage(&msg);
+    readMessage(fd_socket, &msg);
+    if(msg.feedback!=SUCCESS){
+        freeMessage(&msg);
+        errors = msg.additional;
+        return -1;
     }
     if(errors){
+        freeMessage(&msg);
         errors = EIO;
         return -1;
     }
+    freeMessage(&msg);
     return 0;
 }
 
@@ -688,20 +984,3 @@ int storeFile(char* pathname, const char* saveDir, size_t size, void* buf){
     return 0;
 }
 
-int mkpath(char* file_path, mode_t mode) {
-    if(file_path == NULL) {
-        errno = EINVAL;
-        return -1;
-    }
-    for (char* p = strchr(file_path + 1, '/'); p; p = strchr(p + 1, '/')) {
-        *p = '\0';
-        if (mkdir(file_path, mode) == -1) {
-            if (errno != EEXIST) {
-                *p = '/';
-                return -1;
-            }
-        }
-        *p = '/';
-    }
-    return 0;
-}

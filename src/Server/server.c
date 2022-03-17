@@ -57,6 +57,8 @@ int main(int argc, char* argv[]){
     act.sa_handler = SIG_IGN;
     SYSCALL_RETURN(sigaction, sigaction(SIGPIPE, &act, NULL),
                    "ERROR - sigaction failure to ignore sigpipe, errno = %d\n", errno)
+
+
     // Pipe init for threads communications
     int* sigHandler_Pipe = malloc(2*sizeof(int));
     SYSCALL_RETURN(pipe, pipe(sigHandler_Pipe),
@@ -198,7 +200,7 @@ static void* signalHandler(void *arguments){
                 ServerStorage->status = S;
                 close(pipeFd);
                 pipeFd = -1;
-                pthread_exit(NULL);
+                return NULL;
             }
             case SIGQUIT:{
                 appendOnLog(ServerLog, "[SignalHandler]: %d signal received, "
@@ -209,7 +211,7 @@ static void* signalHandler(void *arguments){
                 ServerStorage->status = Q;
                 close(pipeFd);
                 pipeFd = -1;
-                pthread_exit(NULL);
+                return NULL;
             }
             case SIGHUP:{
                 appendOnLog(ServerLog, "[SignalHandler]: %d signal received, "
@@ -220,11 +222,10 @@ static void* signalHandler(void *arguments){
                 ServerStorage->status = Q;
                 close(pipeFd);
                 pipeFd = -1;
-                pthread_exit(NULL);
+                return NULL;
             }
         }
     }
-    pthread_exit(NULL);
 }
 int signalHandlerDestroy(){
     appendOnLog(ServerLog, "[SignalHandler]: Stopped\n");

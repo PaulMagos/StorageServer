@@ -67,6 +67,13 @@
 	return -1;			                        \
     }                                           \
 
+#define SYSCALL_RET(name, sc, str, ...)	        \
+    if (sc == -1) {				                \
+	perror(#name);          		            \
+	print_error(str, __VA_ARGS__);              \
+	return;			                            \
+    }                                           \
+
 #define SYSCALL_ASSIGN(name, r, sc, str, ...)	\
     if ((r=sc) != 0) {				            \
 	perror(#name);				                \
@@ -147,6 +154,25 @@ static inline long StringToLong(char* str) {
         return -1;
     }
     return result;
+}
+
+
+static inline int mkpath(char* file_path, mode_t mode) {
+    if(file_path == NULL) {
+        errno = EINVAL;
+        return -1;
+    }
+    for (char* p = strchr(file_path + 1, '/'); p; p = strchr(p + 1, '/')) {
+        *p = '\0';
+        if (mkdir(file_path, mode) == -1) {
+            if (errno != EEXIST) {
+                *p = '/';
+                return -1;
+            }
+        }
+        *p = '/';
+    }
+    return 0;
 }
 
 #endif //STORAGESERVER_UTILS_H
