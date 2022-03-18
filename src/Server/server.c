@@ -250,7 +250,7 @@ static int serverConfigParser(char* path){
     char fileBuffer[256];
     int socketSet = 0, policySet = 0;
     // Config variables
-    long threads = 0, max_file = 0;
+    long threads = 0, max_file = 0, debug = -1;
     long max_bytes = 0;
     // Try to open file
     if((configFile = fopen(path, "r") )== NULL){
@@ -303,6 +303,19 @@ static int serverConfigParser(char* path){
                 SYSCALL_RETURN(config_fclose, fclose(configFile),
                                "ERROR - Closing file, errno = %d", errno)
                 fprintf(stderr, "ERROR - Threads must be set once, multiple assignments detected\n");
+                return -1;
+            }
+        } else if(strncmp(token, "Debug", 5) == 0){
+            if(debug == -1){
+                token = strtok_r(NULL, "\n\0", &rest);
+                if(token == NULL) return -1;
+                SYSCALL_RETURN(ServerConfig_stringToLong_2, (debug = StringToLong(token)),
+                               "ERROR - String to long conversion, errno = %d", errno)
+                ServerStorage->stdOutput = (debug==1 || debug==0)? debug:0;
+            } else{
+                SYSCALL_RETURN(config_fclose, fclose(configFile),
+                               "ERROR - Closing file, errno = %d", errno)
+                fprintf(stderr, "ERROR - Debug must be set once, multiple assignments detected\n");
                 return -1;
             }
         } else if(strncmp(token, "Policy", 6) == 0){
@@ -361,15 +374,15 @@ static int serverConfigParser(char* path){
     return 0;
 }
 int serverInit(char* configPath, char* logPath){
+    ServerStorage = malloc(sizeof (fileServer));
 
     if (serverConfigParser(configPath) != 0) {
         fprintf(stderr, "ERROR - Parsing config, err = %d", errno);
     }
     createLog(logPath, &ServerLog);
 
-    ServerStorage = malloc(sizeof (fileServer));
 
-    ServerStorage->stdOutput = 1;
+    //ServerStorage->stdOutput = 0;
     ServerStorage->status = E;
 
     ServerStorage->connected = 0;               // Int
@@ -444,10 +457,10 @@ serverFile * icl_hash_toReplace(icl_hash_t *ht, cachePolicy policy){
             file1 = (serverFile*)curr->data;
             if(file1->toDelete == 1) continue;
             fileReadersIncrement(file1);
-            fileReadersIncrement(file2);
+            if(file2) fileReadersIncrement(file2);
             file2 = replaceFile(file1, file2, policy);
             fileReadersDecrement(file1);
-            fileReadersDecrement(file2);
+            if(file2)fileReadersDecrement(file2);
         }
     }
     return file2;
@@ -490,7 +503,7 @@ void fileNumIncrement(){
 }
 
 void fileNumDecrement(){
-    ServerStorage->actualFilesNumber--;
+    if(ServerStorage->actualFilesNumber>0) ServerStorage->actualFilesNumber--;
 }
 
 void fileBytesIncrement(size_t size){
@@ -501,7 +514,7 @@ void fileBytesIncrement(size_t size){
 }
 
 void fileBytesDecrement(size_t size){
-    ServerStorage->actualFilesNumber -= size;
+    if(ServerStorage->actualFilesBytes>0) ServerStorage->actualFilesBytes -= size;
 }
 
 void defaultConfig(serverConfig* config){

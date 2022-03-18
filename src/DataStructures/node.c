@@ -14,9 +14,11 @@ Node createNode(char* index, void* data){
         tmp->index = malloc(strlen(index)+1);
         strncpy(tmp->index, index, strlen(index)+1);
         char* argument = (char*)data;
-        size_t  argSize = strlen(argument)+1;
-        tmp->data = malloc(argSize);
-        memcpy(tmp->data, argument, argSize);
+        if(data!=NULL){
+            size_t  argSize = strlen(argument)+1;
+            tmp->data = malloc(argSize);
+            memcpy(tmp->data, argument, argSize);
+        } else tmp->data = NULL;
     } else{
         tmp->index = NULL;
         tmp->dataInt = *(int*)data;

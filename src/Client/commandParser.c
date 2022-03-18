@@ -291,12 +291,18 @@ void commandHandler(List* commandList){
             }
             case 'R':{
                 if(command) free(command);
-                if(argument!=NULL)
-                    SYSCALL_EXIT(StringToLong, numOfFilesToRead, StringToLong(argument),
+                if(argument!=NULL) {
+                    SYSCALL_BREAK(StringToLong, numOfFilesToRead, StringToLong(argument),
                                  "ERROR - ReadNF Char '%s' to Long Conversion gone wrong, errno=%d\n", argument, errno);
-                SYSCALL_EXIT(readNFiles, scRes, readNFiles(numOfFilesToRead, readDir),
+                }
+                SYSCALL_BREAK(readNFiles, scRes, readNFiles(numOfFilesToRead, readDir),
                              "ReadN failed, errno = %d\n", errno);
-                if(pFlag) fprintf(stdout, "Read Success\n");
+                if(pFlag) fprintf(stdout, "Files Readed, saved in %s\n", readDir);
+                if(scRes == -1 || numOfFilesToRead==-1){
+                    if(socket) free(socket);
+                    if(argument) free(argument);
+                    exit(errno);
+                }
                 msleep(timeToSleep);
                 break;
             }
@@ -413,7 +419,8 @@ void commandHandler(List* commandList){
                 break;
             }
         }
-        if(argument) free(argument);
+        free(argument);
+        argument = NULL;
     }
 
     msleep(timeToSleep);

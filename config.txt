@@ -2,4 +2,5 @@ Files: 1
 Bytes: 100000
 Threads: 3
 Policy: FIFO
+Debug: 1
 Socket:

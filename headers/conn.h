@@ -118,14 +118,10 @@ static inline int readMessage(int fd, message* message1){
         errno = EINVAL;
         return -1;
     }
-    printf("PREREAD\n");
-
 
     if(read(fd, message1, sizeof(message)) != sizeof(message)){
         return -1;
     }
-
-    printf("POSTREAD\n");
 
     message1->content = malloc(message1->size + 1);
     memset(message1->content, 0, message1->size+1);
@@ -133,7 +129,7 @@ static inline int readMessage(int fd, message* message1){
     if((readed = readn(fd, message1->content, message1->size)) == -1){
         fprintf(stderr, "Reading from %d fd", fd);
     }
-    printf("READN: %d %d %s %d %s\n", fd, (int )message1->size, requestToString(message1->request), (int)message1->feedback, strerror(message1->additional));
+    //printf("READN: %d %d %s %d %s\n", fd, (int )message1->size, requestToString(message1->request), (int)message1->feedback, strerror(message1->additional));
 
     return readed;
 }
@@ -148,12 +144,10 @@ static inline int writeMessage(int fd, message* message1){
         errno = EINVAL;
         return -1;
     }
-    printf("PREWRITE\n");
 
     if(write(fd, message1, sizeof(message)) != sizeof(message)){
         return -1;
     }
-    printf("POSTWRITE\n");
 
     int written = 0;
     if(message1->size>0) {
@@ -164,7 +158,7 @@ static inline int writeMessage(int fd, message* message1){
         }
     }
 
-    printf("WRITEN: %d %d %s %d %s\n", fd, (int )message1->size, requestToString(message1->request), (int)message1->feedback, strerror(message1->additional));
+    //printf("WRITEN: %d %d %s %d %s\n", fd, (int )message1->size, requestToString(message1->request), (int)message1->feedback, strerror(message1->additional));
 
     return written;
 }

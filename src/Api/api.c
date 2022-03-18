@@ -34,7 +34,7 @@ struct timespec diff_timespec(const struct timespec time1,
 }
 
 int saveIntoDir(const char* dir, int numOfFiles);
-int storeFile(char* pathname, const char* saveDir, size_t size, void* buf);
+int storeFile(char* pathname, const char* saveDir, size_t size, void** buf);
 int mkpath(char* file_path, mode_t mode);
 
 int openConnection(const char* sockname, int msec, const struct timespec abstime){
@@ -108,7 +108,6 @@ int openFile(const char* pathname, int flags){
     }
     // Variabile per testare le SC
     int scRes;
-    printf("| OPEN FILE\n");
 
     message msg;
     memset(&msg, 0, sizeof(message));
@@ -173,7 +172,6 @@ int readFile(const char* pathname, void** buf, size_t* size){
         return -1;
     }
     int scRes;
-    printf("| READ FILE\n");
 
     message msg;
     memset(&msg, 0, sizeof(message));
@@ -285,6 +283,7 @@ int readNFiles(int N, const char* dirname){
     SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
                  "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
 
+    freeMessageContent(&msg);
     SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
                  "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
     if(msg.feedback!=SUCCESS){
@@ -339,7 +338,6 @@ int writeFile(const char* pathname, const char* dirname){
         errno = ENOTCONN;
         return -1;
     }
-    printf("| WRITE FILE\n");
 
     // LINUX/Posix stat library for retrieving a path info,
     // I could've used standard library by seeking to the end of the file and back,
@@ -740,7 +738,6 @@ int closeFile(const char* pathname){
     }
     int scRes;
 
-    printf("| CLOSE FILE\n");
     message msg;
     memset(&msg, 0, sizeof(message));
     msg.size = strlen(pathname) + 1;
@@ -856,6 +853,7 @@ int removeFile(const char* pathname){
 
 int saveIntoDir(const char* dir, int numOfFiles){
     if(numOfFiles==0) return 0;
+    int scRes = 0;
     int errors = 0;
     int save = (dir==NULL)? 0 : 1;
     void* path;
@@ -863,33 +861,33 @@ int saveIntoDir(const char* dir, int numOfFiles){
     memset(&msg, 0, sizeof(message));
     for(int i = 0; i<numOfFiles; i++){
         // Get PATH and PATHLEN
-        SYSCALL_EXIT(readMessage, errors, readMessage(fd_socket, &msg),
+        SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
                      "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
         // IF ANY ERROR LET THE SERVER KNOW
         if(msg.request!=O_SEND){
             freeMessageContent(&msg);
             msg.feedback = ERROR;
             msg.additional = EBADMSG;
-            SYSCALL_EXIT(writeMessage, errors, writeMessage(fd_socket, &msg),
+            SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
                          "ERROR OpenFile - Sending feedback error to server, errno = %d\n", errno);
             errno = EBADMSG;
             return -1;
         }
-        path = malloc(msg.size);
+        path = malloc(msg.size+1);
         if(path == NULL){
             errno = ENOMEM;
             return -1;
         }
+        strncpy(path, msg.content, msg.size+1);
         freeMessageContent(&msg);
 
         // SUCCESS SEND ME THE FILE
         msg.feedback = SUCCESS;
-        SYSCALL_EXIT(writeMessage, errors, writeMessage(fd_socket, &msg),
+        SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
                      "ERROR OpenFile - Sending feedback error to server, errno = %d\n", errno);
 
-        emptyMessage(&msg);
         // FILE RECEIVED
-        SYSCALL_EXIT(readMessage, errors, readMessage(fd_socket, &msg),
+        SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
                      "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
 
         if(msg.feedback!=SUCCESS || msg.request!=O_DATA){
@@ -958,7 +956,6 @@ int saveIntoDir(const char* dir, int numOfFiles){
         //if(fileBuf!=NULL) free(fileBuf);
     }
 
-    freeMessageContent(&msg);
     readMessage(fd_socket, &msg);
     if(msg.feedback!=SUCCESS){
         errors = msg.additional;
@@ -967,29 +964,28 @@ int saveIntoDir(const char* dir, int numOfFiles){
     }
     if(errors){
         freeMessageContent(&msg);
-        errors = EIO;
+        errno = EIO;
         return -1;
     }
     freeMessageContent(&msg);
     return 0;
 }
 
-int storeFile(char* pathname, const char* saveDir, size_t size, void* buf){
-
+int storeFile(char* pathname, const char* saveDir, size_t size, void** buf){
     int clientPathDim = strlen(saveDir) + strlen(pathname) + 1;
     char* ClientPath = malloc(clientPathDim);
     if(ClientPath == NULL) return -1;
-    snprintf(ClientPath, PATH_MAX, "%s/%s", saveDir, pathname);
-    char* fileDir = basename(ClientPath);
+    sprintf(ClientPath, "%s%s", saveDir, pathname);
+    char* fileDir = ClientPath;
+    fileDir = basename(fileDir);
 
-    if(mkpath(fileDir, S_IRWXU)==-1){
+    if(mkpath(ClientPath, S_IRWXU)==-1){
         return -1;
     }
 
     FILE* fil3 = fopen(ClientPath, "wb");
     if(fil3 == NULL){
         free(ClientPath);
-        free(fileDir);
         return -1;
     }
 
