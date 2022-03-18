@@ -80,6 +80,13 @@
 	int errno_copy = errno;			            \
 	print_error(str, __VA_ARGS__);              \
     return;                                     \
+    }                                         \
+
+#define SYSCALL_BREAK(name, r, sc, str, ...)	\
+    if ((r=sc) != 0) {				            \
+	perror(#name);				                \
+	print_error(str, __VA_ARGS__);              \
+    break;                                     \
     }                                           \
 /**
 * \brief Procedura di utilita' per la stampa degli errori

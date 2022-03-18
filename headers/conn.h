@@ -41,6 +41,26 @@ typedef struct{
     fileResponse feedback;
 } message;
 
+static inline char* requestToString(fileFlags request){
+    switch (request) {
+        case O_PEN: return "OPEN";
+        case O_CREAT: return "CREATE";
+        case O_LOCK: return "LOCK";
+        case O_CREAT_LOCK: return "CREATE AND LOCK";
+        case O_UNLOCK: return "UNLOCK";
+        case O_WRITE: return "WRITE";
+        case O_READ: return "READ";
+        case O_APPND: return "APPEND";
+        case O_DEL: return "DELETE";
+        case O_CLOSE: return "CLOSE";
+        case O_DATA: return "DATA";
+        case O_SEND: return "SEND";
+        case O_READN: return "READ N FILES";
+        case O_NULL: return "NULL";
+    }
+    return "ERROR";
+}
+
 // Lezione 9 laboratorio, funzione di scrittura e lettura per evitare che rimangano dati sul buffer non gestiti
 /** Evita letture parziali
  *
@@ -98,10 +118,14 @@ static inline int readMessage(int fd, message* message1){
         errno = EINVAL;
         return -1;
     }
+    printf("PREREAD\n");
+
 
     if(read(fd, message1, sizeof(message)) != sizeof(message)){
         return -1;
     }
+
+    printf("POSTREAD\n");
 
     message1->content = malloc(message1->size + 1);
     memset(message1->content, 0, message1->size+1);
@@ -109,6 +133,7 @@ static inline int readMessage(int fd, message* message1){
     if((readed = readn(fd, message1->content, message1->size)) == -1){
         fprintf(stderr, "Reading from %d fd", fd);
     }
+    printf("READN: %d %d %s %d %s\n", fd, (int )message1->size, requestToString(message1->request), (int)message1->feedback, strerror(message1->additional));
 
     return readed;
 }
@@ -123,17 +148,24 @@ static inline int writeMessage(int fd, message* message1){
         errno = EINVAL;
         return -1;
     }
+    printf("PREWRITE\n");
 
     if(write(fd, message1, sizeof(message)) != sizeof(message)){
         return -1;
     }
+    printf("POSTWRITE\n");
 
     int written = 0;
     if(message1->size>0) {
         if ((written = writen(fd, message1->content, message1->size)) == -1) {
             fprintf(stderr, "Writing on %d fd", fd);
+            message1->size = 0;
+            free(message1->content);
         }
     }
+
+    printf("WRITEN: %d %d %s %d %s\n", fd, (int )message1->size, requestToString(message1->request), (int)message1->feedback, strerror(message1->additional));
+
     return written;
 }
 
@@ -141,21 +173,15 @@ static inline int writeMessage(int fd, message* message1){
  *
  */
 static inline void emptyMessage(message* message1){
-    message1->size = 0;
     message1->feedback = 0;
     message1->additional = 0;
-    message1->request = O_NULL;
-
-    if(message1->content!=NULL){
-        //free(message1->content);
-        message1->content = NULL;
-    }
 }
 
 /**  Libero content
  *
  */
 static inline void freeMessageContent(message* message1){
+    message1->size = 0;
     free(message1->content);
 }
 /**  Libero memoria

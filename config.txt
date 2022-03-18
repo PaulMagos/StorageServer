@@ -1,5 +1,5 @@
-Files: 100
+Files: 1
 Bytes: 100000
-Threads: 1
-Policy: LIFO
+Threads: 3
+Policy: FIFO
 Socket:

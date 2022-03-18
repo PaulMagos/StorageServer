@@ -37,4 +37,4 @@ Node createNode(char* index, void* data);
  * @effect frees the node
  * @param nodeToFree
  */
-void freeNode(Node* nodeToFree);
+void freeNode(Node nodeToFree);

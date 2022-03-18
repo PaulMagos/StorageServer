@@ -168,14 +168,7 @@ int stopThreadPool(threadPool* tPool, int hard_off){
         free(tPool->workersPipes[i]);
     }
     free(tPool->workersPipes);
-    if(tPool->stop>1){
-        for(int i = 0; i < tPool->maxThreads; i++){
-            if(pthread_detach(tPool->workers[i]) != 0){
-                errno = EFAULT;
-                return -1;
-            }
-        }
-    } else for(int i = 0; i < tPool->maxThreads; i++){
+     for(int i = 0; i < tPool->maxThreads; i++){
         if(pthread_join(tPool->workers[i], NULL) != 0){
             errno = EFAULT;
             return -1;

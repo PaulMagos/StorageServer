@@ -95,14 +95,20 @@ int pullTop(List* myList, char** index, void** data){
         (*myList)->tail = NULL;
     }else {
         (*myList)->head = (*myList)->head->next;
+        (*myList)->head->prev = NULL;
     }
 
     if(tmp->index!= NULL) {
-        *index = tmp->index;
-        *data = tmp->data;
+        *index = malloc(strlen(tmp->index)+1);
+        strncpy(*index, tmp->index, strlen(tmp->index)+1);
+        //*data = malloc()
+        if(tmp->data!=NULL){
+            *data = malloc(strlen(tmp->data)+1);
+            memcpy(*data, tmp->data, strlen(tmp->data)+1);
+        }
     }
 
-    freeNode(&tmp);
+    freeNode(tmp);
     return 0;
 }
 
@@ -146,13 +152,13 @@ int pullBottom(List* myList, char** index, void** data){
     *index = tmp->index;
     *data = tmp->data;
 
-    freeNode(&tmp);
+    freeNode(tmp);
     return 0;
 }
 
-void freeNodes(Node* head){
-    if((*head) == NULL) return;
-    freeNodes(&(*head)->next);
+void freeNodes(Node head){
+    if((head) == NULL) return;
+    freeNodes(head->next);
     freeNode(head);
     return;
 }
@@ -164,7 +170,7 @@ int deleteList(List* myList) {
         return -1;
     }
 
-    freeNodes(&(*myList)->head);
+    freeNodes((*myList)->head);
     free(*myList);
     return 0;
 }
