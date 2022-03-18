@@ -168,7 +168,7 @@ void commandHandler(List* commandList){
         getArg((*commandList)->head, "D", &expelledDir);
         if(expelledDir) {
             stat(expelledDir,&dir_Details);
-            if(!S_ISDIR(dir_Details.st_mode))  expelledDir = "dev/null";
+            if(!S_ISDIR(dir_Details.st_mode))  expelledDir = NULL;
             else if(pFlag) {
                 if(expelledDir[strlen(expelledDir)-1] == '/') expelledDir[strlen(expelledDir)-1] = '\0';
                 fprintf(stdout, "'%s' -> Expelled Files DIR Set\n", expelledDir);
@@ -180,7 +180,7 @@ void commandHandler(List* commandList){
         getArg((*commandList)->head, "d", &readDir);
         if (readDir) {
             stat(readDir, &dir_Details);
-            if (!S_ISDIR(dir_Details.st_mode)) readDir = "dev/null";
+            if (!S_ISDIR(dir_Details.st_mode)) readDir = NULL;
             else if (pFlag) {
                 if(readDir[strlen(readDir)-1] == '/') readDir[strlen(readDir)-1] = '\0';
                 fprintf(stdout, "'%s' -> Received Files DIR Set\n", readDir);

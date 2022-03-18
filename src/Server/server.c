@@ -18,6 +18,7 @@ void removeClient();
 static void* signalHandler(void* arguments);
 int signalHandlerDestroy();
 int serverInit(char* configPath, char* logPath);
+void printServerStatus();
 
 int main(int argc, char* argv[]){
     // -------------------------------------    Server   -------------------------------------
@@ -233,12 +234,6 @@ int signalHandlerDestroy(){
 }
 
 static int serverConfigParser(char* path){
-    /* SUPERFLUO
-     * // Test arguments
-    if(path == NULL) {
-        errno = EINVAL;
-        return -1;
-    }*/
     if(path == NULL) {
         defaultConfig(&ServerConfig);
         return 0;
@@ -422,6 +417,7 @@ void serverDestroy(){
         printf("Error - StopThreadPool, %d", errno);
     }
     signalHandlerDestroy();
+    printServerStatus();
     closeLogStr(ServerLog);
     if(pthread_mutex_destroy(&(ServerStorage->lock)) != 0){
         SYSCALL_EXIT(ServerInit_hashDestroy, res, icl_hash_destroy(ServerStorage->filesTable, free, free),
@@ -434,6 +430,30 @@ void serverDestroy(){
                    "ERROR - Icl_Hash destroy fault, errno = %d", errno);
     free(ServerStorage);
 }
+void printServerStatus(){
+    logSeparator(ServerLog);
+    appendOnLog(ServerLog,"[MAIN]: Number of files saved: %d\n", ServerStorage->sessionMaxFilesNumber);
+    appendOnLog(ServerLog,"[MAIN]: Bytes of files saved: %d\n", (int)ServerStorage->sessionMaxBytes);
+    appendOnLog(ServerLog,"[MAIN]: Number of files expelled: %d\n", ServerStorage->expelledFiles);
+    fprintf(stdout, "[MAIN]: Number of files saved: %d\n", ServerStorage->sessionMaxFilesNumber);
+    fprintf(stdout, "[MAIN]: Bytes of files saved: %d\n", (int)ServerStorage->sessionMaxBytes);
+    fprintf(stdout, "[MAIN]: Number of files expelled: %d\n", ServerStorage->expelledFiles);
+    if(ServerStorage->actualFilesNumber>0){
+        appendOnLog(ServerLog,"[MAIN]: Files on the server at shutdown %d :\n", ServerStorage->sessionMaxFilesNumber);
+        appendOnLog(ServerLog,"SIZE --- PATH\n");
+        fprintf(stdout, "[MAIN]: Files on the server at shutdown %d :\n", ServerStorage->sessionMaxFilesNumber);
+        fprintf(stdout, "SIZE --- PATH\n");
+        icl_entry_t *bucket, *curr;
+        for (int i = 0; i<ServerStorage->filesTable->nbuckets; i++) {
+            bucket = ServerStorage->filesTable->buckets[i];
+            for(curr = bucket; curr!=NULL; curr=curr->next){
+                appendOnLog(ServerLog,"%d --- %s\n",  (int)((serverFile*)curr->data)->size, ((serverFile*)curr->data)->path);
+                fprintf(stdout, "%d --- %s\n",  (int)((serverFile*)curr->data)->size, ((serverFile*)curr->data)->path);
+            }
+        }
+    }
+}
+
 
 serverFile* replaceFile(serverFile* file1, serverFile* file2, cachePolicy policy){
     if(file1 == NULL && file2 == NULL) return NULL;
