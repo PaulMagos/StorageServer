@@ -39,7 +39,7 @@ static inline void getTime(char** val, int type){
 }
 
 
-/*
+/**
  *   @func  CreateLog
  *   @param dir -> log files directory
  *   @param log -> initialize logF* structure with file and mutex
@@ -47,7 +47,7 @@ static inline void getTime(char** val, int type){
  */
 void createLog(char* dir, logFile* log);
 
-/*
+/**
  *   @func  appendOnLog
  *   @param log -> logF* structure with file and mutex
  *   @param strBuf -> what we have to append on the log
@@ -57,7 +57,7 @@ void createLog(char* dir, logFile* log);
  */
 int appendOnLog(logFile log, char* strBuf,...);
 
-/*
+/**
  *   @func -> closeLogStr
  *   @param log -> logF* structure with file and mutex, we have to free this structure
  *   @effects -> it frees the log structure
@@ -65,7 +65,7 @@ int appendOnLog(logFile log, char* strBuf,...);
  */
 int closeLogStr(logFile log);
 
-/*
+/**
  *   @func -> logSeparator
  *   @param log -> logF* structure with file and mutex, we have to free this structure
  *   @effects -> prints a line separator on the log

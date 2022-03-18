@@ -179,8 +179,6 @@ wTask* taskCreate (int client_fd);
  *   @return returns 0 in case everything goes right, -1 if an error occurs
 */
 int taskDestroy(wTask* task);
-
-
 /**
  *   @func  CloseConnection
  *   @effects closes the connection to the client on fd_client, if needed unlocks all the files locked by fd_client
@@ -189,24 +187,69 @@ int taskDestroy(wTask* task);
  *   @return returns 0 in case everything goes right, -1 if an error occurs
 */
 int CloseConnection(int fd_client, int workerId);
-
 /**
  *   @func  OpenFile
  *   @effects read from the fd_client the path and the flags for opening a file
  *   @param fd_client -> client_fd
  *   @param workerId-> thread id
- *   @return returns 0 in case everything goes right, -1 if an error occurs
 */
 void OpenFile(int fd_client, int workerId, message* message1);
-
-void CloseFile(int fd_client, int workerId, message* message1);
-void DeleteFile(int fd_client, int workerId, message* message1);
-void ReceiveFile(int fd_client, int workerId, message* message1);
-void SendFile(int fd_client, int workerId, message* message1);
-void SendNFiles(int fd_client, int workerId, message* message1);
-void LockFile(int fd_client, int workerId, message* message1);
-void UnLockFile(int fd_client, int workerId, message* message1);
-void AppendOnFile(int fd_client, int workerId, message* message1);
+/**
+ *   @func  CloseFile
+ *   @effects close a file previously opened by 'fd' client
+ *   @param fd_client -> client_fd
+ *   @param workerId-> thread id
+*/
+void CloseFile(int fd_client, int workerId, message* );
+/**
+ *   @func  DeleteFile
+ *   @effects delete a file
+ *   @param fd_client -> client_fd
+ *   @param workerId-> thread id
+*/
+void DeleteFile(int fd_client, int workerId, message* );
+/**
+ *   @func  ReceiveFile
+ *   @effects write a file from the client 'fd' in the server
+ *   @param fd_client -> client_fd
+ *   @param workerId-> thread id
+*/
+void ReceiveFile(int fd_client, int workerId, message* );
+/**
+ *   @func  SendFile
+ *   @effects send a file to the client 'fd' from the server
+ *   @param fd_client -> client_fd
+ *   @param workerId-> thread id
+*/
+void SendFile(int fd_client, int workerId, message* );
+/**
+ *   @func  SendNFile
+ *   @effects send N files to the client 'fd' from the server
+ *   @param fd_client -> client_fd
+ *   @param workerId-> thread id
+*/
+void SendNFiles(int fd_client, int workerId, message* );
+/**
+ *   @func  SendNFile
+ *   @effects lock a file for the client 'fd' in the server
+ *   @param fd_client -> client_fd
+ *   @param workerId-> thread id
+*/
+void LockFile(int fd_client, int workerId, message* );
+/**
+ *   @func  SendNFile
+ *   @effects unlock a file for the client 'fd' in the server
+ *   @param fd_client -> client_fd
+ *   @param workerId-> thread id
+*/
+void UnLockFile(int fd_client, int workerId, message* );
+/**
+ *   @func  AppendOnFile
+ *   @effects append on a file that exists from the client 'fd' in the server
+ *   @param fd_client -> client_fd
+ *   @param workerId-> thread id
+*/
+void AppendOnFile(int fd_client, int workerId, message* );
 // ------------------------------------ Files Functions ------------------------------------
 /**
  *   @func  fileReadersIncrement

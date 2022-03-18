@@ -987,6 +987,7 @@ int ExpelledHandler(int fd, int workerId, List expelled){
         if(File==NULL){
             errno = ENOENT;
             freeMessage(&curr);
+            free(index);
             SYSCALL_RETURN(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
                            "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
             return -1;
@@ -1007,6 +1008,7 @@ int ExpelledHandler(int fd, int workerId, List expelled){
             curr.additional = 132;
             writeMessage(fd, &curr);
             freeMessageContent(&curr);
+            free(index);
             return -1;
         }
 
@@ -1014,7 +1016,6 @@ int ExpelledHandler(int fd, int workerId, List expelled){
 
         fileWritersIncrement(File);
         len = (int)File->size;
-        printf("%d\n", len);
 
         curr.size = len;
         curr.content = malloc(len);
@@ -1047,9 +1048,8 @@ int ExpelledHandler(int fd, int workerId, List expelled){
             appendOnLog(ServerLog, "[Thread %d]: File %s, of %d files sent to client %d\n", workerId, index, num, fd);
         }
         freeMessageContent(&curr);
-        memset(index, 0, sizeof (char ) * strlen(index));
+        free(index);
     }
-    if(index) free(index);
     deleteList(&expelled);
     return 0;
 }
