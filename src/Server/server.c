@@ -369,18 +369,20 @@ static int serverConfigParser(char* path){
         fprintf(stderr, "ERROR - Config file wrong parsing");
         return -1;
     }
+    if(debug == -1) debug = 0;
     SYSCALL_RETURN(config_fclose, fclose(configFile),
                    "ERROR - Closing file, errno = %d", errno)
-    return 0;
+    return debug;
 }
 int serverInit(char* configPath, char* logPath){
-    ServerStorage = malloc(sizeof (fileServer));
-
-    if (serverConfigParser(configPath) != 0) {
+    int debug;
+    if ((debug = serverConfigParser(configPath)) != 0) {
         fprintf(stderr, "ERROR - Parsing config, err = %d", errno);
     }
     createLog(logPath, &ServerLog);
 
+    ServerStorage = malloc(sizeof (fileServer));
+    ServerStorage->stdOutput = debug;
     ServerStorage->status = E;
 
     ServerStorage->connected = 0;               // Int

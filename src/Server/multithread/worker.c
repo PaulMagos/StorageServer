@@ -599,6 +599,7 @@ void ReceiveFile(int fd_client, int workerId, message* message1){
         message1->feedback = ERROR;
         fileWritersDecrement(File);
         freeMessageContent(message1);
+        icl_hash_delete(ServerStorage->filesTable, File->path, free, freeFile);
         SYSCALL_RET(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
                        "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
         return ;
@@ -612,6 +613,7 @@ void ReceiveFile(int fd_client, int workerId, message* message1){
             message1->feedback = ERROR;
             fileWritersDecrement(File);
             freeMessageContent(message1);
+            icl_hash_delete(ServerStorage->filesTable, File->path, free, freeFile);
             SYSCALL_RET(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
                            "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
             return ;
