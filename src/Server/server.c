@@ -381,8 +381,6 @@ int serverInit(char* configPath, char* logPath){
     }
     createLog(logPath, &ServerLog);
 
-
-    //ServerStorage->stdOutput = 0;
     ServerStorage->status = E;
 
     ServerStorage->connected = 0;               // Int
