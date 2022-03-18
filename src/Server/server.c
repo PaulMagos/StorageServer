@@ -4,6 +4,8 @@
 
 #include "../../headers/server.h"
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "ConstantFunctionResult"
 // -------------------------------- GLOBAR VARIABLES --------------------------------
 serverConfig ServerConfig;
 fileServer* ServerStorage;
@@ -20,6 +22,8 @@ int signalHandlerDestroy();
 int serverInit(char* configPath, char* logPath);
 void printServerStatus();
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCDFAInspection"
 int main(int argc, char* argv[]){
     // -------------------------------------    Server   -------------------------------------
     // Log, Config and Server Init
@@ -101,7 +105,6 @@ int main(int argc, char* argv[]){
     SYSCALL_EXIT(listen, res, listen(fd_server_socket, SOMAXCONN),
             "ERROR - Socket listen failure, errno = %d\n", errno)
 
-
     atexit(serverDestroy);
 
     // ------------------------------------- Clients Fds -------------------------------------
@@ -116,7 +119,7 @@ int main(int argc, char* argv[]){
         if(i > max_fd) max_fd = i;
     }
 
-    int threadId = 0;
+    int threadId;
 
     if(ServerStorage->stdOutput) fprintf(stdout, "Server Started Well, Waiting For Connections\n");
     // ----------------------------------- MainThreadFunc ------------------------------------
@@ -177,8 +180,10 @@ int main(int argc, char* argv[]){
     msleep(2000);
     //serverDestroy();
     free(sigHandler_Pipe);
-    return 0;
+    if(res!=0) res = 0;
+    return res;
 }
+#pragma clang diagnostic pop
 
 static void* signalHandler(void *arguments){
     sigset_t *workingSet = ((sigHandlerArgs*)arguments)->sigSet;
@@ -200,8 +205,7 @@ static void* signalHandler(void *arguments){
                 }
                 ServerStorage->status = S;
                 close(pipeFd);
-                pipeFd = -1;
-                return NULL;
+                pthread_exit(NULL);
             }
             case SIGQUIT:{
                 appendOnLog(ServerLog, "[SignalHandler]: %d signal received, "
@@ -211,7 +215,6 @@ static void* signalHandler(void *arguments){
                 }
                 ServerStorage->status = Q;
                 close(pipeFd);
-                pipeFd = -1;
                 return NULL;
             }
             case SIGHUP:{
@@ -222,7 +225,6 @@ static void* signalHandler(void *arguments){
                 }
                 ServerStorage->status = Q;
                 close(pipeFd);
-                pipeFd = -1;
                 return NULL;
             }
         }
@@ -358,7 +360,6 @@ static int serverConfigParser(char* path){
 
     if(socketSet == 0){
         strncpy(ServerConfig.serverSocketName, "../../tmp/cs_socket", UNIX_PATH_MAX);
-        socketSet = 1;
     }
     if(threads == 0 || max_file == 0 || max_bytes == 0){
         fprintf(stderr, "ERROR - Config file wrong parsing");
@@ -428,6 +429,7 @@ void serverDestroy(){
 
     SYSCALL_EXIT(ServerInit_hashDestroy, res, icl_hash_destroy(ServerStorage->filesTable, free, freeFile),
                    "ERROR - Icl_Hash destroy fault, errno = %d", errno);
+    if(res == -1 && ServerStorage->stdOutput) printf("ERROR");
     free(ServerStorage);
 }
 void printServerStatus(){
@@ -580,3 +582,4 @@ void* icl_hash_find(icl_hash_t *ht, void* key)
         }
     return NULL;
 }
+#pragma clang diagnostic pop
