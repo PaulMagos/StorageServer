@@ -385,7 +385,8 @@ int serverInit(char* configPath, char* logPath){
     ServerStorage->status = E;
 
     ServerStorage->connected = 0;               // Int
-    ServerStorage->expelledFiles = 0;           // Int
+    ServerStorage->expelledFiles = 0;           // size_t
+    ServerStorage->expelledBytes = 0;           // Int
     ServerStorage->maxConnections = 0;          // Int
     ServerStorage->sessionMaxBytes = 0;         // Size_t
     ServerStorage->actualFilesBytes = 0;        // Size_t
@@ -437,23 +438,39 @@ void serverDestroy(){
 }
 void printServerStatus(){
     logSeparator(ServerLog);
+    char* max = calculateSize(ServerStorage->sessionMaxBytes);
+    char* expelled = calculateSize(ServerStorage->expelledBytes);
     appendOnLog(ServerLog,"[MAIN]: Number of files saved: %d\n", ServerStorage->sessionMaxFilesNumber);
-    appendOnLog(ServerLog,"[MAIN]: Bytes of files saved: %d\n", (int)ServerStorage->sessionMaxBytes);
-    appendOnLog(ServerLog,"[MAIN]: Number of files expelled: %d\n", ServerStorage->expelledFiles);
+    appendOnLog(ServerLog,"        Bytes of files saved: %s\n", max);
+    appendOnLog(ServerLog,"        Number of files expelled: %d\n", ServerStorage->expelledFiles);
+    appendOnLog(ServerLog,"        Number of bytes expelled: %s\n", expelled);
     fprintf(stdout, "[MAIN]: Number of files saved: %d\n", ServerStorage->sessionMaxFilesNumber);
-    fprintf(stdout, "[MAIN]: Bytes of files saved: %d\n", (int)ServerStorage->sessionMaxBytes);
-    fprintf(stdout, "[MAIN]: Number of files expelled: %d\n", ServerStorage->expelledFiles);
+    fprintf(stdout, "        Bytes of files saved: %s\n", max);
+    fprintf(stdout, "        Number of files expelled: %d\n", ServerStorage->expelledFiles);
+    fprintf(stdout, "        Number of bytes expelled: %s\n", expelled);
+    free(max);
+    free(expelled);
     if(ServerStorage->actualFilesNumber>0){
-        appendOnLog(ServerLog,"[MAIN]: Files on the server at shutdown %d :\n", ServerStorage->actualFilesNumber);
-        appendOnLog(ServerLog,"SIZE --- PATH\n");
-        fprintf(stdout, "[MAIN]: Files on the server at shutdown %d :\n", ServerStorage->actualFilesNumber);
-        fprintf(stdout, "SIZE --- PATH\n");
+        char* actual = calculateSize(ServerStorage->actualFilesBytes);
+        char* serverMaxBytes = calculateSize(ServerConfig.maxByte);
+        appendOnLog(ServerLog,"        Files on the server at shutdown %d of %d\n", ServerStorage->actualFilesNumber, ServerConfig.maxFile);
+        appendOnLog(ServerLog,"        Bytes on the server at shutdown %s of %s:\n\n", actual, serverMaxBytes);
+        appendOnLog(ServerLog,"        Files :\n");
+        appendOnLog(ServerLog,"        Size --- Path\n");
+        fprintf(stdout, "        Files on the server at shutdown %d of %d\n", ServerStorage->actualFilesNumber, ServerConfig.maxFile);
+        fprintf(stdout, "        Bytes on the server at shutdown %s of %s:\n\n", actual, serverMaxBytes);
+        fprintf(stdout, "        Files :\n");
+        fprintf(stdout, "        Size --- Path\n");
+        free(serverMaxBytes);
         icl_entry_t *bucket, *curr;
+        free(actual);
         for (int i = 0; i<ServerStorage->filesTable->nbuckets; i++) {
             bucket = ServerStorage->filesTable->buckets[i];
             for(curr = bucket; curr!=NULL; curr=curr->next){
-                appendOnLog(ServerLog,"%d --- %s\n",  (int)((serverFile*)curr->data)->size, ((serverFile*)curr->data)->path);
-                fprintf(stdout, "%d --- %s\n",  (int)((serverFile*)curr->data)->size, ((serverFile*)curr->data)->path);
+                actual = calculateSize((int)((serverFile*)curr->data)->size);
+                appendOnLog(ServerLog,"        %s --- %s\n",  actual, ((serverFile*)curr->data)->path);
+                fprintf(stdout, "        %s --- %s\n",  actual, ((serverFile*)curr->data)->path);
+                free(actual);
             }
         }
     }
@@ -475,17 +492,20 @@ serverFile* replaceFile(serverFile* file1, serverFile* file2, cachePolicy policy
 
 serverFile * icl_hash_toReplace(icl_hash_t *ht, cachePolicy policy){
     icl_entry_t *bucket, *curr;
-    serverFile *file1, *file2 = NULL;
+    serverFile *file1, *file2 = NULL, *exFile2 = NULL;
     for (int i = 0; i<ht->nbuckets; i++) {
         bucket = ht->buckets[i];
         for(curr = bucket; curr!=NULL; curr=curr->next){
             file1 = (serverFile*)curr->data;
-            if(file1->toDelete == 1) continue;
+            if(file1->toDelete != 0) continue;
+            if(file1->lockFd != -1) continue;
+            if(file2 && file2->lockFd != -1) continue;
             fileReadersIncrement(file1);
-            if(file2) fileReadersIncrement(file2);
+            if(file2 && file1!=file2) fileReadersIncrement(file2);
+            exFile2 = file2;
             file2 = replaceFile(file1, file2, policy);
             fileReadersDecrement(file1);
-            if(file2 && file1!=file2) fileReadersDecrement(file2);
+            if(file2 && exFile2 && (file2 != exFile2 || file1!=file2)) fileReadersDecrement(exFile2);
         }
     }
     return file2;
@@ -522,9 +542,7 @@ void freeFile(void* file) {
 
 void fileNumIncrement(){
     ServerStorage->actualFilesNumber++;
-    if(ServerStorage->actualFilesNumber>ServerStorage->sessionMaxFilesNumber){
-        ServerStorage->sessionMaxFilesNumber = ServerStorage->actualFilesNumber;
-    }
+    ServerStorage->sessionMaxFilesNumber++;
 }
 
 void fileNumDecrement(){
@@ -533,9 +551,7 @@ void fileNumDecrement(){
 
 void fileBytesIncrement(size_t size){
     ServerStorage->actualFilesBytes += size;
-    if(ServerStorage->actualFilesBytes>ServerStorage->sessionMaxBytes){
-        ServerStorage->sessionMaxBytes = ServerStorage->actualFilesBytes;
-    }
+    ServerStorage->sessionMaxBytes += size;
 }
 
 void fileBytesDecrement(size_t size){

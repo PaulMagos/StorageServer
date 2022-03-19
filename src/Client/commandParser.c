@@ -41,6 +41,7 @@ int getCmdList(List* opList, int argc, char* argv[]){
     int test;
     char* timeArg = NULL;
     char* fArg = NULL;
+    char* rNum = NULL;
 
     while((option = (char)getopt(argc, argv, "hpf:w:W:D:r:R::d:t:l:u:c:")) != -1){
         if(optarg) {
@@ -81,6 +82,14 @@ int getCmdList(List* opList, int argc, char* argv[]){
             }
             case 't': {
                 if(timeArg==NULL) timeArg = optarg;
+                break;
+            }
+            case 'R':{
+                if(argv[optind][0]!='-'){
+                    rNum = argv[optind];
+                }
+                SYSCALL_EXIT(pushBottom, test, pushBottom(&(*opList), charToString(option),rNum),
+                             "Error List Push, errno = %d\n", errno);
                 break;
             }
             case ':': {
@@ -252,7 +261,6 @@ void commandHandler(List* commandList){
                         size_t size;
                         SYSCALL_BREAK(readFile, scRes, readFile(path, &buffer, &size), (pFlag) ?
                             "'%s' -> Read failed, errno = %d\n" : "", token, errno);
-                        printf("%d\n", (int )size);
                         if (readDir != NULL){
                             char clientPath[UNIX_PATH_MAX];
                             memset(clientPath, 0, UNIX_PATH_MAX);
@@ -436,7 +444,7 @@ int recWrite(char* dirname, char* expelledDir, long cnt, int indent){
     if(dirname[sizeof(dirname)-1] == '/') dirname[sizeof(dirname)-1] = '\0';
     int scRes;
     if((directory = opendir(dirname))==NULL || filesToWrite == 0) return 0;
-
+    char* path;
     errno = 0;
     // StackOverflow has something similar at
     // https://stackoverflow.com/questions/8436841/how-to-recursively-list-directories-in-c-on-linux/29402705
@@ -445,14 +453,14 @@ int recWrite(char* dirname, char* expelledDir, long cnt, int indent){
         snprintf(newPath, sizeof(newPath), "%s/%s", dirname, element->d_name);
         switch(element->d_type){
             case DT_REG:{
-                char* path = NULL;
+                path = NULL;
                 if((path = realpath(newPath, path)) == NULL) fprintf(stderr, "ERROR - Opening File %s\n", newPath);
                 else{
-                    SYSCALL_EXIT(openFile, scRes, openFile(path, 1), (pFlag)?
+                    SYSCALL_BREAK(openFile, scRes, openFile(path, 1), (pFlag)?
                         "ERROR - Couldn't send file %s to server, errno = %d\n": "", element->d_name, errno);
-                    SYSCALL_EXIT(writeFile, scRes, writeFile(path, expelledDir), (pFlag)?
+                    SYSCALL_BREAK(writeFile, scRes, writeFile(path, expelledDir), (pFlag)?
                         "ERROR - Couldn't write file %s on server, errno = %d\n": "", element->d_name, errno);
-                    SYSCALL_EXIT(closeFile, scRes, closeFile(path), (pFlag)?
+                    SYSCALL_BREAK(closeFile, scRes, closeFile(path), (pFlag)?
                         "ERROR - Couldn't close file %s on server, errno = %d\n": "", element->d_name, errno);
                     if(pFlag) printf("%*s- %s -> WRITE SUCCESS\n", indent, "", element->d_name);
                     filesToWrite--;
@@ -471,6 +479,7 @@ int recWrite(char* dirname, char* expelledDir, long cnt, int indent){
                 break;
             }
         }
+        if(scRes == -1) free(path);
     }
     closedir(directory);
     return cnt - filesToWrite;

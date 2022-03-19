@@ -81,6 +81,7 @@ typedef struct{
     serverStat status;                      // Server status
     int expelledFiles;                      // Number of expelled files
     int maxConnections;                     // The max number of client connected in one session
+    size_t expelledBytes;                   // Number of expelled bytes
     int actualFilesNumber;                  // Number of files in one moment of the working session
     pthread_mutex_t lock;                   // Mutex variable for lock
     size_t sessionMaxBytes;                 // Max bytes of file in one working session

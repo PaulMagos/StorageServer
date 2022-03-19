@@ -34,6 +34,12 @@
 #define DIM_MSG 2048
 #define MAX_DIM_LEN 1024
 #define UNIX_PATH_MAX 108 /* man 7 unix */
+#define KB 1024
+#define MB 1048576
+#define GB 1073741824
+
+static const char* sizes[] = {"GB", "MB", "KB", "B"};
+
 
 # define tSpecCmp(a, b, CMP)                                                  \
    (((a).tv_sec == (b).tv_sec) ?                                             \
@@ -83,7 +89,7 @@
     }                                         \
 
 #define SYSCALL_BREAK(name, r, sc, str, ...)	\
-    if ((r=sc) != 0) {				            \
+    if ((r=sc) == -1) {				            \
 	perror(#name);				                \
 	print_error(str, __VA_ARGS__);              \
     break;                                     \
@@ -150,7 +156,6 @@ static inline long StringToLong(char* str) {
         return -1;
     }
     result = strtol(str, NULL, 10);
-
     if (result == 0) {
         errno = EINVAL;
         return INT_MAX;
@@ -182,4 +187,18 @@ static inline int mkpath(char* file_path, mode_t mode) {
     return 0;
 }
 
+static inline char* calculateSize(size_t size){
+    char* result = (char*) malloc(sizeof(char) * 20);
+    float max = GB;
+    for (int i = 0; i < (int)(sizeof(sizes)/sizeof(*sizes)); i++) {
+        if(size < max) {
+            max = max/1024;
+            continue;
+        }
+        sprintf(result, "%.2f %s", ((float)size)/max, sizes[i]);
+        return result;
+    }
+    strcpy(result, "0 B");
+    return result;
+}
 #endif //STORAGESERVER_UTILS_H
