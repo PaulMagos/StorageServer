@@ -1,6 +1,6 @@
 Files: 1
 Bytes: 100000
 Threads: 5
-Policy: FIFO
-Debug: True
-Socket:
+Policy: LIFO
+Debug: False
+Socket: ../tmp/cs_socket

@@ -73,7 +73,7 @@ int main(int argc, char* argv[]){
                            NULL,
                            signalHandler,
                            &args
-                           ),
+                   ),
                    "ERROR - Signal Handler Thread Creation Failure, errno = %d", errno);
     // ------------------------------------- ThreadPool -------------------------------------
     // ThreadPool Initialize
@@ -83,7 +83,7 @@ int main(int argc, char* argv[]){
         exit(EXIT_FAILURE);
     }
 
-   // ------------------------------------- ServerSocket -------------------------------------
+    // ------------------------------------- ServerSocket -------------------------------------
     // Socket creation
     int max_fd = 0;
     int fd_server_socket, fd_client_socket = 0;
@@ -95,11 +95,11 @@ int main(int argc, char* argv[]){
 
     // Socket binding and ready to listen
     SYSCALL_EXIT(socket, fd_server_socket, socket(AF_UNIX, SOCK_STREAM, 0),
-            "ERROR - Socket set failure, errno = %d\n", errno)
+                 "ERROR - Socket set failure, errno = %d\n", errno)
     SYSCALL_EXIT(bind, res, bind(fd_server_socket, (struct sockaddr*) &SocketAddress, sizeof(SocketAddress)),
-            "ERROR - Socket bind failure, errno = %d\n", errno)
+                 "ERROR - Socket bind failure, errno = %d\n", errno)
     SYSCALL_EXIT(listen, res, listen(fd_server_socket, SOMAXCONN),
-            "ERROR - Socket listen failure, errno = %d\n", errno)
+                 "ERROR - Socket listen failure, errno = %d\n", errno)
 
     atexit(serverDestroy);
 
@@ -120,56 +120,56 @@ int main(int argc, char* argv[]){
     if(ServerStorage->stdOutput) fprintf(stdout, "Server Started Well, Waiting For Connections\n");
     // ----------------------------------- MainThreadFunc ------------------------------------
     while (ServerStorage->status == E){
-         readySet = currSet;
-         SYSCALL_EXIT(select, res, select(max_fd+1, &readySet,NULL, NULL, NULL), "ERROR - Select failed, errno = %d", errno);
-         for(int i = 0; i <= max_fd; i++){
-             if(!FD_ISSET(i, &readySet)) continue;
-             if(i==fd_server_socket && ServerStorage->status==E){
+        readySet = currSet;
+        SYSCALL_EXIT(select, res, select(max_fd+1, &readySet,NULL, NULL, NULL), "ERROR - Select failed, errno = %d", errno);
+        for(int i = 0; i <= max_fd; i++){
+            if(!FD_ISSET(i, &readySet)) continue;
+            if(i==fd_server_socket && ServerStorage->status==E){
 
-                 SYSCALL_EXIT(acceptNewConn, fd_client_socket, accept(fd_server_socket, NULL, NULL),
-                              "ERROR - Accept new connection to server, errno = %d", errno);
-                 newClient();
-                 FD_SET(fd_client_socket, &currSet);
-                 if(fd_client_socket > max_fd) max_fd = fd_client_socket;
-                 continue;
-             }
+                SYSCALL_EXIT(acceptNewConn, fd_client_socket, accept(fd_server_socket, NULL, NULL),
+                             "ERROR - Accept new connection to server, errno = %d", errno);
+                newClient();
+                FD_SET(fd_client_socket, &currSet);
+                if(fd_client_socket > max_fd) max_fd = fd_client_socket;
+                continue;
+            }
 
-             if(i == sigHandler_Pipe[0]){
-                 if(ServerStorage->status==S){
-                     break;
-                 } else{
-                     continue;
-                 }
-             }
+            if(i == sigHandler_Pipe[0]){
+                if(ServerStorage->status==S){
+                    break;
+                } else{
+                    continue;
+                }
+            }
 
-             int cont = 1;
-             for(threadId = 0; threadId < ServerConfig.threadNumber; threadId++){
-                 if(i == threadPool1->workersPipes[threadId][0]){
-                     if(readn(threadPool1->workersPipes[threadId][0], &fd_client_socket, sizeof(int)) == -1){
-                         fprintf(stderr, "ERROR - Reading Thread %d Pipe", threadId);
-                         continue;
-                     }
-                     newClient();
-                     FD_SET(fd_client_socket, &currSet);
-                     if(fd_client_socket > max_fd) max_fd = fd_client_socket;
-                     cont = 0;
-                 }
-             }
-             if(!cont) continue;
+            int cont = 1;
+            for(threadId = 0; threadId < ServerConfig.threadNumber; threadId++){
+                if(i == threadPool1->workersPipes[threadId][0]){
+                    if(readn(threadPool1->workersPipes[threadId][0], &fd_client_socket, sizeof(int)) == -1){
+                        fprintf(stderr, "ERROR - Reading Thread %d Pipe", threadId);
+                        continue;
+                    }
+                    newClient();
+                    FD_SET(fd_client_socket, &currSet);
+                    if(fd_client_socket > max_fd) max_fd = fd_client_socket;
+                    cont = 0;
+                }
+            }
+            if(!cont) continue;
 
-             enqueue(threadPool1, taskExecute, &i);
+            enqueue(threadPool1, taskExecute, &i);
 
-             FD_CLR(i, &currSet);
-             removeClient();
-             if(i == max_fd){
-                 for(int j = max_fd; j>=0; j--){
-                     if(FD_ISSET(j, &currSet)){
-                         max_fd = j;
-                         break;
-                     }
-                 }
-             }
-         }
+            FD_CLR(i, &currSet);
+            removeClient();
+            if(i == max_fd){
+                for(int j = max_fd; j>=0; j--){
+                    if(FD_ISSET(j, &currSet)){
+                        max_fd = j;
+                        break;
+                    }
+                }
+            }
+        }
     }
 
 
@@ -426,13 +426,13 @@ void serverDestroy(){
     closeLogStr(ServerLog);
     if(pthread_mutex_destroy(&(ServerStorage->lock)) != 0){
         SYSCALL_EXIT(ServerInit_hashDestroy, res, icl_hash_destroy(ServerStorage->filesTable, free, free),
-                       "ERROR - Icl_Hash destroy fault, errno = %d", errno);
+                     "ERROR - Icl_Hash destroy fault, errno = %d", errno);
         free(ServerStorage);
         exit(0);
     }
 
     SYSCALL_EXIT(ServerInit_hashDestroy, res, icl_hash_destroy(ServerStorage->filesTable, free, freeFile),
-                   "ERROR - Icl_Hash destroy fault, errno = %d", errno);
+                 "ERROR - Icl_Hash destroy fault, errno = %d", errno);
     if(res == -1 && ServerStorage->stdOutput) printf("ERROR");
     free(ServerStorage);
 }

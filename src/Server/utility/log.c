@@ -6,7 +6,9 @@
 
 void createLog(char* dir, logFile* log){
     char* directory;
-    if(dir == NULL) directory = "../../log/";
+    if(dir == NULL) {
+        directory = "../log";
+    }
     else directory = dir;
     if(*log == NULL) *log = malloc(sizeof(logF));
     else return;
@@ -15,16 +17,17 @@ void createLog(char* dir, logFile* log){
         exit(EXIT_FAILURE);
     }
 
+
     char* time;
     getTime(&time,0);
     if(time == NULL) return;
-    int pathLen = strlen(directory) + strlen(time) + strlen(".txt") + 1;
+    int pathLen = strlen(directory) + strlen(time) + strlen(".txt") + 2;
     char* path = malloc(pathLen);
     if(!path) exit(ENOMEM);
-    snprintf(path, pathLen, "%s%s.txt", directory,time);
+    snprintf(path, pathLen, "%s%c%s.txt", directory, ((directory[strlen(directory)-1] == '/')? 0:'/'),time);
 
     if(((*log)->file = fopen(path, "w")) == NULL){
-        free(log);
+        free((*log));
         free(path);
         free(time);
         fprintf(stderr, "ERROR - Log File open failure\n");
@@ -35,7 +38,7 @@ void createLog(char* dir, logFile* log){
 
     if(pthread_mutex_init(&(*log)->mutex, NULL) != 0){
         fclose((*log)->file);
-        free(log);
+        free(*log);
         fprintf(stderr, "ERROR - Log Mutex init failure\n");
         exit(EXIT_FAILURE);
     }

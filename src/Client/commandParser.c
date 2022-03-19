@@ -226,6 +226,12 @@ void commandHandler(List* commandList){
                     if((path = realpath(token, path)) == NULL)
                         fprintf(stderr, "'%s' -> File not exits\n", token);
                     else{
+                        stat(path,&dir_Details);
+                        if(S_ISDIR(dir_Details.st_mode)) {
+                            fprintf(stderr, "'%s' -> This is a directory\n", token);
+                            scRes = -1;
+                            break;
+                        }
                         SYSCALL_BREAK(openFile, scRes, openFile(path, O_CREAT),
                             "'%s' -> Open failed, errno = %d\n", token, errno);
                         SYSCALL_BREAK(writeFile, scRes, writeFile(path, expelledDir),
@@ -441,7 +447,6 @@ int recWrite(char* dirname, char* expelledDir, long cnt, int indent){
     DIR* directory;
     struct dirent* element;
     long filesToWrite = cnt;
-    if(dirname[sizeof(dirname)-1] == '/') dirname[sizeof(dirname)-1] = '\0';
     int scRes;
     if((directory = opendir(dirname))==NULL || filesToWrite == 0) return 0;
     char* path;
@@ -450,7 +455,7 @@ int recWrite(char* dirname, char* expelledDir, long cnt, int indent){
     // https://stackoverflow.com/questions/8436841/how-to-recursively-list-directories-in-c-on-linux/29402705
     while ((element = readdir(directory)) != NULL && filesToWrite > 0){
         char newPath[PATH_MAX];
-        snprintf(newPath, sizeof(newPath), "%s/%s", dirname, element->d_name);
+        snprintf(newPath, sizeof(newPath), "%s%c%s", dirname, (dirname[strlen(dirname)-1] == '/')? 0:'/',element->d_name);
         switch(element->d_type){
             case DT_REG:{
                 path = NULL;
