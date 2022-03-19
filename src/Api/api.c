@@ -296,7 +296,7 @@ int writeFile(const char* pathname, const char* dirname){
     msg.request = O_DATA;
     msg.feedback = 0;
     msg.additional = 0;
-
+    free(fileBuf);
 
     SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
                  "ERROR OpenFile - Sending file to server, errno = %d\n", errno);
@@ -306,24 +306,25 @@ int writeFile(const char* pathname, const char* dirname){
                  "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
 
     if(msg.feedback != SUCCESS){
-        free(fileBuf);
         errno = msg.additional;
         freeMessageContent(&msg);
         return -1;
     }
-    free(fileBuf);
 
+    printf("%d", (int)msg.additional);
     if(saveIntoDir(dirname, msg.additional) == -1) return -1;
     freeMessageContent(&msg);
-    SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
-                 "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+    if(msg.additional==0) {
+        SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
+                     "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
 
-    if(msg.feedback != SUCCESS){
-        errno = msg.additional;
+        if (msg.feedback != SUCCESS) {
+            errno = msg.additional;
+            freeMessageContent(&msg);
+            return -1;
+        }
         freeMessageContent(&msg);
-        return -1;
     }
-    freeMessageContent(&msg);
     return 0;
 }
 
@@ -540,6 +541,7 @@ int saveIntoDir(const char* dir, int numOfFiles){
     memset(&msg, 0, sizeof(message));
     for(int i = 0; i<numOfFiles; i++){
         // Get PATH and PATHLEN
+        printf("CIAO %d\n", i);
         SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
                      "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
         // IF ANY ERROR LET THE SERVER KNOW

@@ -322,7 +322,15 @@ cachePolicy fromStringToEnumCachePolicy(char* str);
  */
 void freeFile(void* file);
 
-
+/**
+ * icl_hash_toDelete
+ * @func finds files to delete, that has to be sent to fd
+ * @param ht -- the files table
+ * @param expelled -- the list in which to put the files
+ * @param fd -- the client
+ * @return 0 if none, num of files if any
+ */
+int icl_hash_toDelete(icl_hash_t * ht, List expelled, int fd);
 // ------------------------------------ Server Functions ------------------------------------
 /** defaultConfig
  * @func  Sets the Server config with default settings

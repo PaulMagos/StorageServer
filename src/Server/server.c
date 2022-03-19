@@ -4,8 +4,6 @@
 
 #include "../../headers/server.h"
 
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "ConstantFunctionResult"
 // -------------------------------- GLOBAR VARIABLES --------------------------------
 serverConfig ServerConfig;
 fileServer* ServerStorage;
@@ -22,8 +20,6 @@ int signalHandlerDestroy();
 int serverInit(char* configPath, char* logPath);
 void printServerStatus();
 
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "OCDFAInspection"
 int main(int argc, char* argv[]){
     // -------------------------------------    Server   -------------------------------------
     // Log, Config and Server Init
@@ -183,7 +179,6 @@ int main(int argc, char* argv[]){
     if(res!=0) res = 0;
     return res;
 }
-#pragma clang diagnostic pop
 
 static void* signalHandler(void *arguments){
     sigset_t *workingSet = ((sigHandlerArgs*)arguments)->sigSet;
@@ -306,9 +301,17 @@ static int serverConfigParser(char* path){
             if(debug == -1){
                 token = strtok_r(NULL, "\n\0", &rest);
                 if(token == NULL) return -1;
-                SYSCALL_RETURN(ServerConfig_stringToLong_2, (debug = StringToLong(token)),
-                               "ERROR - String to long conversion, errno = %d", errno)
-                ServerStorage->stdOutput = (debug==1 || debug==0)? debug:0;
+                // De blank string
+                int c = 0, j = 0;
+                while(token[c]!='\0'){
+                    if(token[c]!=' '){
+                        token[j++]=token[c];
+                    }
+                    c++;
+                }
+                token[j]='\0';
+                if(strcmp(token, "True")==0 || strcmp(token, "true")==0) debug = 1;
+                else debug = 0;
             } else{
                 SYSCALL_RETURN(config_fclose, fclose(configFile),
                                "ERROR - Closing file, errno = %d", errno)
@@ -372,7 +375,7 @@ static int serverConfigParser(char* path){
 }
 int serverInit(char* configPath, char* logPath){
     int debug;
-    if ((debug = serverConfigParser(configPath)) != 0) {
+    if ((debug = serverConfigParser(configPath)) == -1) {
         fprintf(stderr, "ERROR - Parsing config, err = %d", errno);
     }
     createLog(logPath, &ServerLog);
@@ -441,9 +444,9 @@ void printServerStatus(){
     fprintf(stdout, "[MAIN]: Bytes of files saved: %d\n", (int)ServerStorage->sessionMaxBytes);
     fprintf(stdout, "[MAIN]: Number of files expelled: %d\n", ServerStorage->expelledFiles);
     if(ServerStorage->actualFilesNumber>0){
-        appendOnLog(ServerLog,"[MAIN]: Files on the server at shutdown %d :\n", ServerStorage->sessionMaxFilesNumber);
+        appendOnLog(ServerLog,"[MAIN]: Files on the server at shutdown %d :\n", ServerStorage->actualFilesNumber);
         appendOnLog(ServerLog,"SIZE --- PATH\n");
-        fprintf(stdout, "[MAIN]: Files on the server at shutdown %d :\n", ServerStorage->sessionMaxFilesNumber);
+        fprintf(stdout, "[MAIN]: Files on the server at shutdown %d :\n", ServerStorage->actualFilesNumber);
         fprintf(stdout, "SIZE --- PATH\n");
         icl_entry_t *bucket, *curr;
         for (int i = 0; i<ServerStorage->filesTable->nbuckets; i++) {
@@ -482,7 +485,7 @@ serverFile * icl_hash_toReplace(icl_hash_t *ht, cachePolicy policy){
             if(file2) fileReadersIncrement(file2);
             file2 = replaceFile(file1, file2, policy);
             fileReadersDecrement(file1);
-            if(file2)fileReadersDecrement(file2);
+            if(file2 && file1!=file2) fileReadersDecrement(file2);
         }
     }
     return file2;
@@ -582,4 +585,29 @@ void* icl_hash_find(icl_hash_t *ht, void* key)
         }
     return NULL;
 }
-#pragma clang diagnostic pop
+
+
+int icl_hash_toDelete(icl_hash_t * ht, List expelled, int fd){
+    icl_entry_t *bucket, *curr;
+    int i;
+
+    if(!ht) return 0;
+    serverFile* file;
+    for(i=0; i<ht->nbuckets; i++) {
+        bucket = ht->buckets[i];
+        for(curr=bucket; curr!=NULL; ) {
+            file = ((serverFile*)curr->data);
+            if(curr->key){
+                if(file->toDelete==fd){
+                    fileWritersIncrement(file);
+                    pushTop(&expelled, file->path, NULL);
+                    file->toDelete = 1;
+                    fileWritersDecrement(file);
+                }
+            }
+            curr = curr->next;
+        }
+    }
+
+    return expelled->len;
+}
