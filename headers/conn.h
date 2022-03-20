@@ -11,6 +11,11 @@
 #include <stdlib.h>
 #define SOCKNAME     "../../tmp/cs_socket"
 
+#define RETURN(name, sc, str, ...)	            \
+    if (sc == -1) {				                \
+	    return -1;                              \
+    }                                           \
+
 typedef enum{
     O_PEN = 0,
     O_CREAT = 1,

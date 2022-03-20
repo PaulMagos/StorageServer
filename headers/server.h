@@ -78,12 +78,14 @@ typedef struct {
 typedef struct{
     int stdOutput;                          // Bool variable to see operations on the terminal
     int connected;                          // The number of clients connected now
+    int deletedFiles;                       // Number of deleted files
     serverStat status;                      // Server status
     int expelledFiles;                      // Number of expelled files
     int maxConnections;                     // The max number of client connected in one session
+    size_t deletedBytes;                    // Number of deleted files bytes
     size_t expelledBytes;                   // Number of expelled bytes
-    int actualFilesNumber;                  // Number of files in one moment of the working session
     pthread_mutex_t lock;                   // Mutex variable for lock
+    int actualFilesNumber;                  // Number of files in one moment of the working session
     size_t sessionMaxBytes;                 // Max bytes of file in one working session
     size_t actualFilesBytes;                // Num of bytes in a momento of the working session
     icl_hash_t * filesTable;                // Server storage hash table

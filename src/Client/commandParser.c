@@ -172,6 +172,7 @@ void commandHandler(List* commandList){
     char* path = NULL;
     char* temporary;
 
+    signal(SIGPIPE, SIG_IGN);
     // Control if given arguments for expelled files, and readen files from server are directories
     if(DFlag) {
         getArg((*commandList)->head, "D", &expelledDir);
@@ -486,7 +487,9 @@ int recWrite(char* dirname, char* expelledDir, long cnt, int indent){
                 break;
             }
         }
-        if(scRes == -1) free(path);
+        if(scRes == -1) {
+            free(path);
+        }
     }
     closedir(directory);
     return cnt - filesToWrite;

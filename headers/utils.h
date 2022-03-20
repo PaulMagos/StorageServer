@@ -81,12 +81,10 @@ static const char* sizes[] = {"GB", "MB", "KB", "B"};
     }                                           \
 
 #define SYSCALL_ASSIGN(name, r, sc, str, ...)	\
-    if ((r=sc) != 0) {				            \
+    if ((r=sc) == -1) {				            \
 	perror(#name);				                \
-	int errno_copy = errno;			            \
 	print_error(str, __VA_ARGS__);              \
-    return;                                     \
-    }                                         \
+    }                                           \
 
 #define SYSCALL_BREAK(name, r, sc, str, ...)	\
     if ((r=sc) == -1) {				            \

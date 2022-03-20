@@ -34,6 +34,7 @@ int main(int argc, char* argv[]){
     }else if(argc>2){
         fprintf(stderr, "ERROR - Too many argument, max 2 arguments: \n");
         printf("Example: ./server config_path log_directory\n");
+        exit(0);
     }
 
     // SYSCALL RESPONSE VARIABLE
@@ -246,6 +247,7 @@ static int serverConfigParser(char* path){
     long max_bytes = 0;
     // Try to open file
     if((configFile = fopen(path, "r") )== NULL){
+        free(path);
         return -1;
     }
 
@@ -385,6 +387,8 @@ int serverInit(char* configPath, char* logPath){
     ServerStorage->status = E;
 
     ServerStorage->connected = 0;               // Int
+    ServerStorage->deletedBytes = 0;            // size_t
+    ServerStorage->deletedFiles = 0;            // int
     ServerStorage->expelledFiles = 0;           // size_t
     ServerStorage->expelledBytes = 0;           // Int
     ServerStorage->maxConnections = 0;          // Int
@@ -440,40 +444,50 @@ void printServerStatus(){
     logSeparator(ServerLog);
     char* max = calculateSize(ServerStorage->sessionMaxBytes);
     char* expelled = calculateSize(ServerStorage->expelledBytes);
-    appendOnLog(ServerLog,"[MAIN]: Number of files saved: %d\n", ServerStorage->sessionMaxFilesNumber);
+    char* actual = calculateSize(ServerStorage->actualFilesBytes);
+    char* serverMaxBytes = calculateSize(ServerConfig.maxByte);
+    char* deletedBytes = calculateSize(ServerStorage->deletedBytes);
+    appendOnLog(ServerLog,"        Number of files saved: %d\n", ServerStorage->sessionMaxFilesNumber);
     appendOnLog(ServerLog,"        Bytes of files saved: %s\n", max);
     appendOnLog(ServerLog,"        Number of files expelled: %d\n", ServerStorage->expelledFiles);
     appendOnLog(ServerLog,"        Number of bytes expelled: %s\n", expelled);
-    fprintf(stdout, "[MAIN]: Number of files saved: %d\n", ServerStorage->sessionMaxFilesNumber);
+    appendOnLog(ServerLog,"        Number of files deleted: %d\n", ServerStorage->deletedFiles);
+    appendOnLog(ServerLog,"        Number of bytes deleted: %s\n", deletedBytes);
+    appendOnLog(ServerLog,"        Files on the server at shutdown %d of %d\n", ServerStorage->actualFilesNumber, ServerConfig.maxFile);
+    appendOnLog(ServerLog,"        Bytes on the server at shutdown %s of %s:\n\n", actual, serverMaxBytes);
+    fprintf(stdout, "\n--------------------------------------------------------------------------------------------------\n");
+    fprintf(stdout, "        Number of files saved: %d\n", ServerStorage->sessionMaxFilesNumber);
     fprintf(stdout, "        Bytes of files saved: %s\n", max);
     fprintf(stdout, "        Number of files expelled: %d\n", ServerStorage->expelledFiles);
     fprintf(stdout, "        Number of bytes expelled: %s\n", expelled);
+    fprintf(stdout, "        Number of files deleted: %d\n", ServerStorage->deletedFiles);
+    fprintf(stdout, "        Number of bytes deleted: %s\n", deletedBytes);
+    fprintf(stdout, "        Files on the server at shutdown %d of %d\n", ServerStorage->actualFilesNumber, ServerConfig.maxFile);
+    fprintf(stdout, "        Bytes on the server at shutdown %s of %s:\n\n", actual, serverMaxBytes);
     free(max);
     free(expelled);
+    free(actual);
+    free(serverMaxBytes);
+    free(deletedBytes);
     if(ServerStorage->actualFilesNumber>0){
-        char* actual = calculateSize(ServerStorage->actualFilesBytes);
-        char* serverMaxBytes = calculateSize(ServerConfig.maxByte);
-        appendOnLog(ServerLog,"        Files on the server at shutdown %d of %d\n", ServerStorage->actualFilesNumber, ServerConfig.maxFile);
-        appendOnLog(ServerLog,"        Bytes on the server at shutdown %s of %s:\n\n", actual, serverMaxBytes);
         appendOnLog(ServerLog,"        Files :\n");
-        appendOnLog(ServerLog,"        Size --- Path\n");
-        fprintf(stdout, "        Files on the server at shutdown %d of %d\n", ServerStorage->actualFilesNumber, ServerConfig.maxFile);
-        fprintf(stdout, "        Bytes on the server at shutdown %s of %s:\n\n", actual, serverMaxBytes);
+        appendOnLog(ServerLog,"        Size --- Last Operation & Time --- Path\n");
         fprintf(stdout, "        Files :\n");
-        fprintf(stdout, "        Size --- Path\n");
-        free(serverMaxBytes);
+        fprintf(stdout, "        Size --- Last Operation & Time --- Path\n");
         icl_entry_t *bucket, *curr;
-        free(actual);
         for (int i = 0; i<ServerStorage->filesTable->nbuckets; i++) {
             bucket = ServerStorage->filesTable->buckets[i];
             for(curr = bucket; curr!=NULL; curr=curr->next){
-                actual = calculateSize((int)((serverFile*)curr->data)->size);
-                appendOnLog(ServerLog,"        %s --- %s\n",  actual, ((serverFile*)curr->data)->path);
-                fprintf(stdout, "        %s --- %s\n",  actual, ((serverFile*)curr->data)->path);
+                serverFile* file = (serverFile*)curr->data;
+                actual = calculateSize((int)file->size);
+                struct tm* cTime = gmtime(&(file->lastOpTime.tv_sec));
+                appendOnLog(ServerLog,"        %s --- %s %d/%d/%d %d:%d:%d --- %s\n",  actual, requestToString(file->latsOp), cTime->tm_mday, cTime->tm_mon+1, cTime->tm_year+1900, cTime->tm_hour, cTime->tm_min, cTime->tm_sec, file->path);
+                fprintf(stdout, "        %s --- %s %d/%d/%d %d:%d:%d --- %s\n",  actual, requestToString(file->latsOp), cTime->tm_mday, cTime->tm_mon+1, cTime->tm_year+1900, cTime->tm_hour, cTime->tm_min, cTime->tm_sec, file->path);
                 free(actual);
             }
         }
     }
+    fprintf(stdout, "--------------------------------------------------------------------------------------------------\n");
 }
 
 

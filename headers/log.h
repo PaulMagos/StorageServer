@@ -38,7 +38,6 @@ static inline void getTime(char** val, int type){
         snprintf(*val, 20, "%d:%d:%d", local->tm_hour, local->tm_min, local->tm_sec);
 }
 
-
 /**
  *   @func  CreateLog
  *   @param dir -> log files directory

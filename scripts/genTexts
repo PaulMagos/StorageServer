@@ -1,0 +1,11 @@
+#!/bin/bash
+
+TEST=1
+
+
+echo ${RAND}
+
+for i in {1..100}
+do
+  echo $RANDOM | md5sum | head -c 20 >> ./files/test${TEST}/write/file${i}.txt
+done
