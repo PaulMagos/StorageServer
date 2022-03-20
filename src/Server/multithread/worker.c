@@ -532,6 +532,7 @@ void DeleteFile(int fd_client, int workerId, message* message1){
         fileWritersDecrement(File);
         return ;
     }
+    fileBytesDecrement(File->size);
     if(icl_hash_delete(ServerStorage->filesTable, message1->content, free, freeFile) == -1){
         message1->additional = 132;
         message1->feedback = ERROR;
@@ -540,7 +541,6 @@ void DeleteFile(int fd_client, int workerId, message* message1){
                        "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
         return;
     }
-    fileBytesDecrement(File->size);
     fileNumDecrement();
     SYSCALL_RET(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
                    "ERROR - ServerStorage lock acquisition failure, errno = %d", errno);

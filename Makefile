@@ -13,7 +13,7 @@ APIDIR = ./src/Api
 OBJS = $(DATAOBJ) $(CLIENTOBJ) $(SERVEROBJ) $(APIOBJ) $(MULTIOBJ) $(LOGOBJ)
 
 TARGETS = $(CLIENTOUTPUT) $(SERVEROUTPUT)
-all : $(TARGETS) clean
+all : $(TARGETS)
 
 # ---------------------------- DATA STRUCTURES ----------------------------- #
 DATASRC = $(wildcard $(DATASTRUCTURES)/*.c)

@@ -243,10 +243,12 @@ void commandHandler(List* commandList){
                     token = strtok_r(NULL, ",", &rest);
                 }
                 if(scRes == -1){
-                    if(path) free(path);
-                    if(socket) free(socket);
-                    if(argument) free(argument);
-                    exit(errno);
+                    if(errno!=17) {
+                        if(argument) free(argument);
+                        if(path) free(path);
+                        if(socket) free(socket);
+                        exit(errno);
+                    }
                 }
                 free(path);
                 msleep(timeToSleep);
@@ -287,7 +289,7 @@ void commandHandler(List* commandList){
                         }
                         free(buffer);
 
-                        SYSCALL_EXITFREE(closeFile, path, scRes, closeFile(path), (pFlag) ?
+                        SYSCALL_BREAK(closeFile, scRes, closeFile(path), (pFlag) ?
                             "'%s' -> Close failed, errno = %d\n" : "", token, errno);
                         if (pFlag) fprintf(stdout, "%s -> Read Success\n", token);
                     }
@@ -433,7 +435,7 @@ void commandHandler(List* commandList){
                 break;
             }
         }
-        free(argument);
+        if(argument) free(argument);
         argument = NULL;
     }
 

@@ -118,7 +118,7 @@ int openFile(const char* pathname, int flags){
     msg.feedback = 0;
     msg.additional = 0;
 
-    SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
+    SYSCALL_RETURN(writeMessage, writeMessage(fd_socket, &msg),
                  "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
 
     freeMessageContent(&msg);
