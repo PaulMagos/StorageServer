@@ -1,6 +1,6 @@
-Files: 10
-Bytes: 1000000
-Threads: 4
+Files: 100
+Bytes: 1048576
+Threads: 8
 Policy: FIFO
 Debug: False
 Socket: ./tmp/cs_socket

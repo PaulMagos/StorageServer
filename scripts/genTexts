@@ -1,11 +1,46 @@
 #!/bin/bash
 
-TEST=1
+TEST1=1
+TEST2=2
+TEST3=3
 
-
-echo ${RAND}
+for i in {1..3}
+do
+  mkdir -p ./files/test${i}/read
+  mkdir -p ./files/test${i}/write
+  mkdir -p ./files/test${i}/expelled
+  if (( $i == 3 ))
+  then
+        mkdir -p ./files/test${i}/write/dir1
+        mkdir -p ./files/test${i}/write/dir2
+        mkdir -p ./files/test${i}/write/dir3
+        mkdir -p ./files/test${i}/write/dir4
+        mkdir -p ./files/test${i}/write/dir5
+        mkdir -p ./files/test${i}/write/dir6
+        mkdir -p ./files/test${i}/write/dir7
+        mkdir -p ./files/test${i}/write/dir8
+        mkdir -p ./files/test${i}/write/dir9
+        mkdir -p ./files/test${i}/write/dir10
+  fi
+done
 
 for i in {1..100}
 do
-  echo $RANDOM | md5sum | head -c 20 >> ./files/test${TEST}/write/file${i}.txt
+  #echo $RANDOM | md5sum | head -c 20 >> ./files/test${TEST1}/write/file${i}.txt
+  echo "./files/test${TEST1}/write/file${i}.txt" >> ./files/test${TEST1}/write/file${i}.txt
+  #echo $RANDOM | md5sum | head -c 20 >> ./files/test${TEST2}/write/file${i}.txt
+  echo "./files/test${TEST2}/write/file${i}.txt" >> ./files/test${TEST2}/write/file${i}.txt
+  for j in {1..10}
+  do
+    #echo $RANDOM | md5sum | head -c 20 >> ./files/test${TEST3}/write/dir${j}/file${j}${i}.txt
+    if (($i < 25))
+    then
+    echo "./files/test${TEST3}/write/dir${j}/file${j}${i}.txt" >> ./files/test${TEST3}/write/dir${j}/file${j}${i}.txt
+    fi
+  done
 done
+
+echo "#!/bin/sh" > ./scripts/newTerm
+echo "\"\$@\"" >> ./scripts/newTerm
+echo "exec \"\$SHELL\"" >> ./scripts/newTerm
+chmod +x ./scripts/newTerm

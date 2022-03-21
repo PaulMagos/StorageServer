@@ -125,10 +125,12 @@ int main(int argc, char* argv[]){
         SYSCALL_EXIT(select, res, select(max_fd+1, &readySet,NULL, NULL, NULL), "ERROR - Select failed, errno = %d", errno);
         for(int i = 0; i <= max_fd; i++){
             if(!FD_ISSET(i, &readySet)) continue;
-            if(i==fd_server_socket && ServerStorage->status==E){
-
-                SYSCALL_EXIT(acceptNewConn, fd_client_socket, accept(fd_server_socket, NULL, NULL),
+            if(i==fd_server_socket && ServerStorage->status==E && max_fd<1000){
+                SYSCALL_ASSIGN(acceptNewConn, fd_client_socket, accept(fd_server_socket, NULL, NULL),
                              "ERROR - Accept new connection to server, errno = %d", errno);
+                if(fd_client_socket==-1){
+                    continue;
+                }
                 newClient();
                 FD_SET(fd_client_socket, &currSet);
                 if(fd_client_socket > max_fd) max_fd = fd_client_socket;
@@ -137,6 +139,9 @@ int main(int argc, char* argv[]){
 
             if(i == sigHandler_Pipe[0]){
                 if(ServerStorage->status==S){
+                    for(int c = 0; c<=max_fd; c++){
+                        if(FD_ISSET(c, &currSet)) close(c);
+                    }
                     break;
                 } else{
                     continue;
@@ -201,7 +206,7 @@ static void* signalHandler(void *arguments){
                 }
                 ServerStorage->status = S;
                 close(pipeFd);
-                pthread_exit(NULL);
+                return NULL;
             }
             case SIGQUIT:{
                 appendOnLog(ServerLog, "[SignalHandler]: %d signal received, "
@@ -397,7 +402,7 @@ int serverInit(char* configPath, char* logPath){
     ServerStorage->actualFilesNumber = 0;       // Int
     ServerStorage->sessionMaxFilesNumber = 0;   // Int
 
-    ServerStorage->filesTable = icl_hash_create((2*ServerConfig.maxFile), NULL,NULL);
+    ServerStorage->filesTable = icl_hash_create((3*ServerConfig.maxFile), NULL,NULL);
     if(!ServerStorage->filesTable) {
         free(ServerStorage);
         errno = ENOMEM;
@@ -429,13 +434,12 @@ void serverDestroy(){
     printServerStatus();
     closeLogStr(ServerLog);
     if(pthread_mutex_destroy(&(ServerStorage->lock)) != 0){
-        SYSCALL_EXIT(ServerInit_hashDestroy, res, icl_hash_destroy(ServerStorage->filesTable, free, free),
+        SYSCALL_EXIT(ServerInit_hashDestroy, res, icl_hash_destroy(ServerStorage->filesTable, free, freeFile),
                      "ERROR - Icl_Hash destroy fault, errno = %d", errno);
         free(ServerStorage);
         exit(0);
     }
-
-    SYSCALL_EXIT(ServerInit_hashDestroy, res, icl_hash_destroy(ServerStorage->filesTable, free, freeFile),
+    SYSCALL_ASSIGN(ServerInit_hashDestroy, res, icl_hash_destroy(ServerStorage->filesTable, free, freeFile),
                  "ERROR - Icl_Hash destroy fault, errno = %d", errno);
     if(res == -1 && ServerStorage->stdOutput) printf("ERROR");
     free(ServerStorage);
@@ -504,7 +508,7 @@ serverFile* replaceFile(serverFile* file1, serverFile* file2, cachePolicy policy
     }
 }
 
-serverFile * icl_hash_toReplace(icl_hash_t *ht, cachePolicy policy){
+serverFile * icl_hash_toReplace(icl_hash_t *ht, cachePolicy policy, int workerId){
     icl_entry_t *bucket, *curr;
     serverFile *file1, *file2 = NULL, *exFile2 = NULL;
     for (int i = 0; i<ht->nbuckets; i++) {
@@ -514,12 +518,12 @@ serverFile * icl_hash_toReplace(icl_hash_t *ht, cachePolicy policy){
             if(file1->toDelete != 0) continue;
             if(file1->lockFd != -1) continue;
             if(file2 && file2->lockFd != -1) continue;
-            fileReadersIncrement(file1);
-            if(file2 && file1!=file2) fileReadersIncrement(file2);
+            fileReadersIncrement(file1, workerId);
+            if(file2 && file1!=file2) fileReadersIncrement(file2, workerId);
             exFile2 = file2;
             file2 = replaceFile(file1, file2, policy);
-            fileReadersDecrement(file1);
-            if(file2 && exFile2 && (file2 != exFile2 || file1!=file2)) fileReadersDecrement(exFile2);
+            fileReadersDecrement(file1, workerId);
+            if(file2 && exFile2 && (file2 != exFile2 || file1!=file2)) fileReadersDecrement(exFile2, workerId);
         }
     }
     return file2;
@@ -545,8 +549,9 @@ cachePolicy fromStringToEnumCachePolicy(char* str){
 
 void freeFile(void* file) {
     serverFile *file1 = (serverFile *) file;
-    if (file1->content != NULL) free(file1->content);
-    //if (file1->path != NULL) free(file1->path);
+    if(file1->size>0){
+        if (file1->content != NULL) free(file1->content);
+    }
     if (file1->clients_fd != NULL) deleteList(&(file1->clients_fd));
     pthread_mutex_destroy(&(file1->lock));
     pthread_mutex_destroy(&(file1->order));
@@ -617,7 +622,7 @@ void* icl_hash_find(icl_hash_t *ht, void* key)
 }
 
 
-int icl_hash_toDelete(icl_hash_t * ht, List expelled, int fd){
+int icl_hash_toDelete(icl_hash_t * ht, List expelled, int fd, int workerId){
     icl_entry_t *bucket, *curr;
     int i;
 
@@ -628,11 +633,15 @@ int icl_hash_toDelete(icl_hash_t * ht, List expelled, int fd){
         for(curr=bucket; curr!=NULL; ) {
             file = ((serverFile*)curr->data);
             if(curr->key){
+                if(file->writers>0) {
+                    curr = curr->next;
+                    continue;
+                }
                 if(file->toDelete==fd){
-                    fileWritersIncrement(file);
+                    fileWritersIncrement(file, workerId);
                     pushTop(&expelled, file->path, NULL);
                     file->toDelete = 1;
-                    fileWritersDecrement(file);
+                    fileWritersDecrement(file, workerId);
                 }
             }
             curr = curr->next;

@@ -57,18 +57,30 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
     strncpy(socketAdd.sun_path, sockname, UNIX_PATH_MAX);
     socketAdd.sun_family = AF_UNIX;
 
-    SYSCALL_EXIT(clock_gettime, scRes, clock_gettime(CLOCK_REALTIME, &iniTime),
+    SYSCALL_ASSIGN(clock_gettime, scRes, clock_gettime(CLOCK_REALTIME, &iniTime),
                  "ERROR - initializing time, errno = %d\n", errno);
-    SYSCALL_EXIT(clock_gettime, scRes, clock_gettime(CLOCK_REALTIME, &currenTime),
+    if(scRes==-1){
+        return -1;
+    }
+    SYSCALL_ASSIGN(clock_gettime, scRes, clock_gettime(CLOCK_REALTIME, &currenTime),
                  "ERROR - getting current time, errno = %d\n", errno);
-    SYSCALL_EXIT(socket, fd_socket, socket(AF_UNIX, SOCK_STREAM, 0),
+    if(scRes==-1){
+        return -1;
+    }
+    SYSCALL_ASSIGN(socket, fd_socket, socket(AF_UNIX, SOCK_STREAM, 0),
                  "ERROR - socket connection failed, errno = %d\n", errno);
+    if(fd_socket==-1){
+        return -1;
+    }
     while ((diff_timespec( abstime, diff_timespec(currenTime, iniTime))).tv_sec
         && (connRes = connect(fd_socket, (struct sockaddr*)&socketAdd, sizeof(socketAdd))) == -1){
         msleep(msec);
-        SYSCALL_EXIT(clock_gettime, scRes, clock_gettime(CLOCK_REALTIME, &currenTime),
+        SYSCALL_ASSIGN(clock_gettime, scRes, clock_gettime(CLOCK_REALTIME, &currenTime),
                      "ERROR - getting current time, errno = %d\n", errno);
-        fprintf(stdout, "Trying connection... %d\n", (int)(currenTime.tv_sec-iniTime.tv_sec+1));
+        if(scRes==-1){
+            return -1;
+        }
+        //fprintf(stdout, "Trying connection... %d\n", (int)(currenTime.tv_sec-iniTime.tv_sec+1));
     }
 
     if(connRes==-1){
@@ -118,7 +130,7 @@ int openFile(const char* pathname, int flags){
     msg.additional = 0;
 
     SYSCALL_ASSIGN(writeMessage, scRes, writeMessage(fd_socket, &msg),
-                 "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+                 "OpenFile - Sending message to server, errno = %d\n", errno);
     if(scRes == -1){
         freeMessageContent(&msg);
         return -1;
@@ -126,7 +138,7 @@ int openFile(const char* pathname, int flags){
 
     freeMessageContent(&msg);
     SYSCALL_ASSIGN(readMessage, scRes, readMessage(fd_socket, &msg),
-                 "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+                 "OpenFile - Sending message to server, errno = %d\n", errno);
     if(scRes == -1){
         return -1;
     }
@@ -161,13 +173,18 @@ int readFile(const char* pathname, void** buf, size_t* size){
     msg.additional = 0;
 
     // Send request for reading file
-    SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
-                 "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
-
+    SYSCALL_ASSIGN(writeMessage, scRes, writeMessage(fd_socket, &msg),
+                 "ReadFile - Sending message to server, errno = %d\n", errno);
+    if(scRes==-1){
+        freeMessageContent(&msg);
+        return -1;
+    }
     freeMessageContent(&msg);
-    SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
-                 "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
-
+    SYSCALL_ASSIGN(readMessage, scRes, readMessage(fd_socket, &msg),
+                 "ReadFile - Sending message to server, errno = %d\n", errno);
+    if(scRes==-1){
+        return -1;
+    }
     // If any Error return
     if(msg.feedback!=SUCCESS){
         errno = msg.additional;
@@ -177,8 +194,11 @@ int readFile(const char* pathname, void** buf, size_t* size){
     freeMessageContent(&msg);
 
     // Receive File
-    SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
+    SYSCALL_ASSIGN(readMessage, scRes, readMessage(fd_socket, &msg),
                  "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+    if(scRes==-1){
+        return -1;
+    }
     if(msg.feedback!=SUCCESS && msg.request!=O_DATA){
         errno = msg.additional;
         freeMessageContent(&msg);
@@ -208,12 +228,18 @@ int readNFiles(int N, const char* dirname){
 
 
     // Send request for reading file
-    SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
+    SYSCALL_ASSIGN(writeMessage, scRes, writeMessage(fd_socket, &msg),
                  "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
-
+    if(scRes==-1){
+        freeMessageContent(&msg);
+        return -1;
+    }
     freeMessageContent(&msg);
-    SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
+    SYSCALL_ASSIGN(readMessage, scRes, readMessage(fd_socket, &msg),
                  "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+    if(scRes==-1){
+        return -1;
+    }
     if(msg.feedback!=SUCCESS){
         errno = msg.additional;
         freeMessageContent(&msg);
@@ -282,15 +308,23 @@ int writeFile(const char* pathname, const char* dirname){
     msg.feedback = 0;
     msg.additional = 0;
 
-    SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
+    SYSCALL_ASSIGN(writeMessage, scRes, writeMessage(fd_socket, &msg),
                  "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
-
+    if(scRes==-1){
+        free(fileBuf);
+        freeMessageContent(&msg);
+        return -1;
+    }
     freeMessageContent(&msg);
-    SYSCALL_RETURN(readMessage, readMessage(fd_socket, &msg),
+    SYSCALL_ASSIGN(readMessage, scRes, readMessage(fd_socket, &msg),
                  "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
-
+    if(scRes==-1){
+        free(fileBuf);
+        return -1;
+    }
     if(msg.feedback != SUCCESS){
         errno = msg.additional;
+        free(fileBuf);
         freeMessageContent(&msg);
         return -1;
     }
@@ -305,20 +339,29 @@ int writeFile(const char* pathname, const char* dirname){
     msg.additional = 0;
     free(fileBuf);
 
-    SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
+    SYSCALL_ASSIGN(writeMessage, scRes, writeMessage(fd_socket, &msg),
                  "ERROR OpenFile - Sending file to server, errno = %d\n", errno);
 
+    if(scRes==-1){
+        freeMessageContent(&msg);
+        return -1;
+    }
     freeMessageContent(&msg);
-    SYSCALL_RETURN(readMessage, readMessage(fd_socket, &msg),
+    SYSCALL_ASSIGN(readMessage, scRes, readMessage(fd_socket, &msg),
                  "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
-
+    if(scRes==-1){
+        return -1;
+    }
     if(msg.feedback != SUCCESS){
         errno = msg.additional;
         freeMessageContent(&msg);
         return -1;
     }
 
-    if(saveIntoDir(dirname, msg.additional) == -1) return -1;
+    if(saveIntoDir(dirname, msg.additional) == -1) {
+        freeMessageContent(&msg);
+        return -1;
+    }
     freeMessageContent(&msg);
     if(msg.additional==0) {
         SYSCALL_RETURN(readMessage, readMessage(fd_socket, &msg),
@@ -354,14 +397,17 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
     msg.feedback = 0;
     msg.additional = 0;
 
-    SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
+    SYSCALL_ASSIGN(writeMessage, scRes, writeMessage(fd_socket, &msg),
                  "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
-
+    if(scRes==-1){
+        freeMessageContent(&msg);
+        return -1;
+    }
     freeMessageContent(&msg);
 
-    SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
+    SYSCALL_ASSIGN(readMessage, scRes, readMessage(fd_socket, &msg),
                  "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
-
+    if(scRes==-1) return -1;
     if(msg.feedback != SUCCESS){
         errno = msg.additional;
         freeMessageContent(&msg);
@@ -374,12 +420,12 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
     msg.request = O_DATA;
     msg.feedback = 0;
     msg.additional = 0;
-    SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
+    SYSCALL_ASSIGN(writeMessage, scRes, writeMessage(fd_socket, &msg),
                  "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
-
-    SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
+    if(scRes==-1) return -1;
+    SYSCALL_ASSIGN(readMessage, scRes, readMessage(fd_socket, &msg),
                  "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
-
+    if(scRes==-1) return -1;
     if(msg.feedback!=SUCCESS){
         errno = msg.additional;
         freeMessageContent(&msg);
@@ -410,13 +456,16 @@ int lockFile(const char* pathname){
     msg.feedback = 0;
     msg.additional = 0;
 
-    SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
+    SYSCALL_ASSIGN(writeMessage, scRes, writeMessage(fd_socket, &msg),
                  "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
-
+    if(scRes==-1){
+        freeMessageContent(&msg);
+        return -1;
+    }
     freeMessageContent(&msg);
-    SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
+    SYSCALL_ASSIGN(readMessage, scRes, readMessage(fd_socket, &msg),
                  "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
-
+    if(scRes==-1) return -1;
     if(msg.feedback != SUCCESS){
         errno = msg.additional;
         freeMessageContent(&msg);
@@ -447,13 +496,16 @@ int unlockFile(const char* pathname){
     msg.feedback = 0;
     msg.additional = 0;
 
-    SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
+    SYSCALL_ASSIGN(writeMessage, scRes, writeMessage(fd_socket, &msg),
                  "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
-
+    if(scRes==-1){
+        freeMessageContent(&msg);
+        return -1;
+    }
     freeMessageContent(&msg);
-    SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
+    SYSCALL_ASSIGN(readMessage, scRes, readMessage(fd_socket, &msg),
                  "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
-
+    if(scRes==-1) return -1;
     if(msg.feedback != SUCCESS){
         errno = msg.additional;
         freeMessageContent(&msg);
@@ -484,12 +536,16 @@ int closeFile(const char* pathname){
     msg.feedback = 0;
     msg.additional = 0;
 
-    SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
+    SYSCALL_ASSIGN(writeMessage, scRes, writeMessage(fd_socket, &msg),
                  "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
-
+    if(scRes==-1){
+        freeMessageContent(&msg);
+        return -1;
+    }
     freeMessageContent(&msg);
-    SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
+    SYSCALL_ASSIGN(readMessage, scRes, readMessage(fd_socket, &msg),
                  "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+    if(scRes==-1) return -1;
     if(msg.feedback != SUCCESS){
         errno = msg.additional;
         freeMessageContent(&msg);
@@ -520,13 +576,16 @@ int removeFile(const char* pathname){
     msg.feedback = 0;
     msg.additional = 0;
 
-    SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
+    SYSCALL_ASSIGN(writeMessage, scRes, writeMessage(fd_socket, &msg),
                  "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
-
+    if(scRes==-1){
+        freeMessageContent(&msg);
+        return -1;
+    }
     freeMessageContent(&msg);
-    SYSCALL_RETURN(readMessage, readMessage(fd_socket, &msg),
+    SYSCALL_ASSIGN(readMessage, scRes, readMessage(fd_socket, &msg),
                  "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
-
+    if(scRes==-1) return -1;
     if(msg.feedback != SUCCESS){
         errno = msg.additional;
         freeMessageContent(&msg);
@@ -545,16 +604,24 @@ int saveIntoDir(const char* dir, int numOfFiles){
     void* path;
     message msg;
     memset(&msg, 0, sizeof(message));
+    msg.additional=save;
+    msg.feedback=SUCCESS;
+    writeMessage(fd_socket, &msg);
     for(int i = 0; i<numOfFiles; i++){
         // Get PATH and PATHLEN
-        SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
+        SYSCALL_ASSIGN(readMessage, scRes, readMessage(fd_socket, &msg),
                      "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
+        if(scRes==-1){
+            freeMessageContent(&msg);
+            errno = EBADMSG;
+            return -1;
+        }
         // IF ANY ERROR LET THE SERVER KNOW
         if(msg.request!=O_SEND){
             freeMessageContent(&msg);
             msg.feedback = ERROR;
             msg.additional = EBADMSG;
-            SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
+            SYSCALL_ASSIGN(writeMessage, scRes, writeMessage(fd_socket, &msg),
                          "ERROR OpenFile - Sending feedback error to server, errno = %d\n", errno);
             errno = EBADMSG;
             return -1;
@@ -569,13 +636,17 @@ int saveIntoDir(const char* dir, int numOfFiles){
 
         // SUCCESS SEND ME THE FILE
         msg.feedback = SUCCESS;
-        SYSCALL_EXIT(writeMessage, scRes, writeMessage(fd_socket, &msg),
+        SYSCALL_ASSIGN(writeMessage, scRes, writeMessage(fd_socket, &msg),
                      "ERROR OpenFile - Sending feedback error to server, errno = %d\n", errno);
-
+        if(scRes==-1){
+            return -1;
+        }
         // FILE RECEIVED
         SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
                      "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
-
+        if(scRes==-1){
+            return -1;
+        }
         if(msg.feedback!=SUCCESS || msg.request!=O_DATA){
             freeMessageContent(&msg);
             free(path);

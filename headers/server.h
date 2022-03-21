@@ -258,26 +258,30 @@ void AppendOnFile(int fd_client, int workerId, message* );
  *   @func  fileReadersIncrement
  *   @effects increments the readers counter
  *   @param file -> file for the operation
+ *   @param thread -> thread id
  */
-int fileReadersIncrement(serverFile* file);
+int fileReadersIncrement(serverFile* file, int thread);
 /**
  *   @func  fileReadersDecrement
  *   @effects decrements the readers counter
  *   @param file -> file for the operation
+ *   @param thread -> thread id
  */
-int fileReadersDecrement(serverFile* file);
+int fileReadersDecrement(serverFile* file, int thread);
 /**
  *   @func  fileWritersIncrement
  *   @effects increments the writers counter
  *   @param file -> file for the operation
+ *   @param thread -> thread id
  */
-int fileWritersIncrement(serverFile* file);
+int fileWritersIncrement(serverFile* file, int thread);
 /**
  *   @func  fileWritersDecrement
  *   @effects decrements the writers counter
  *   @param file -> file for the operation
+ *   @param thread -> thread id
  */
-int fileWritersDecrement(serverFile* file);
+int fileWritersDecrement(serverFile* file, int thread);
 /**
  *   @func  isLocked
  *   @param file -> file for the operation
@@ -299,10 +303,11 @@ serverFile* replaceFile(serverFile* file1, serverFile* file2, cachePolicy policy
  * @func  Returns a replaceable file
  * @param ht -- the icl_hash table of files
  * @param policy -- the policy to be used for the comparison
+ * @param workerId -- the thread id
  * @returns file to replace on success, NULL on failure.
  */
 serverFile
-* icl_hash_toReplace(icl_hash_t *ht, cachePolicy policy);
+* icl_hash_toReplace(icl_hash_t *ht, cachePolicy policy, int workerId);
 
 /**
  * @func  Returns a string with the policy in "policy"
@@ -331,9 +336,10 @@ void freeFile(void* file);
  * @param ht -- the files table
  * @param expelled -- the list in which to put the files
  * @param fd -- the client
+ * @param workerId -- the thread id
  * @return 0 if none, num of files if any
  */
-int icl_hash_toDelete(icl_hash_t * ht, List expelled, int fd);
+int icl_hash_toDelete(icl_hash_t * ht, List expelled, int fd, int workerId);
 // ------------------------------------ Server Functions ------------------------------------
 /** defaultConfig
  * @func  Sets the Server config with default settings

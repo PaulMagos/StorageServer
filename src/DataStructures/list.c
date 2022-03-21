@@ -112,6 +112,44 @@ int pullTop(List* myList, char** index, void** data){
     return 0;
 }
 
+int removeByInt(List* myList, void* data){
+    if(!(*myList) || (*myList)->len < 1){
+        // ERRORE DOVUTO AD ARGOMENTO INVALIDO
+        errno = EINVAL;
+        return -1;
+    }
+
+    Node tmp=(*myList)->head;
+    Node prev=NULL;
+
+    while(tmp!=NULL){
+        if(tmp->dataInt==*(int*)data){
+            (*myList)->len--;
+            if((*myList)->len == 0){
+                (*myList)->head = NULL;
+                (*myList)->tail = NULL;
+            } else if(tmp==(*myList)->head){
+                (*myList)->head = (*myList)->head->next;
+                (*myList)->head->prev = NULL;
+            } else if(tmp==(*myList)->tail){
+                (*myList)->tail = (*myList)->tail->prev;
+                (*myList)->head->next = NULL;
+            } else{
+                prev->next = tmp->next;
+                tmp->next->prev = prev;
+                tmp->next = NULL;
+                tmp->prev = NULL;
+                freeNode(tmp);
+            }
+            freeNode(tmp);
+            return 0;
+        }
+        prev=tmp;
+        tmp = tmp->next;
+    }
+    return -1;
+}
+
 Node getHead(List* myList){
     if(!(*myList) || (*myList)->len < 1){
         // ERRORE DOVUTO AD ARGOMENTO INVALIDO
@@ -128,6 +166,7 @@ Node getHead(List* myList){
     }else {
         (*myList)->head = (*myList)->head->next;
     }
+
 
     return tmp;
 }
@@ -147,6 +186,7 @@ int pullBottom(List* myList, char** index, void** data){
         (*myList)->tail = NULL;
     }else {
         (*myList)->tail = (*myList)->tail->prev;
+        (*myList)->head->next = NULL;
     }
 
     *index = tmp->index;

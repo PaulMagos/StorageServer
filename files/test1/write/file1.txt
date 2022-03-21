@@ -1,6 +1,0 @@
-Files: 1
-Bytes: 100000
-Threads: 5
-Policy: LIFO
-Debug: False
-Socket: ../tmp/cs_socket92948574db66f1aba400

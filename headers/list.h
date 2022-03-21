@@ -72,6 +72,14 @@ int pushBottom(List* myList, char* index, void* data);
 int pullTop(List* myList, char** index, void** data);
 
 /**
+ *   @func  removeByInt
+ *   @param myList -> List
+ *   @param data -> data int remove
+ *   @effects -> Pulls a node with index and data from the the list and removes it
+ *   @return -> returns -1 if there's a failure, 0 otherwise
+ */
+int removeByInt(List* myList, void* data);
+/**
  *   @func  pullBottom
  *   @param myList -> List
  *   @param index -> index for the node index

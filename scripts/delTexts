@@ -1,0 +1,31 @@
+#!/bin/bash
+
+TEST1=1
+TEST2=2
+TEST3=3
+
+
+for i in {1..100}
+do
+  rm -f ./files/test${TEST1}/write/file${i}.txt
+  rm -f ./files/test${TEST2}/write/file${i}.txt
+done
+
+
+for i in {1..5}
+do
+  rm -f -r ./files/test${TEST3}/write/dir${i}
+done
+
+
+rm -f -r ./files/test${TEST1}/read/home/
+rm -f -r ./files/test${TEST2}/read/home/
+rm -f -r ./files/test${TEST3}/read/home/
+
+rm -f -r ./files/test${TEST1}/expelled/home/
+rm -f -r ./files/test${TEST2}/expelled/home/
+rm -f -r ./files/test${TEST3}/expelled/home/
+
+rm -f -r ./files
+
+rm -f ./scripts/newTerm

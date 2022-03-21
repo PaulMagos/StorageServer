@@ -26,6 +26,7 @@ void createLog(char* dir, logFile* log){
     if(!path) exit(ENOMEM);
     snprintf(path, pathLen, "%s%c%s.txt", directory, ((directory[strlen(directory)-1] == '/')? 0:'/'),time);
 
+
     if(((*log)->file = fopen(path, "w")) == NULL){
         free((*log));
         free(path);
@@ -50,11 +51,10 @@ void createLog(char* dir, logFile* log){
 }
 
 int appendOnLog(logFile log, char* strBuf,...){
-    if(!log) {
+    if(!log || !strBuf) {
         errno = EINVAL;
         return -1;
     }
-
     SYSCALL_RETURN(pthread_mutex_init, pthread_mutex_lock(&(log->mutex)),
                    "ERROR - Log File Lock, errno = %d\n", errno);
 

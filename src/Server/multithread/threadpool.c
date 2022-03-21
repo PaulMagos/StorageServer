@@ -53,7 +53,7 @@ static void *threadPoolWorker(void* arg){
             pthread_cond_wait(&(tmpPool->work_cond), &(tmpPool->lock));
         }
         if(tmpPool->stop>1) break;
-        if(tmpPool->stop==1 && tmpPool->taskN == 0) break;
+        if(tmpPool->stop>0 && tmpPool->taskN==0) break;
         tmpTask = getTask(tmpPool);
         if(tmpPool->taskN>0) tmpPool->taskN--;
         pthread_mutex_unlock(&(tmpPool->lock));
@@ -67,7 +67,7 @@ static void *threadPoolWorker(void* arg){
     }
     pthread_mutex_unlock(&(tmpPool->lock));
     appendOnLog(ServerLog, "[Thread %d]: Stopped\n", id);
-    pthread_exit(NULL);
+    return NULL;
 }
 
 threadPool* initThreadPool(int threads){

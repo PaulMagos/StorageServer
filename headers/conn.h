@@ -127,12 +127,14 @@ static inline int readMessage(int fd, message* message1){
     if(read(fd, message1, sizeof(message)) != sizeof(message)){
         return -1;
     }
+    int readed=0;
 
-    message1->content = malloc(message1->size + 1);
-    memset(message1->content, 0, message1->size+1);
-    int readed;
-    if((readed = readn(fd, message1->content, message1->size)) == -1){
-        fprintf(stderr, "Reading from %d fd", fd);
+    if(message1->size>0){
+        message1->content = malloc(message1->size + 1);
+        memset(message1->content, 0, message1->size+1);
+        if((readed = readn(fd, message1->content, message1->size)) == -1){
+            fprintf(stderr, "Reading from %d fd", fd);
+        }
     }
     //printf("READN: %d %d %s %d %s\n", fd, (int )message1->size, requestToString(message1->request), (int)message1->feedback, strerror(message1->additional));
 
@@ -180,8 +182,10 @@ static inline void emptyMessage(message* message1){
  *
  */
 static inline void freeMessageContent(message* message1){
-    message1->size = 0;
-    free(message1->content);
+    if(message1->size>0){
+        message1->size = 0;
+        free(message1->content);
+    }
 }
 /**  Libero memoria
  *
