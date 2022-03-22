@@ -254,6 +254,7 @@ void commandHandler(List* commandList){
                         }
                         if(S_ISDIR(dir_Details.st_mode)) {
                             fprintf(stderr, "'%s' -> This is a directory\n", token);
+                            free(path);
                             scRes = -1;
                             break;
                         }
@@ -272,7 +273,7 @@ void commandHandler(List* commandList){
                     token = strtok_r(NULL, ",", &rest);
                     if(scRes == -1){
                         if(errno!=17) {
-                            //if(path) free(path);
+                            if(path) free(path);
                             if(argument) free(argument);
                             if(socket) free(socket);
                             exit(errno);

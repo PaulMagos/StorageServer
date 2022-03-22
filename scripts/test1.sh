@@ -30,4 +30,4 @@ x-terminal-emulator -e ${TERM} ${MEMCHECK} ${CLIENT} -f ${SOCKET} ${TIME} -p -w 
 echo
 echo "AVVIO CLIENT 3 TESTO -l E -u DI 2 FILE, E -R"
 x-terminal-emulator -e ${TERM} ${MEMCHECK} ${CLIENT} -f ${SOCKET} ${TIME} -p -l ${WRITEFILESDIR}/file1.txt,${WRITEFILESDIR}/file2.txt -u ${WRITEFILESDIR}/file1.txt,${WRITEFILESDIR}/file2.txt -R &
-(sleep 2; kill -1 ${SERVER_PID})
+(kill -1 ${SERVER_PID})
