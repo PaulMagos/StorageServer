@@ -185,7 +185,7 @@ void OpenFile(int fd_client, int workerId, message* message1){
                         expelledFile  = icl_hash_toReplace(ServerStorage->filesTable, ServerConfig.policy, workerId);
                         continue;
                     }
-                    appendOnLog(ServerLog, "[Thread %d]: REPLACEALG\n");
+                    appendOnLog(ServerLog, "[Thread %d]: REPLACEALG\n", workerId);
                     if(expelledFile==NULL) {
                         if(message1->size>0) freeMessageContent(message1);
                         return;
@@ -369,7 +369,7 @@ void OpenFile(int fd_client, int workerId, message* message1){
                         expelledFile  = icl_hash_toReplace(ServerStorage->filesTable, ServerConfig.policy, workerId);
                         continue;
                     }
-                    appendOnLog(ServerLog, "[Thread %d]: REPLACEALG\n");
+                    appendOnLog(ServerLog, "[Thread %d]: REPLACEALG\n", workerId);
                     if(expelledFile==NULL) {
                         if(message1->size>0) freeMessageContent(message1);
                         return;
@@ -700,7 +700,7 @@ void ReceiveFile(int fd_client, int workerId, message* message1){
     createList(&expelled);
     while (ServerStorage->actualFilesBytes+message1->size > ServerConfig.maxByte){
         serverFile* file = icl_hash_toReplace(ServerStorage->filesTable, ServerConfig.policy, workerId);
-        appendOnLog(ServerLog, "[Thread %d]: REPLACEALG\n");
+        appendOnLog(ServerLog, "[Thread %d]: REPLACEALG\n", workerId);
         if(file == NULL) {
             message1->additional = 132;
             message1->feedback = ERROR;
@@ -1086,7 +1086,7 @@ void AppendOnFile(int fd_client, int workerId, message* message1){
     createList(&expelled);
     while (ServerStorage->actualFilesBytes-File->size+message1->size > ServerConfig.maxByte){
         serverFile* file = icl_hash_toReplace(ServerStorage->filesTable, ServerConfig.policy, workerId);
-        appendOnLog(ServerLog, "[Thread %d]: REPLACEALG\n");
+        appendOnLog(ServerLog, "[Thread %d]: REPLACEALG\n", workerId);
         if(file == NULL) {
             message1->additional = 132;
             message1->feedback = ERROR;
@@ -1163,8 +1163,8 @@ int ExpelledHandler(int fd, int workerId, List expelled){
         while (expelled->len>0){
             pullTop(&expelled, &index, NULL);
             File = icl_hash_find(ServerStorage->filesTable, index);
-            fileWritersIncrement(File, workerId);
             if(File && (File->toDelete==1||File->toDelete==fd) && isLocked(File, fd)!=1 && File->latsOp!=O_CREAT) {
+                fileWritersIncrement(File, workerId);
                 if(ServerStorage->stdOutput) printf("[Thread %d]: EXPELL File %d %s, %d of %d files\n", workerId, (int)File->size, index, num-expelled->len, num);
                 appendOnLog(ServerLog, "[Thread %d]: EXPELL File %d %s, %d of %d files\n", workerId, File->size, index, num-expelled->len, num);
                 fileWritersDecrement(File, workerId);

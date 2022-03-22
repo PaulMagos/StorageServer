@@ -51,46 +51,59 @@ static const char* sizes[] = {"GB", "MB", "KB", "B"};
 // ES 5 LEZIONI
 #define SYSCALL_EXIT(name, r, sc, str, ...)	    \
     if ((r=sc) == -1) {				            \
-	perror(#name);				                \
 	int errno_copy = errno;			            \
-	print_error(str, __VA_ARGS__);              \
+        if(strcmp(str, "")!=0 &&                \
+        strcmp(str, " ")!=0){                   \
+            perror(#name);                      \
+            print_error(str, __VA_ARGS__);      \
+        }                                       \
 	exit(errno_copy);			                \
     }                                           \
 
 #define SYSCALL_EXITFREE(name, toFree,r, sc, str, ...)	    \
     if ((r=sc) == -1) {				            \
-	perror(#name);				                \
 	int errno_copy = errno;			            \
-	print_error(str, __VA_ARGS__);              \
+        if(strcmp(str, "")!=0 &&                \
+        strcmp(str, " ")!=0){                   \
+            perror(#name);                      \
+            print_error(str, __VA_ARGS__);      \
+        }                                       \
     free(toFree),                               \
 	exit(errno_copy);			                \
     }                                           \
 
 #define SYSCALL_RETURN(name, sc, str, ...)	    \
     if (sc == -1) {				                \
-	perror(#name);          		            \
-	print_error(str, __VA_ARGS__);              \
+        if(strcmp(str, "")!=0 &&                \
+        strcmp(str, " ")!=0){                   \
+            perror(#name);                      \
+            print_error(str, __VA_ARGS__);      \
+        }                                       \
 	return -1;			                        \
     }                                           \
 
 #define SYSCALL_RET(name, sc, str, ...)	        \
     if (sc == -1) {				                \
-	perror(#name);          		            \
-	print_error(str, __VA_ARGS__);              \
+        if(strcmp(str, "")!=0 &&                \
+        strcmp(str, " ")!=0){                   \
+            perror(#name);                      \
+            print_error(str, __VA_ARGS__);      \
+        }                                       \
 	return;			                            \
     }                                           \
 
 #define SYSCALL_ASSIGN(name, r, sc, str, ...)	\
     if ((r=sc) == -1) {				            \
-	perror(#name);				                \
-	print_error(str, __VA_ARGS__);              \
     }                                           \
 
 #define SYSCALL_BREAK(name, r, sc, str, ...)	\
     if ((r=sc) == -1) {				            \
-	perror(#name);				                \
-	print_error(str, __VA_ARGS__);              \
-    break;                                     \
+        if(strcmp(str, "")!=0 &&                \
+        strcmp(str, " ")!=0){                   \
+            perror(#name);                      \
+            print_error(str, __VA_ARGS__);      \
+        }                                       \
+    break;                                      \
     }                                           \
 /**
 * \brief Procedura di utilita' per la stampa degli errori

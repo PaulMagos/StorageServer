@@ -16,7 +16,7 @@ endTime=$(($SECONDS+30))
 
 echo
 echo "AVVIO SERVER"
-${MEMCHECK} ${SERVER} ./configs/config${I}.txt ./log/test${I} &
+${SERVER} ./configs/config${I}.txt ./log/test${I} &
 SERVER_PID=$!
 THIS_PID=$$
 
@@ -35,6 +35,7 @@ do
   ${CLIENT} -f ${SOCKET} "${TIME}" -W ${WRITEFILESDIR}/dir7/file72.txt -r ${WRITEFILESDIR}/dir7/file72.txt -l ${WRITEFILESDIR}/dir7/file72.txt -u ${WRITEFILESDIR}/dir7/file72.txt -c ${WRITEFILESDIR}/dir7/file72.txt &
   ${CLIENT} -f ${SOCKET} "${TIME}" -W ${WRITEFILESDIR}/dir9/file92.txt -r ${WRITEFILESDIR}/dir9/file92.txt -l ${WRITEFILESDIR}/dir9/file92.txt -u ${WRITEFILESDIR}/dir9/file92.txt -c ${WRITEFILESDIR}/dir9/file92.txt &
   ${CLIENT} -f ${SOCKET} "${TIME}" -W ${WRITEFILESDIR}/dir10/file102.txt -r ${WRITEFILESDIR}/dir10/file102.txt -l ${WRITEFILESDIR}/dir10/file102.txt -u ${WRITEFILESDIR}/dir10/file102.txt -c ${WRITEFILESDIR}/dir10/file102.txt &
+  ${CLIENT} -f ${SOCKET} "${TIME}" -R 10 -d ${SAVEDIR} &
   sleep 1
 done
 

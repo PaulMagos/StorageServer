@@ -14,6 +14,7 @@ OBJS = $(DATAOBJ) $(CLIENTOBJ) $(SERVEROBJ) $(APIOBJ) $(MULTIOBJ) $(LOGOBJ)
 
 TARGETS = $(CLIENTOUTPUT) $(SERVEROUTPUT)
 all : $(TARGETS)
+	make clean genTexts
 
 # ---------------------------- DATA STRUCTURES ----------------------------- #
 DATASRC = $(wildcard $(DATASTRUCTURES)/*.c)
@@ -66,4 +67,29 @@ $(SERVERDIR)/utility/%.o: $(SERVERDIR)/utility/%.c
 clean :
 	-rm -f $(OBJS)
 cleanall :
-	-rm -f $(TARGETS) ./log/
+	-rm -f $(TARGETS) $(OBJS)
+	make delTexts
+
+test1:
+	chmod +x ./scripts/test.sh &
+	./scripts/test.sh 1
+
+test2:
+	chmod +x ./scripts/test.sh &
+	./scripts/test.sh 2
+
+test3:
+	chmod +x ./scripts/test3.sh &
+	./scripts/test3.sh
+
+stats:
+	chmod +x ./scripts/stats.sh &
+	./scripts/stats.sh
+
+genTexts:
+	chmod +x ./scripts/genTexts &
+	./scripts/genTexts
+
+delTexts:
+	chmod +x ./scripts/delTexts &
+	./scripts/delTexts
