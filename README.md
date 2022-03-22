@@ -1,7 +1,6 @@
-#StorageServer
+# StorageServer
 
-#### Multithreaded Server and Client for file "exchange" 
-Operating Systems Course Project <br>
-University Of Pisa <br>
+#### Multithreaded Server and Client for file "exchange"
+Operating Systems Course Project\
+University Of Pisa\
 Paul Magos
-
