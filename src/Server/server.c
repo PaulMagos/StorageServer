@@ -445,14 +445,42 @@ void serverDestroy(){
     free(ServerStorage);
 }
 void printServerStatus(){
+    icl_entry_t *bucket, *curr, *tmp;
+    List toDel;
+    createList(&toDel);
+    for (int i = 0; i<ServerStorage->filesTable->nbuckets; i++) {
+        bucket = ServerStorage->filesTable->buckets[i];
+        for(curr = bucket, tmp=bucket; tmp!=NULL; curr=curr->next){
+            tmp=curr->next;
+            serverFile* file = (serverFile*)curr->data;
+            if(file->toDelete!=0) {
+                pushTop(&toDel, file->path, NULL);
+            }else if(file->latsOp==O_CREAT_LOCK || file->latsOp==O_CREAT) {
+                fileNumDecrement();
+                ServerStorage->sessionMaxFilesNumber--;
+                pushTop(&toDel, file->path, NULL);
+            }
+        }
+    }
+
+    char* index;
+    while(toDel->len>0){
+        pullTop(&toDel, &index,NULL);
+        icl_hash_delete(ServerStorage->filesTable, index, free, freeFile);
+        if(index!=NULL)free(index);
+    }
+
+    deleteList(&toDel);
+
     logSeparator(ServerLog);
     char* max = calculateSize(ServerStorage->sessionMaxBytes);
     char* expelled = calculateSize(ServerStorage->expelledBytes);
     char* actual = calculateSize(ServerStorage->actualFilesBytes);
     char* serverMaxBytes = calculateSize(ServerConfig.maxByte);
     char* deletedBytes = calculateSize(ServerStorage->deletedBytes);
-    appendOnLog(ServerLog,"        Number of files saved: %d\n", ServerStorage->sessionMaxFilesNumber);
-    appendOnLog(ServerLog,"        Bytes of files saved: %s\n", max);
+    appendOnLog(ServerLog,"        Max client: %d\n", ServerStorage->maxConnections);
+    appendOnLog(ServerLog,"        Max number of files saved: %d\n", ServerStorage->sessionMaxFilesNumber);
+    appendOnLog(ServerLog,"        Max bytes of files saved: %s %zu\n", max, ServerStorage->sessionMaxBytes);
     appendOnLog(ServerLog,"        Number of files expelled: %d\n", ServerStorage->expelledFiles);
     appendOnLog(ServerLog,"        Number of bytes expelled: %s\n", expelled);
     appendOnLog(ServerLog,"        Number of files deleted: %d\n", ServerStorage->deletedFiles);
@@ -460,8 +488,9 @@ void printServerStatus(){
     appendOnLog(ServerLog,"        Files on the server at shutdown %d of %d\n", ServerStorage->actualFilesNumber, ServerConfig.maxFile);
     appendOnLog(ServerLog,"        Bytes on the server at shutdown %s of %s:\n\n", actual, serverMaxBytes);
     fprintf(stdout, "\n--------------------------------------------------------------------------------------------------\n");
-    fprintf(stdout, "        Number of files saved: %d\n", ServerStorage->sessionMaxFilesNumber);
-    fprintf(stdout, "        Bytes of files saved: %s\n", max);
+    fprintf(stdout, "        Max client: %d\n", ServerStorage->maxConnections);
+    fprintf(stdout, "        Max number of files saved: %d\n", ServerStorage->sessionMaxFilesNumber);
+    fprintf(stdout, "        Max bytes of files saved: %s %zu\n", max, ServerStorage->sessionMaxBytes);
     fprintf(stdout, "        Number of files expelled: %d\n", ServerStorage->expelledFiles);
     fprintf(stdout, "        Number of bytes expelled: %s\n", expelled);
     fprintf(stdout, "        Number of files deleted: %d\n", ServerStorage->deletedFiles);
@@ -479,14 +508,17 @@ void printServerStatus(){
         fprintf(stdout, "        Files :\n");
         fprintf(stdout, "        Size --- Last Operation & Time --- Path\n");
         icl_entry_t *bucket, *curr;
+        int j = 0;
         for (int i = 0; i<ServerStorage->filesTable->nbuckets; i++) {
             bucket = ServerStorage->filesTable->buckets[i];
             for(curr = bucket; curr!=NULL; curr=curr->next){
+                j++;
                 serverFile* file = (serverFile*)curr->data;
                 actual = calculateSize((int)file->size);
                 struct tm* cTime = gmtime(&(file->lastOpTime.tv_sec));
-                appendOnLog(ServerLog,"        %s --- %s %d/%d/%d %d:%d:%d --- %s\n",  actual, requestToString(file->latsOp), cTime->tm_mday, cTime->tm_mon+1, cTime->tm_year+1900, cTime->tm_hour, cTime->tm_min, cTime->tm_sec, file->path);
-                fprintf(stdout, "        %s --- %s %d/%d/%d %d:%d:%d --- %s\n",  actual, requestToString(file->latsOp), cTime->tm_mday, cTime->tm_mon+1, cTime->tm_year+1900, cTime->tm_hour, cTime->tm_min, cTime->tm_sec, file->path);
+                //if(file->latsOp==O_CREAT_LOCK||file->latsOp==O_CREAT ) continue;
+                appendOnLog(ServerLog,"        %d %s --- %s %d/%d/%d %d:%d:%d --- %s\n", j, actual, requestToString(file->latsOp), cTime->tm_mday, cTime->tm_mon+1, cTime->tm_year+1900, cTime->tm_hour, cTime->tm_min, cTime->tm_sec, file->path);
+                fprintf(stdout, "        %d %s --- %s %d/%d/%d %d:%d:%d --- %s\n",  j, actual, requestToString(file->latsOp), cTime->tm_mday, cTime->tm_mon+1, cTime->tm_year+1900, cTime->tm_hour, cTime->tm_min, cTime->tm_sec, file->path);
                 free(actual);
             }
         }

@@ -46,11 +46,12 @@ int pushTop(List* myList, char* index, void* data){
         return -1;
     }
 
-    if((*myList)->len>0){
-        temp->next = (*myList)->head;
-        (*myList)->head->prev = temp;
-    } else (*myList)->tail = temp;
+    temp->next = (*myList)->head;
+    temp->prev = NULL;
 
+    if((*myList)->head!=NULL) {
+        (*myList)->head->prev = temp;
+    }
     (*myList)->head = temp;
     (*myList)->len++;
     return 0;
@@ -70,13 +71,22 @@ int pushBottom(List* myList, char* index, void* data){
         return -1;
     }
 
-    if((*myList)->len>0){
-        temp->prev = (*myList)->tail;
-        (*myList)->tail->next = temp;
-    } else (*myList)->head = temp;
+    Node last = (*myList)->head;
+    temp->next = NULL;
+
+    (*myList)->len++;
+    if((*myList)->head==NULL){
+        temp->prev=NULL;
+        (*myList)->head = temp;
+        return 0;
+    }
+
+    while(last->next!=NULL) last=last->next;
+
+    last->next=temp;
+    temp->prev=last;
 
     (*myList)->tail = temp;
-    (*myList)->len++;
     return 0;
 }
 
@@ -119,35 +129,29 @@ int removeByInt(List* myList, void* data){
         return -1;
     }
 
-    Node tmp=(*myList)->head;
-    Node prev=NULL;
+    if((*myList)->tail!=NULL&&(*myList)->tail->dataInt==*(int*)data){
+        return pullBottom(&(*myList), NULL, NULL);
+    }
 
-    while(tmp!=NULL){
-        if(tmp->dataInt==*(int*)data){
-            (*myList)->len--;
-            if((*myList)->len == 0){
-                (*myList)->head = NULL;
-                (*myList)->tail = NULL;
-            } else if(tmp==(*myList)->head){
-                (*myList)->head = (*myList)->head->next;
-                (*myList)->head->prev = NULL;
-            } else if(tmp==(*myList)->tail){
-                (*myList)->tail = (*myList)->tail->prev;
-                (*myList)->head->next = NULL;
-            } else{
-                prev->next = tmp->next;
-                tmp->next->prev = prev;
-                tmp->next = NULL;
-                tmp->prev = NULL;
-                freeNode(tmp);
-            }
-            freeNode(tmp);
-            return 0;
-        }
-        prev=tmp;
+    Node tmp=(*myList)->head;
+    Node prev;
+
+    if(tmp!=NULL&&tmp->dataInt==*(int*)data){
+        return pullTop(&(*myList), NULL, NULL);
+    }
+
+    while(tmp!=NULL && tmp->dataInt==*(int*)data){
+        prev = tmp;
         tmp = tmp->next;
     }
-    return -1;
+
+    if(tmp==NULL) return -1;
+    (*myList)->len--;
+    prev->next=tmp->next;
+    if(tmp->next) tmp->next->prev = prev;
+
+    freeNode(tmp);
+    return 0;
 }
 
 Node getHead(List* myList){
@@ -186,11 +190,19 @@ int pullBottom(List* myList, char** index, void** data){
         (*myList)->tail = NULL;
     }else {
         (*myList)->tail = (*myList)->tail->prev;
-        (*myList)->head->next = NULL;
+        (*myList)->tail->next = NULL;
     }
 
-    *index = tmp->index;
-    *data = tmp->data;
+
+    if(tmp->index!= NULL) {
+        *index = malloc(strlen(tmp->index)+1);
+        strncpy(*index, tmp->index, strlen(tmp->index)+1);
+        //*data = malloc()
+        if(tmp->data!=NULL){
+            *data = malloc(strlen(tmp->data)+1);
+            memcpy(*data, tmp->data, strlen(tmp->data)+1);
+        }
+    }
 
     freeNode(tmp);
     return 0;

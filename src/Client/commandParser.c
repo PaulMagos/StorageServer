@@ -248,7 +248,7 @@ void commandHandler(List* commandList){
                     if((path = realpath(token, path)) == NULL)
                         fprintf(stderr, (pFlag) ? "'%s' -> File not exits\n": " ", token);
                     else{
-                        if(path || stat(path, &dir_Details)==-1){
+                        if(!path || stat(path, &dir_Details)==-1){
                             token = strtok_r(NULL, ",", &rest);
                             continue;
                         }
@@ -257,7 +257,7 @@ void commandHandler(List* commandList){
                             scRes = -1;
                             break;
                         }
-                        SYSCALL_ASSIGN(openFile, scRes, openFile(path, O_CREAT), (pFlag)?
+                        SYSCALL_ASSIGN(openFile, scRes, openFile(path, O_CREAT_LOCK), (pFlag)?
                             "'%s' -> WRITE Open failed, errno = %d\n":"", token, errno);
                         if(scRes!=-1){
                             SYSCALL_ASSIGN(writeFile, scRes, writeFile(path, expelledDir), (pFlag)?
@@ -492,7 +492,7 @@ int recWrite(char* dirname, char* expelledDir, long cnt, int indent){
                 path = NULL;
                 if((path = realpath(newPath, path)) == NULL) fprintf(stderr, (pFlag)? "ERROR - Opening File %s\n":" ", newPath);
                 else{
-                    SYSCALL_BREAK(openFile, scRes, openFile(path, 1), (pFlag)?
+                    SYSCALL_BREAK(openFile, scRes, openFile(path, O_CREAT_LOCK), (pFlag)?
                         "ERROR - REWRITE Couldn't send file %s to server, errno = %d\n": "", element->d_name, errno);
                     SYSCALL_BREAK(writeFile, scRes, writeFile(path, expelledDir), (pFlag)?
                         "ERROR - REWRITE Couldn't write file %s on server, errno = %d\n": "", element->d_name, errno);
