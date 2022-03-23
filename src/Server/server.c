@@ -21,6 +21,20 @@ int serverInit(char* configPath, char* logPath);
 void printServerStatus();
 
 int main(int argc, char* argv[]){
+    /* SYSCALL RESPONSE VARIABLE */
+    int res = 0;
+    int threadId;
+    int i, j;
+    int max_fd = 0;
+    int fd_server_socket, fd_client_socket = 0;
+    struct sockaddr_un SocketAddress;
+    /* SigPipe */
+    struct sigaction act;
+    int* sigHandler_Pipe;
+    sigset_t mask;
+    sigHandlerArgs args;
+    /* CLIENTS FDS */
+    fd_set readySet, currSet;
     /* -------------------------------------    Server   -------------------------------------
      * Log, Config and Server Init
      */
@@ -38,8 +52,7 @@ int main(int argc, char* argv[]){
         exit(0);
     }
 
-    /* SYSCALL RESPONSE VARIABLE */
-    int res = 0;
+
 
 
     /*
@@ -47,7 +60,6 @@ int main(int argc, char* argv[]){
      * Signal Handler & Respective Pipe Init
      * Signal Set creation for the sigHandler thread
      */
-    sigset_t mask;
     sigemptyset(&mask);
     sigaddset(&mask, SIGHUP);
     sigaddset(&mask, SIGINT);
@@ -57,7 +69,6 @@ int main(int argc, char* argv[]){
                    "ERROR - pthread_sigmask fault, errno = %d\n", errno)
 
     /* SigPipe Ignore */
-    struct sigaction act;
     memset(&act, 0, sizeof(act));
     act.sa_handler = SIG_IGN;
     SYSCALL_RETURN(sigaction, sigaction(SIGPIPE, &act, NULL),
@@ -65,12 +76,12 @@ int main(int argc, char* argv[]){
 
 
     /* Pipe init for threads communications */
-    int* sigHandler_Pipe = malloc(2*sizeof(int));
+    sigHandler_Pipe = malloc(2*sizeof(int));
     SYSCALL_RETURN(pipe, pipe(sigHandler_Pipe),
                    "ERROR - pipe failure, errno = %d", errno)
 
     /* pthread_t sigHandler_t; */
-    sigHandlerArgs args = {(sigHandler_Pipe)[1], &mask};
+    args = {(sigHandler_Pipe)[1], &mask};
     SYSCALL_RETURN(sigHandler_pthread_creation,
                    pthread_create(
                            &sigHandler_t,
@@ -93,9 +104,8 @@ int main(int argc, char* argv[]){
      * ------------------------------------- ServerSocket -------------------------------------
      * Socket creation
      */
-    int max_fd = 0;
-    int fd_server_socket, fd_client_socket = 0;
-    struct sockaddr_un SocketAddress;
+    max_fd = 0;
+    fd_client_socket = 0;
     (void) unlink(ServerConfig.serverSocketName);
     memset(&SocketAddress, '0', sizeof(SocketAddress));
     strncpy(SocketAddress.sun_path, ServerConfig.serverSocketName, UNIX_PATH_MAX);
@@ -112,25 +122,24 @@ int main(int argc, char* argv[]){
     atexit(serverDestroy);
 
     /* ------------------------------------- Clients Fds ------------------------------------- */
-    fd_set readySet, currSet;
     FD_ZERO(&currSet);
     FD_ZERO(&readySet);
     FD_SET(fd_server_socket, &currSet);
     FD_SET(sigHandler_Pipe[0], &currSet);
     if(fd_server_socket>max_fd) max_fd = fd_server_socket;
-    for(int i = 0; i<ServerConfig.threadNumber; i++){
+    for(i = 0; i<ServerConfig.threadNumber; i++){
         FD_SET(threadPool1->workersPipes[i][0], &currSet);
         if(i > max_fd) max_fd = i;
     }
 
-    int threadId;
+
 
     if(ServerStorage->stdOutput) fprintf(stdout, "Server Started Well, Waiting For Connections\n");
     /* ----------------------------------- MainThreadFunc ------------------------------------ */
     while (ServerStorage->status == E){
         readySet = currSet;
         SYSCALL_EXIT(select, res, select(max_fd+1, &readySet,NULL, NULL, NULL), "ERROR - Select failed, errno = %d", errno);
-        for(int i = 0; i <= max_fd; i++){
+        for(i = 0; i <= max_fd; i++){
             if(!FD_ISSET(i, &readySet)) continue;
             if(i==fd_server_socket && ServerStorage->status==E && max_fd<1000){
                 SYSCALL_ASSIGN(acceptNewConn, fd_client_socket, accept(fd_server_socket, NULL, NULL),
@@ -175,7 +184,7 @@ int main(int argc, char* argv[]){
             FD_CLR(i, &currSet);
             removeClient();
             if(i == max_fd){
-                for(int j = max_fd; j>=0; j--){
+                for(j = max_fd; j>=0; j--){
                     if(FD_ISSET(j, &currSet)){
                         max_fd = j;
                         break;
@@ -244,12 +253,10 @@ int signalHandlerDestroy(){
 }
 
 static int serverConfigParser(char* path){
-    if(path == NULL) {
-        defaultConfig(&ServerConfig);
-        return 0;
-    }
+
 
     /* Define variables */
+    int c = 0, j = 0;
     FILE *configFile;
     char* token, *rest;
     char fileBuffer[256];
@@ -258,6 +265,10 @@ static int serverConfigParser(char* path){
     long threads = 0, max_file = 0, debug = -1;
     long max_bytes = 0;
     /* Try to open file */
+    if(path == NULL) {
+        defaultConfig(&ServerConfig);
+        return 0;
+    }
     if((configFile = fopen(path, "r") )== NULL){
         free(path);
         return -1;
@@ -316,7 +327,7 @@ static int serverConfigParser(char* path){
                 token = strtok_r(NULL, "\n\0", &rest);
                 if(token == NULL) return -1;
                 /* De blank string */
-                int c = 0, j = 0;
+                c = 0, j = 0;
                 while(token[c]!='\0'){
                     if(token[c]!=' '){
                         token[j++]=token[c];
@@ -337,7 +348,7 @@ static int serverConfigParser(char* path){
                 token = strtok_r(NULL, "\n\0", &rest);
                 if(token == NULL) return -1;
                 /* De blank string */
-                int c = 0, j = 0;
+                c = 0, j = 0;
                 while(token[c]!='\0'){
                     if(token[c]!=' '){
                         token[j++]=token[c];
@@ -360,7 +371,7 @@ static int serverConfigParser(char* path){
                 if (token == NULL) break;
 
                 /* De blank string */
-                int c = 0, j = 0;
+                c = 0, j = 0;
                 while(token[c]!='\0'){
                     if(token[c]!=' '){
                         token[j++]=token[c];
@@ -452,14 +463,22 @@ void serverDestroy(){
     free(ServerStorage);
 }
 void printServerStatus(){
-    icl_entry_t *bucket, *curr, *tmp;
+    int i, j;
+    char* max;
     List toDel;
+    char* actual;
+    char* expelled;
+    struct tm* cTime;
+    serverFile* file;
+    char* deletedBytes;
+    char* serverMaxBytes;
     createList(&toDel);
-    for (int i = 0; i<ServerStorage->filesTable->nbuckets; i++) {
+    icl_entry_t *bucket, *curr, *tmp;
+    for (i = 0; i<ServerStorage->filesTable->nbuckets; i++) {
         bucket = ServerStorage->filesTable->buckets[i];
         for(curr = bucket, tmp=bucket; tmp!=NULL; curr=curr->next){
             tmp=curr->next;
-            serverFile* file = (serverFile*)curr->data;
+            file = (serverFile*)curr->data;
             if(file->toDelete!=0) {
                 pushTop(&toDel, file->path, NULL);
             }else if(file->latsOp==O_CREAT_LOCK || file->latsOp==O_CREAT) {
@@ -480,11 +499,11 @@ void printServerStatus(){
     deleteList(&toDel);
 
     logSeparator(ServerLog);
-    char* max = calculateSize(ServerStorage->sessionMaxBytes);
-    char* expelled = calculateSize(ServerStorage->expelledBytes);
-    char* actual = calculateSize(ServerStorage->actualFilesBytes);
-    char* serverMaxBytes = calculateSize(ServerConfig.maxByte);
-    char* deletedBytes = calculateSize(ServerStorage->deletedBytes);
+    max = calculateSize(ServerStorage->sessionMaxBytes);
+    expelled = calculateSize(ServerStorage->expelledBytes);
+    actual = calculateSize(ServerStorage->actualFilesBytes);
+    serverMaxBytes = calculateSize(ServerConfig.maxByte);
+    deletedBytes = calculateSize(ServerStorage->deletedBytes);
     appendOnLog(ServerLog,"        Max client: %d\n", ServerStorage->maxConnections);
     appendOnLog(ServerLog,"        Max number of files saved: %d\n", ServerStorage->sessionMaxFilesNumber);
     appendOnLog(ServerLog,"        Max bytes of files saved: %s %zu B\n", max, ServerStorage->sessionMaxBytes);
@@ -514,15 +533,14 @@ void printServerStatus(){
         appendOnLog(ServerLog,"        Size --- Last Operation & Time --- Path\n");
         fprintf(stdout, "        Files :\n");
         fprintf(stdout, "        Size --- Last Operation & Time --- Path\n");
-        icl_entry_t *bucket, *curr;
-        int j = 0;
-        for (int i = 0; i<ServerStorage->filesTable->nbuckets; i++) {
+        j = 0;
+        for (i = 0; i<ServerStorage->filesTable->nbuckets; i++) {
             bucket = ServerStorage->filesTable->buckets[i];
             for(curr = bucket; curr!=NULL; curr=curr->next){
                 j++;
-                serverFile* file = (serverFile*)curr->data;
+                file = (serverFile*)curr->data;
                 actual = calculateSize((int)file->size);
-                struct tm* cTime = gmtime(&(file->lastOpTime.tv_sec));
+                cTime = gmtime(&(file->lastOpTime.tv_sec));
                 /* if(file->latsOp==O_CREAT_LOCK||file->latsOp==O_CREAT ) continue; */
                 appendOnLog(ServerLog,"        %d %s --- %s %d/%d/%d %d:%d:%d --- %s\n", j, actual, requestToString(file->latsOp), cTime->tm_mday, cTime->tm_mon+1, cTime->tm_year+1900, cTime->tm_hour, cTime->tm_min, cTime->tm_sec, file->path);
                 fprintf(stdout, "        %d %s --- %s %d/%d/%d %d:%d:%d --- %s\n",  j, actual, requestToString(file->latsOp), cTime->tm_mday, cTime->tm_mon+1, cTime->tm_year+1900, cTime->tm_hour, cTime->tm_min, cTime->tm_sec, file->path);
@@ -548,9 +566,10 @@ serverFile* replaceFile(serverFile* file1, serverFile* file2, cachePolicy policy
 }
 
 serverFile * icl_hash_toReplace(icl_hash_t *ht, cachePolicy policy, int workerId){
+    int i;
     icl_entry_t *bucket, *curr;
     serverFile *file1, *file2 = NULL, *exFile2 = NULL;
-    for (int i = 0; i<ht->nbuckets; i++) {
+    for (i = 0; i<ht->nbuckets; i++) {
         bucket = ht->buckets[i];
         for(curr = bucket; curr!=NULL; curr=curr->next){
             file1 = (serverFile*)curr->data;

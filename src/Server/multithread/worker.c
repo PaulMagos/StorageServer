@@ -1136,18 +1136,19 @@ void AppendOnFile(int fd_client, int workerId, message* message1){
 }
 
 int ExpelledHandler(int fd, int workerId, List expelled){
-    if(expelled==NULL) return -1;
-    if(expelled->len==0){
-        deleteList(&expelled);
-        return 0;
-    }
     message curr;
-    memset(&curr, 0, sizeof(message));
     int num = expelled->len;
     char* index;
     int len;
     int scRes=0;
     serverFile* File;
+    if(expelled==NULL) return -1;
+    if(expelled->len==0){
+        deleteList(&expelled);
+        return 0;
+    }
+    memset(&curr, 0, sizeof(message));
+
     SYSCALL_RETURN(pthred_unlock, pthread_mutex_lock(&(ServerStorage->lock)),
                    "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
     if(ServerStorage->stdOutput) printf("[Thread %d]: Server Lock\n", workerId);
@@ -1340,8 +1341,8 @@ int lastOpUpdate(serverFile* file, fileFlags op, int thread){
 }
 
 wTask* taskCreate (int client_fd){
-    if(client_fd == -1) return NULL;
     wTask *task;
+    if(client_fd == -1) return NULL;
     task = (wTask*)malloc(sizeof(wTask));
     task->pipeT = -1;
     task->worker_id = -1;

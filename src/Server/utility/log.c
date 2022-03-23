@@ -5,7 +5,11 @@
 #include "../../../headers/log.h"
 
 void createLog(char* dir, logFile* log){
+    char* time;
+    char* path;
+    int pathLen;
     char* directory;
+
     if(dir == NULL) {
         directory = "../log";
     }
@@ -18,11 +22,10 @@ void createLog(char* dir, logFile* log){
     }
 
 
-    char* time;
     getTime(&time,0);
     if(time == NULL) return;
-    int pathLen = strlen(directory) + strlen(time) + strlen(".txt") + 2;
-    char* path = malloc(pathLen);
+    pathLen = strlen(directory) + strlen(time) + strlen(".txt") + 2;
+    path = malloc(pathLen);
     if(!path) exit(ENOMEM);
     snprintf(path, pathLen, "%s%c%s.txt", directory, ((directory[strlen(directory)-1] == '/')? 0:'/'),time);
 
@@ -51,6 +54,7 @@ void createLog(char* dir, logFile* log){
 }
 
 int appendOnLog(logFile log, char* strBuf,...){
+    char* time;
     if(!log || !strBuf) {
         errno = EINVAL;
         return -1;
@@ -61,7 +65,6 @@ int appendOnLog(logFile log, char* strBuf,...){
     va_list argList;
     va_start(argList, strBuf);
 
-    char* time;
     getTime(&time,1);
     if(time == NULL) return -1;
     fprintf(log->file, "%s ->\t", time);
@@ -77,9 +80,9 @@ int appendOnLog(logFile log, char* strBuf,...){
 }
 
 int closeLogStr(logFile log){
+    int scRes;
     if(log == NULL) return -1;
     fprintf(log->file, "-------------------- END LOG --------------------\n");
-    int scRes;
     SYSCALL_EXIT(fclose, scRes, fclose(log->file), "ERROR - Log File Close, errno = %d\n", errno);
     pthread_mutex_destroy(&(log->mutex));
     free(log);
