@@ -17,6 +17,7 @@
     if (sc == -1) {				                \
 	    return -1;                              \
     }                                          \
+
 #pragma GCC diagnostic pop
 
 typedef enum{
