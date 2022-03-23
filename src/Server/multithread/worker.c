@@ -11,15 +11,18 @@ int ExpelledHandler(int fd, int workerId, List expelled);
 
 
 void taskExecute(void* argument){
+    wTask *tmpArgs;
+    message message1;
+    int myId, fd_client, pipeM;
     if( argument == NULL ) {
         fprintf(stderr, "ERROR - Invalid Worker Argument, errno = %d", EINVAL);
         exit(EXIT_FAILURE);
     }
 
-    wTask *tmpArgs = argument;
-    int myId = tmpArgs->worker_id;
-    int fd_client = (int)tmpArgs->client_fd;
-    int pipeM = tmpArgs->pipeT;
+    tmpArgs = argument;
+    myId = tmpArgs->worker_id;
+    fd_client = (int)tmpArgs->client_fd;
+    pipeM = tmpArgs->pipeT;
     free(argument);
     /*int r = -1;
     if(writen(pipeM, &r, sizeof(int))==-1){
@@ -27,7 +30,6 @@ void taskExecute(void* argument){
     }*/
 
 
-    message message1;
     memset(&message1, 0, sizeof(message));
 
     if(readMessage(fd_client, &message1) == -1){
@@ -114,6 +116,9 @@ int opExecute(int fd, int workerId, message* message1){
 }
 
 int CloseConnection(int fd_client, int workerId){
+    int i;
+    serverFile *file;
+    icl_entry_t *bucket, *curr;
     if(fd_client == -1 || workerId == -1){
         errno = EINVAL;
         return -1;
@@ -124,9 +129,8 @@ int CloseConnection(int fd_client, int workerId){
 
 
     if(ServerStorage->actualFilesNumber>0) {
-        serverFile *file;
-        icl_entry_t *bucket, *curr;
-        for (int i = 0; i < ServerStorage->filesTable->nbuckets; i++) {
+
+        for (i = 0; i < ServerStorage->filesTable->nbuckets; i++) {
             bucket = ServerStorage->filesTable->buckets[i];
             for (curr = bucket; curr != NULL; curr = curr->next) {
                 file = ((serverFile *) curr->data);
@@ -152,6 +156,7 @@ int CloseConnection(int fd_client, int workerId){
 }
 
 void OpenFile(int fd_client, int workerId, message* message1){
+    serverFile* File, *expelledFile;
     if(fd_client == -1 || workerId == -1) {
         errno = EINVAL;
         message1->additional = errno;
@@ -164,7 +169,7 @@ void OpenFile(int fd_client, int workerId, message* message1){
     if(ServerStorage->stdOutput) printf("[Thread %d]: Server Lock\n", workerId);
 
 
-    serverFile* File = icl_hash_find(ServerStorage->filesTable, message1->content);
+    File = icl_hash_find(ServerStorage->filesTable, message1->content);
 
     switch (message1->request) {
         case O_CREAT:{
@@ -180,7 +185,7 @@ void OpenFile(int fd_client, int workerId, message* message1){
             }
             else{
                 if(ServerStorage->actualFilesNumber == ServerConfig.maxFile){
-                    serverFile *expelledFile     = icl_hash_toReplace(ServerStorage->filesTable, ServerConfig.policy, workerId);
+                    expelledFile     = icl_hash_toReplace(ServerStorage->filesTable, ServerConfig.policy, workerId);
                     while(expelledFile && (expelledFile->latsOp==O_CREAT||expelledFile->latsOp==O_CREAT_LOCK)) {
                         expelledFile  = icl_hash_toReplace(ServerStorage->filesTable, ServerConfig.policy, workerId);
                         continue;
@@ -364,7 +369,7 @@ void OpenFile(int fd_client, int workerId, message* message1){
                 return;
             } else {
                 if(ServerStorage->actualFilesNumber==ServerConfig.maxFile){
-                    serverFile *expelledFile     = icl_hash_toReplace(ServerStorage->filesTable, ServerConfig.policy, workerId);
+                    expelledFile     = icl_hash_toReplace(ServerStorage->filesTable, ServerConfig.policy, workerId);
                     while(expelledFile && (expelledFile->latsOp==O_CREAT||expelledFile->latsOp==O_CREAT_LOCK)) {
                         expelledFile  = icl_hash_toReplace(ServerStorage->filesTable, ServerConfig.policy, workerId);
                         continue;
@@ -523,6 +528,7 @@ void OpenFile(int fd_client, int workerId, message* message1){
     return;
 }
 void CloseFile(int fd_client, int workerId, message* message1){
+    serverFile* File;
     if(fd_client == -1 || workerId == -1) {
         errno = EINVAL;
         message1->additional = errno;
@@ -534,7 +540,7 @@ void CloseFile(int fd_client, int workerId, message* message1){
                    "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
     if(ServerStorage->stdOutput) printf("[Thread %d]: Server Lock\n", workerId);
 
-    serverFile* File = icl_hash_find(ServerStorage->filesTable, message1->content);
+    File = icl_hash_find(ServerStorage->filesTable, message1->content);
     if(File==NULL || isLocked(File, fd_client)==1 || File->latsOp==O_CREAT || File->latsOp==O_CREAT_LOCK){
         errno = ENOENT;
         message1->additional = errno;
@@ -567,6 +573,7 @@ void CloseFile(int fd_client, int workerId, message* message1){
     return;
 }
 void DeleteFile(int fd_client, int workerId, message* message1){
+    serverFile* File;
     if(fd_client == -1 || workerId == -1) {
         errno = EINVAL;
         message1->additional = errno;
@@ -579,7 +586,7 @@ void DeleteFile(int fd_client, int workerId, message* message1){
                    "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
     if(ServerStorage->stdOutput) printf("[Thread %d]: Server Lock\n", workerId);
 
-    serverFile* File = icl_hash_find(ServerStorage->filesTable, message1->content);
+    File = icl_hash_find(ServerStorage->filesTable, message1->content);
     if(File==NULL){
         errno = ENOENT;
         message1->additional = errno;
@@ -627,6 +634,9 @@ void DeleteFile(int fd_client, int workerId, message* message1){
     return;
 }
 void ReceiveFile(int fd_client, int workerId, message* message1){
+    List expelled;
+    serverFile* File;
+
     if(fd_client == -1 || workerId == -1) {
         errno = EINVAL;
         message1->additional = errno;
@@ -639,7 +649,7 @@ void ReceiveFile(int fd_client, int workerId, message* message1){
     if(ServerStorage->stdOutput) printf("[Thread %d]: Server Lock\n", workerId);
 
 
-    serverFile* File = (message1->size>0)? icl_hash_find(ServerStorage->filesTable, message1->content):NULL;
+    File = (message1->size>0)? icl_hash_find(ServerStorage->filesTable, message1->content):NULL;
     if(File==NULL){
         errno = ENOENT;
         message1->additional = errno;
@@ -696,7 +706,6 @@ void ReceiveFile(int fd_client, int workerId, message* message1){
 
         return ;
     }
-    List expelled;
     createList(&expelled);
     while (ServerStorage->actualFilesBytes+message1->size > ServerConfig.maxByte){
         serverFile* file = icl_hash_toReplace(ServerStorage->filesTable, ServerConfig.policy, workerId);
@@ -771,6 +780,7 @@ void ReceiveFile(int fd_client, int workerId, message* message1){
     return ;
 }
 void SendFile(int fd_client, int workerId, message* message1){
+    serverFile* File;
     if(fd_client == -1 || workerId == -1) {
         errno = EINVAL;
         message1->additional = errno;
@@ -782,7 +792,7 @@ void SendFile(int fd_client, int workerId, message* message1){
                    "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
     if(ServerStorage->stdOutput) printf("[Thread %d]: Server Lock\n", workerId);
 
-    serverFile* File = icl_hash_find(ServerStorage->filesTable, message1->content);
+    File = icl_hash_find(ServerStorage->filesTable, message1->content);
     if(message1->content) freeMessageContent(message1);
     if(File==NULL){
         errno = ENOENT;
@@ -839,6 +849,11 @@ void SendFile(int fd_client, int workerId, message* message1){
     return;
 }
 void SendNFiles(int fd_client, int workerId, message* message1){
+    int i;
+    List expelled;
+    serverFile* file;
+    int numberOfFiles = 0;
+    icl_entry_t *bucket, *curr;
     if(fd_client == -1 || workerId == -1) {
         errno = EINVAL;
         message1->additional = errno;
@@ -846,18 +861,15 @@ void SendNFiles(int fd_client, int workerId, message* message1){
         return;
     }
 
-    int numberOfFiles = 0;
     SYSCALL_RET(pthred_lock, pthread_mutex_lock(&(ServerStorage->lock)),
                    "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
     if(ServerStorage->stdOutput) printf("[Thread %d]: Server Lock\n", workerId);
 
     numberOfFiles = (ServerStorage->actualFilesNumber<message1->additional)? ServerStorage->actualFilesNumber:message1->additional;
-    List expelled;
     createList(&expelled);
 
-    icl_entry_t *bucket, *curr;
-    serverFile* file;
-    for(int i = 0; i < ServerStorage->filesTable->nbuckets && (int)expelled->len<numberOfFiles; i++){
+
+    for(i = 0; i < ServerStorage->filesTable->nbuckets && (int)expelled->len<numberOfFiles; i++){
         bucket = ServerStorage->filesTable->buckets[i];
         for(curr = bucket; curr!=NULL && (int)expelled->len<numberOfFiles; curr=curr->next){
             file = (serverFile*) curr->data;
@@ -906,6 +918,7 @@ void SendNFiles(int fd_client, int workerId, message* message1){
     return;
 }
 void LockFile(int fd_client, int workerId, message* message1){
+    serverFile* File;
     if(fd_client == -1 || workerId == -1) {
         errno = EINVAL;
         message1->additional = errno;
@@ -917,7 +930,7 @@ void LockFile(int fd_client, int workerId, message* message1){
                    "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
     if(ServerStorage->stdOutput) printf("[Thread %d]: Server Lock\n", workerId);
 
-    serverFile* File = icl_hash_find(ServerStorage->filesTable, message1->content);
+    File = icl_hash_find(ServerStorage->filesTable, message1->content);
     if(File==NULL){
         errno = ENOENT;
         message1->additional = errno;
@@ -958,6 +971,7 @@ void LockFile(int fd_client, int workerId, message* message1){
     return;
 }
 void UnLockFile(int fd_client, int workerId, message* message1){
+    serverFile* File;
     if(fd_client == -1 || workerId == -1) {
         errno = EINVAL;
         message1->additional = errno;
@@ -969,7 +983,7 @@ void UnLockFile(int fd_client, int workerId, message* message1){
                    "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
     if(ServerStorage->stdOutput) printf("[Thread %d]: Server Lock\n", workerId);
 
-    serverFile* File = icl_hash_find(ServerStorage->filesTable, message1->content);
+    File = icl_hash_find(ServerStorage->filesTable, message1->content);
     if(File==NULL){
         errno = ENOENT;
         message1->additional = errno;
@@ -1017,6 +1031,8 @@ void UnLockFile(int fd_client, int workerId, message* message1){
     return;
 }
 void AppendOnFile(int fd_client, int workerId, message* message1){
+    List expelled;
+    serverFile* File;
     if(fd_client == -1 || workerId == -1) {
         errno = EINVAL;
         message1->additional = errno;
@@ -1028,7 +1044,7 @@ void AppendOnFile(int fd_client, int workerId, message* message1){
                    "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
     if(ServerStorage->stdOutput) printf("[Thread %d]: Server Lock\n", workerId);
 
-    serverFile* File = icl_hash_find(ServerStorage->filesTable, message1->content);
+    File = icl_hash_find(ServerStorage->filesTable, message1->content);
     if(File==NULL){
         errno = ENOENT;
         message1->additional = errno;
@@ -1082,7 +1098,6 @@ void AppendOnFile(int fd_client, int workerId, message* message1){
         return;
     }
 
-    List expelled;
     createList(&expelled);
     while (ServerStorage->actualFilesBytes-File->size+message1->size > ServerConfig.maxByte){
         serverFile* file = icl_hash_toReplace(ServerStorage->filesTable, ServerConfig.policy, workerId);
