@@ -1,5 +1,5 @@
 #!/bin/bash
-MEMCHECK="valgrind --leak-check=full --track-origins=yes --show-leak-kinds=all -s"
+MEMCHECK="valgrind --leak-check=full"
 EXTERNTERMINAL="x-terminal-emulator -e ./scripts/newTerm"
 I=1
 stdOut="-p"

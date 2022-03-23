@@ -56,5 +56,3 @@ do
 done
 
 (kill -s SIGINT ${SERVER_PID}; kill ${THIS_PID})
-
-exit
