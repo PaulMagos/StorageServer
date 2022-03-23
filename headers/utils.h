@@ -187,7 +187,8 @@ static inline int mkpath(char* file_path, mode_t mode) {
         errno = EINVAL;
         return -1;
     }
-    for (char* p = strchr(file_path + 1, '/'); p; p = strchr(p + 1, '/')) {
+    char* p;
+    for (p = strchr(file_path + 1, '/'); p; p = strchr(p + 1, '/')) {
         *p = '\0';
         if (mkdir(file_path, mode) == -1) {
             if (errno != EEXIST) {

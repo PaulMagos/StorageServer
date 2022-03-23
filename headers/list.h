@@ -17,7 +17,7 @@ typedef struct el{
 typedef enum {
     type_int,
     type_char,
-    type_string,
+    type_string
 } Type_;
 
 typedef list* List;

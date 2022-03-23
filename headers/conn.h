@@ -30,12 +30,12 @@ typedef enum{
     O_DATA = 256,
     O_SEND = 512,
     O_READN = 1024,
-    O_NULL = 2048,
+    O_NULL = 2048
 } fileFlags;
 
 typedef enum {
     SUCCESS = 1,
-    ERROR = 2,
+    ERROR = 2
 } fileResponse;
 
 typedef struct{
@@ -127,7 +127,8 @@ static inline int readMessage(int fd, message* message1){
     if(read(fd, message1, sizeof(message)) != sizeof(message)){
         return -1;
     }
-    int readed=0;
+    int readed;
+    readed=0;
 
     if(message1->size>0){
         message1->content = malloc(message1->size + 1);
@@ -156,7 +157,8 @@ static inline int writeMessage(int fd, message* message1){
         return -1;
     }
 
-    int written = 0;
+    int written;
+    written=0;
     if(message1->size>0) {
         if ((written = writen(fd, message1->content, message1->size)) == -1) {
             fprintf(stderr, "Writing on %d fd", fd);
