@@ -24,8 +24,7 @@ int diffTimespec(struct timespec time1, struct timespec time0) {
 
 struct timespec diff_timespec(const struct timespec time1,
                               const struct timespec time0) {
-    struct timespec diff = {.tv_sec = time1.tv_sec - time0.tv_sec, .tv_nsec =
-    time1.tv_nsec - time0.tv_nsec};
+    struct timespec diff = {time1.tv_sec - time0.tv_sec,time1.tv_nsec - time0.tv_nsec};
     if (diff.tv_nsec < 0) {
         diff.tv_nsec += 1000000000;
         diff.tv_sec--;
@@ -38,11 +37,7 @@ int storeFile(char* pathname, const char* saveDir, size_t size, void** buf);
 int mkpath(char* file_path, mode_t mode);
 
 int openConnection(const char* sockname, int msec, const struct timespec abstime){
-    if(!sockname || msec<0){
-        /* INVALID ARGUMENTS */
-        errno = EINVAL;
-        return -1;
-    }
+
 
     /* SYS CALL RESPONSE ( "Re-Used" for other functions when needed ) */
     int scRes = -1;
@@ -51,6 +46,12 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
     struct sockaddr_un socketAdd;
     /* Time variables */
     struct timespec currenTime, iniTime;
+
+    if(!sockname || msec<0){
+        /* INVALID ARGUMENTS */
+        errno = EINVAL;
+        return -1;
+    }
     memset(&socketAdd, '0', sizeof(socketAdd));
 
     SYSCALL_EXIT(lengthCheck, scRes, lengthCheck(sockname), "ERROR - socket name too long, errno = %d\n", errno);
@@ -93,6 +94,7 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
 }
 
 int closeConnection(const char* sockname){
+    int scRes;
     if(!sockname){
         errno = EINVAL;
         return -1;
@@ -103,13 +105,15 @@ int closeConnection(const char* sockname){
         return -1;
     }
     sName = NULL;
-    int scRes;
     SYSCALL_EXIT(close, scRes, close(fd_socket), "ERROR - closing connection to %s, errno = %d\n", sockname, errno);
     fd_socket = -1;
     return 0;
 }
 
 int openFile(const char* pathname, int flags){
+    int scRes = 0;
+    message msg;
+
     if (pathname == NULL){
         errno = EINVAL;
         return -1;
@@ -118,9 +122,6 @@ int openFile(const char* pathname, int flags){
         errno = ENOTCONN;
         return -1;
     }
-    int scRes = 0;
-
-    message msg;
     memset(&msg, 0, sizeof(message));
     msg.size = strlen(pathname) + 1;
     msg.content = malloc(msg.size);
@@ -153,6 +154,9 @@ int openFile(const char* pathname, int flags){
 }
 
 int readFile(const char* pathname, void** buf, size_t* size){
+    int scRes;
+    message msg;
+
     if (pathname == NULL){
         errno = EINVAL;
         return -1;
@@ -161,9 +165,7 @@ int readFile(const char* pathname, void** buf, size_t* size){
         errno = ENOTCONN;
         return -1;
     }
-    int scRes;
 
-    message msg;
     memset(&msg, 0, sizeof(message));
     msg.size = strlen(pathname) + 1;
     msg.content = malloc(msg.size);
@@ -212,13 +214,13 @@ int readFile(const char* pathname, void** buf, size_t* size){
 }
 
 int readNFiles(int N, const char* dirname){
+    int scRes;
+    message msg;
     if(fd_socket == -1){
         errno = ENOTCONN;
         return -1;
     }
-    int scRes;
 
-    message msg;
     memset(&msg, 0, sizeof(message));
     msg.size = 0;
     msg.content = NULL;
@@ -255,6 +257,12 @@ int readNFiles(int N, const char* dirname){
 }
 
 int writeFile(const char* pathname, const char* dirname){
+    struct stat fileDet;
+    size_t fileSize;
+    void* fileBuf;
+    FILE* fil3;
+    int scRes = 0;
+    message msg;
     if (pathname == NULL){
         errno = EINVAL;
         return -1;
@@ -270,22 +278,20 @@ int writeFile(const char* pathname, const char* dirname){
      * but I've preferred this method
      * https://stackoverflow.com/questions/238603/how-can-i-get-a-files-size-in-c
      */
-    struct stat fileDet;
     if(stat(pathname, &fileDet) == -1){
         errno = EINVAL;
         return -1;
     }
-    size_t fileSize = fileDet.st_size;
+    fileSize = fileDet.st_size;
 
     /* Alloco un buffer della dimensione del file e verifico che sia andata a buon fine l'allocazione */
-    void* fileBuf = malloc(fileSize);
+    fileBuf = malloc(fileSize);
     if(fileBuf == NULL) {
         errno = ENOMEM;
         return -1;
     }
 
     /* Tento l'apertura del file in lettura binaria e ne verifico l'esito */
-    FILE* fil3;
     if((fil3 = fopen(pathname, "rb")) == NULL){
         return -1;
     }
@@ -299,9 +305,7 @@ int writeFile(const char* pathname, const char* dirname){
 
     if(fclose(fil3) != 0 ) return -1;
 
-    int scRes = 0;
 
-    message msg;
     memset(&msg, 0, sizeof(message));
     msg.size = strlen(pathname) + 1;
     msg.content = malloc(msg.size);
@@ -380,6 +384,8 @@ int writeFile(const char* pathname, const char* dirname){
 }
 
 int appendToFile(const char* pathname, void* buf, size_t size, const char* dirname){
+    int scRes;
+    message msg;
     if (pathname == NULL){
         errno = EINVAL;
         return -1;
@@ -388,9 +394,7 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
         errno = ENOTCONN;
         return -1;
     }
-    int scRes;
 
-    message msg;
     memset(&msg, 0, sizeof(message));
     msg.size = strlen(pathname) + 1;
     msg.content = malloc(msg.size);
@@ -440,6 +444,8 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
 }
 
 int lockFile(const char* pathname){
+    int scRes;
+    message msg;
     if (pathname == NULL){
         errno = EINVAL;
         return -1;
@@ -448,8 +454,6 @@ int lockFile(const char* pathname){
         errno = ENOTCONN;
         return -1;
     }
-    int scRes;
-    message msg;
     memset(&msg, 0, sizeof(message));
     msg.size = strlen(pathname) + 1;
     msg.content = malloc(msg.size);
@@ -479,6 +483,8 @@ int lockFile(const char* pathname){
 }
 
 int unlockFile(const char* pathname){
+    int scRes;
+    message msg;
     if (pathname == NULL){
         errno = EINVAL;
         return -1;
@@ -487,9 +493,6 @@ int unlockFile(const char* pathname){
         errno = ENOTCONN;
         return -1;
     }
-    int scRes;
-
-    message msg;
     memset(&msg, 0, sizeof(message));
     msg.size = strlen(pathname) + 1;
     msg.content = malloc(msg.size);
@@ -519,6 +522,8 @@ int unlockFile(const char* pathname){
 }
 
 int closeFile(const char* pathname){
+    int scRes;
+    message msg;
     if (pathname == NULL){
         errno = EINVAL;
         return -1;
@@ -527,9 +532,6 @@ int closeFile(const char* pathname){
         errno = ENOTCONN;
         return -1;
     }
-    int scRes;
-
-    message msg;
     memset(&msg, 0, sizeof(message));
     msg.size = strlen(pathname) + 1;
     msg.content = malloc(msg.size);
@@ -559,6 +561,8 @@ int closeFile(const char* pathname){
 }
 
 int removeFile(const char* pathname){
+    int scRes;
+    message msg;
     if (pathname == NULL){
         errno = EINVAL;
         return -1;
@@ -567,9 +571,6 @@ int removeFile(const char* pathname){
         errno = ENOTCONN;
         return -1;
     }
-    int scRes;
-
-    message msg;
     memset(&msg, 0, sizeof(message));
     msg.size = strlen(pathname) + 1;
     msg.content = malloc(msg.size);
@@ -599,17 +600,18 @@ int removeFile(const char* pathname){
 }
 
 int saveIntoDir(const char* dir, int numOfFiles){
-    if(numOfFiles==0) return 0;
+    int i;
     int scRes = 0;
     int errors = 0;
-    int save = (dir==NULL)? 0 : 1;
     void* path;
     message msg;
+    int save = (dir==NULL)? 0 : 1;
+    if(numOfFiles==0) return 0;
     memset(&msg, 0, sizeof(message));
     msg.additional=save;
     msg.feedback=SUCCESS;
     writeMessage(fd_socket, &msg);
-    for(int i = 0; i<numOfFiles; i++){
+    for(i = 0; i<numOfFiles; i++){
         /* Get PATH and PATHLEN */
         SYSCALL_ASSIGN(readMessage, scRes, readMessage(fd_socket, &msg),
                      "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
@@ -684,25 +686,26 @@ int saveIntoDir(const char* dir, int numOfFiles){
 int storeFile(char* pathname, const char* saveDir, size_t size, void** buf){
     int clientPathDim = strlen(saveDir) + strlen(pathname) + 1;
     char* ClientPath = malloc(clientPathDim);
+    FILE* fil3;
+    int errors = 0;
+    char* fileDir = ClientPath;
     if(ClientPath == NULL) return -1;
     sprintf(ClientPath, "%s%s", saveDir, pathname);
-    char* fileDir = ClientPath;
     fileDir = basename(fileDir);
 
     if(mkpath(ClientPath, S_IRWXU)==-1){
         return -1;
     }
 
-    FILE* fil3 = fopen(ClientPath, "wb");
+    fil3 = fopen(ClientPath, "wb");
     if(fil3 == NULL){
         free(ClientPath);
         return -1;
     }
 
-    bool errors = false;
     if(buf){
         if(fwrite(buf, 1, size, fil3) < size){
-            errors = true;
+            errors = 1;
         }
     }
     free(ClientPath);
