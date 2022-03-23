@@ -60,6 +60,7 @@ int pushTop(List* myList, char* index, void* data){
 
 int pushBottom(List* myList, char* index, void* data){
     node* temp;
+    Node last;
     if(!(*myList)){
         /* ERRORE DOVUTO AD ARGOMENTO INVALIDO */
         errno = EINVAL;
@@ -73,7 +74,7 @@ int pushBottom(List* myList, char* index, void* data){
         return -1;
     }
 
-    Node last = (*myList)->head;
+    last = (*myList)->head;
     temp->next = NULL;
 
     (*myList)->len++;
@@ -91,7 +92,7 @@ int pushBottom(List* myList, char* index, void* data){
 }
 
 int pullTop(List* myList, char** index, void** data){
-    node* temp;
+    node* tmp;
     if(!(*myList) || (*myList)->len < 1){
         /* ERRORE DOVUTO AD ARGOMENTO INVALIDO */
         errno = EINVAL;
@@ -157,7 +158,7 @@ int removeByInt(List* myList, void* data){
 }
 
 Node getHead(List* myList){
-    mode* tmp;
+    node* tmp;
     if(!(*myList) || (*myList)->len < 1){
         /* ERRORE DOVUTO AD ARGOMENTO INVALIDO */
         errno = EINVAL;
