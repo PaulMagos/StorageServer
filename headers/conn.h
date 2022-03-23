@@ -11,10 +11,13 @@
 #include <stdlib.h>
 #define SOCKNAME     "../../tmp/cs_socket"
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wvariadic-macros"
 #define RETURN(name, sc, str, ...)	            \
     if (sc == -1) {				                \
 	    return -1;                              \
-    }                                           \
+    }                                          \
+#pragma GCC diagnostic pop
 
 typedef enum{
     O_PEN = 0,
@@ -119,6 +122,7 @@ static inline int writen(long fd, void *buf, size_t size) {
  *   \retval  size se la lettura termina con successo
  */
 static inline int readMessage(int fd, message* message1){
+    int readed = 0;
     if(fd == -1 || message1 == NULL){
         errno = EINVAL;
         return -1;
@@ -127,8 +131,6 @@ static inline int readMessage(int fd, message* message1){
     if(read(fd, message1, sizeof(message)) != sizeof(message)){
         return -1;
     }
-    int readed;
-    readed=0;
 
     if(message1->size>0){
         message1->content = malloc(message1->size + 1);
@@ -148,6 +150,7 @@ static inline int readMessage(int fd, message* message1){
  *   \retval  1   se la scrittura termina con successo
  */
 static inline int writeMessage(int fd, message* message1){
+    int written=0;
     if(fd == -1 || message1 == NULL){
         errno = EINVAL;
         return -1;
@@ -157,8 +160,6 @@ static inline int writeMessage(int fd, message* message1){
         return -1;
     }
 
-    int written;
-    written=0;
     if(message1->size>0) {
         if ((written = writen(fd, message1->content, message1->size)) == -1) {
             fprintf(stderr, "Writing on %d fd", fd);

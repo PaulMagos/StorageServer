@@ -186,11 +186,11 @@ static inline long StringToLong(char* str) {
 
 
 static inline int mkpath(char* file_path, mode_t mode) {
+    char* p;
     if(file_path == NULL) {
         errno = EINVAL;
         return -1;
     }
-    char* p;
     for (p = strchr(file_path + 1, '/'); p; p = strchr(p + 1, '/')) {
         *p = '\0';
         if (mkdir(file_path, mode) == -1) {
@@ -207,7 +207,8 @@ static inline int mkpath(char* file_path, mode_t mode) {
 static inline char* calculateSize(size_t size){
     char* result = (char*) malloc(sizeof(char) * 20);
     float max = GB;
-    for (int i = 0; i < (int)(sizeof(sizes)/sizeof(*sizes)); i++) {
+    int i;
+    for (i = 0; i < (int)(sizeof(sizes)/sizeof(*sizes)); i++) {
         if(size < max) {
             max = max/1024;
             continue;
