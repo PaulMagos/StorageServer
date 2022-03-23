@@ -11,18 +11,18 @@ FORLDER=./files/test${I}
 SAVEDIR=${FORLDER}/read
 EXPELLED=${FORLDER}/expelled
 WRITEFILESDIR=${FORLDER}/write
-endTime=$(($SECONDS+30))
 
 
 echo
 echo "AVVIO SERVER"
-${SERVER} ./configs/config${I}.txt ./log/test${I} &
+${MEMCHECK} ${SERVER} ./configs/config${I}.txt ./log/test${I} &
 SERVER_PID=$!
 THIS_PID=$$
 
 sleep 2
-
-while (( $SECONDS < $endTime ))
+endTime=$(($SECONDS+30))
+SEC=$(($endTime-$SECONDS))
+while (( $SEC>0 ))
 do
   J=$(($((J + 1))%10))
   ${CLIENT} -f ${SOCKET} "${TIME}" -w "${WRITEFILESDIR}"/dir${J},5 -D ${EXPELLED} &
@@ -36,6 +36,11 @@ do
   ${CLIENT} -f ${SOCKET} "${TIME}" -W ${WRITEFILESDIR}/dir9/file92.txt -r ${WRITEFILESDIR}/dir9/file92.txt -l ${WRITEFILESDIR}/dir9/file92.txt -u ${WRITEFILESDIR}/dir9/file92.txt -c ${WRITEFILESDIR}/dir9/file92.txt &
   ${CLIENT} -f ${SOCKET} "${TIME}" -W ${WRITEFILESDIR}/dir10/file102.txt -r ${WRITEFILESDIR}/dir10/file102.txt -l ${WRITEFILESDIR}/dir10/file102.txt -u ${WRITEFILESDIR}/dir10/file102.txt -c ${WRITEFILESDIR}/dir10/file102.txt &
   ${CLIENT} -f ${SOCKET} "${TIME}" -R 10 -d ${SAVEDIR} &
+  if (( $SEC > $endTime-$SECONDS ))
+  then
+    SEC=$(($endTime-$SECONDS))
+    echo $SEC
+  fi
   sleep 1
 done
 

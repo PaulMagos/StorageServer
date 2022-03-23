@@ -35,8 +35,6 @@ void freeNode(Node nodeToFree){
             if((nodeToFree)->data!= NULL) free((nodeToFree)->data);
             free((nodeToFree)->index);
         }
-        if((nodeToFree)->prev) (nodeToFree)->prev->next = NULL;
-        if((nodeToFree)->next) (nodeToFree)->next->prev = NULL;
         free(nodeToFree);
     }
 }

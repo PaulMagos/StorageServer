@@ -13,8 +13,8 @@ APIDIR = ./src/Api
 OBJS = $(DATAOBJ) $(CLIENTOBJ) $(SERVEROBJ) $(APIOBJ) $(MULTIOBJ) $(LOGOBJ)
 
 TARGETS = $(CLIENTOUTPUT) $(SERVEROUTPUT)
-all : $(TARGETS)
-	make clean genTexts
+all : genTexts $(TARGETS)
+	make clean
 
 # ---------------------------- DATA STRUCTURES ----------------------------- #
 DATASRC = $(wildcard $(DATASTRUCTURES)/*.c)
@@ -65,9 +65,9 @@ $(SERVERDIR)/utility/%.o: $(SERVERDIR)/utility/%.c
 .SUFFIXES: .c .o .h
 
 clean :
-	-rm -f $(OBJS)
+	rm -f $(OBJS)
 cleanall :
-	-rm -f $(TARGETS) $(OBJS)
+	rm -f $(TARGETS) $(OBJS)
 	make delTexts
 
 test1:

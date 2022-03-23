@@ -11,7 +11,6 @@
 
 typedef struct el{
     Node head;
-    Node tail;
     unsigned int len;
 } list;
 
@@ -86,8 +85,8 @@ int removeByInt(List* myList, void* data);
  *   @param data -> data for the node data
  *   @effects -> Pulls a node with index and data from the bottom of the List myList
  *   @return -> returns -1 if there's a failure, 0 otherwise
- */
-int pullBottom(List* myList, char** index, void** data);
+ *
+int pullBottom(List* myList, char** index, void** data);*/
 
 
 /**

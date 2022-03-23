@@ -27,5 +27,8 @@ rm -f -r ./files/test${TEST2}/expelled/home/
 rm -f -r ./files/test${TEST3}/expelled/home/
 
 rm -f -r ./files
+rm -f -r ./log
+rm -f -r ./tmp
+rm -f -r ./bin
 
 rm -f ./scripts/newTerm

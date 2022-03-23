@@ -130,7 +130,7 @@ int CloseConnection(int fd_client, int workerId){
             bucket = ServerStorage->filesTable->buckets[i];
             for (curr = bucket; curr != NULL; curr = curr->next) {
                 file = ((serverFile *) curr->data);
-                if (file->writers != 0) {
+                if (file->writers != 0 || file->toDelete!=0) {
                     continue;
                 }
                 fileWritersIncrement(file, workerId);

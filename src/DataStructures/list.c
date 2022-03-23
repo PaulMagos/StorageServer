@@ -85,8 +85,6 @@ int pushBottom(List* myList, char* index, void* data){
 
     last->next=temp;
     temp->prev=last;
-
-    (*myList)->tail = temp;
     return 0;
 }
 
@@ -102,7 +100,6 @@ int pullTop(List* myList, char** index, void** data){
     (*myList)->len--;
     if((*myList)->len == 0){
         (*myList)->head = NULL;
-        (*myList)->tail = NULL;
     }else {
         (*myList)->head = (*myList)->head->next;
         (*myList)->head->prev = NULL;
@@ -129,15 +126,16 @@ int removeByInt(List* myList, void* data){
         return -1;
     }
 
-    if((*myList)->tail!=NULL&&(*myList)->tail->dataInt==*(int*)data){
-        return pullBottom(&(*myList), NULL, NULL);
-    }
-
     Node tmp=(*myList)->head;
-    Node prev;
+    Node prev=NULL;
 
     if(tmp!=NULL&&tmp->dataInt==*(int*)data){
-        return pullTop(&(*myList), NULL, NULL);
+        if(tmp->next) (*myList)->head = tmp->next;
+        else (*myList)->head=NULL;
+        if(tmp->next) tmp->next->prev=NULL;
+        (*myList)->len--;
+        freeNode(tmp);
+        return 0;
     }
 
     while(tmp!=NULL && tmp->dataInt==*(int*)data){
@@ -147,7 +145,7 @@ int removeByInt(List* myList, void* data){
 
     if(tmp==NULL) return -1;
     (*myList)->len--;
-    prev->next=tmp->next;
+    if(prev) prev->next=tmp->next;
     if(tmp->next) tmp->next->prev = prev;
 
     freeNode(tmp);
@@ -166,7 +164,6 @@ Node getHead(List* myList){
     (*myList)->len--;
     if((*myList)->len == 0){
         (*myList)->head = NULL;
-        (*myList)->tail = NULL;
     }else {
         (*myList)->head = (*myList)->head->next;
     }
@@ -174,7 +171,7 @@ Node getHead(List* myList){
 
     return tmp;
 }
-
+/*
 int pullBottom(List* myList, char** index, void** data){
     if(!(*myList) || (*myList)->len < 1){
         // ERRORE DOVUTO AD ARGOMENTO INVALIDO
@@ -197,7 +194,7 @@ int pullBottom(List* myList, char** index, void** data){
     if(tmp->index!= NULL) {
         *index = malloc(strlen(tmp->index)+1);
         strncpy(*index, tmp->index, strlen(tmp->index)+1);
-        //*data = malloc()
+        *data = malloc()
         if(tmp->data!=NULL){
             *data = malloc(strlen(tmp->data)+1);
             memcpy(*data, tmp->data, strlen(tmp->data)+1);
@@ -206,7 +203,7 @@ int pullBottom(List* myList, char** index, void** data){
 
     freeNode(tmp);
     return 0;
-}
+}*/
 
 void freeNodes(Node head){
     if((head) == NULL) return;
