@@ -74,9 +74,19 @@ test1:
 	chmod +x ./scripts/test.sh &
 	./scripts/test.sh 1
 
+# IF x-terminal-emulator doesn't work
+test1X:
+	chmod +x ./scripts/test.sh &
+	./scripts/test.sh 1 1
+
 test2:
 	chmod +x ./scripts/test.sh &
 	./scripts/test.sh 2
+
+# IF x-terminal-emulator doesn't work
+test2X:
+	chmod +x ./scripts/test.sh &
+	./scripts/test.sh 2 1
 
 test3:
 	chmod +x ./scripts/test3.sh &
@@ -86,10 +96,13 @@ stats:
 	chmod +x ./scripts/stats.sh &
 	./scripts/stats.sh
 
+# Genero cartella di log, bin, files e rispettivi file per ogni test, tmp per la socket,
+# e new term per mantenere aperto un terminale (Se non esiste)
 genTexts:
 	chmod +x ./scripts/genTexts &
 	./scripts/genTexts
 
+# Elimino tutto quello che genero con genTexts (Se Esiste)
 delTexts:
 	chmod +x ./scripts/delTexts &
 	./scripts/delTexts

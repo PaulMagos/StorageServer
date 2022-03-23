@@ -51,6 +51,7 @@ do
   #echo "./files/test${TEST2}/write/file${i}.txt" >> ./files/test${TEST2}/write/file${i}.txt
 done
 
+rm -f ./scripts/newTerm
 echo "#!/bin/sh" > ./scripts/newTerm
 echo "\"\$@\"" >> ./scripts/newTerm
 echo "exec \"\$SHELL\"" >> ./scripts/newTerm
