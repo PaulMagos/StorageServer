@@ -32,7 +32,7 @@ int main(int argc, char* argv[]){
     struct sigaction act;
     int* sigHandler_Pipe;
     sigset_t mask;
-    sigHandlerArgs args;
+    sigHandlerArgs sigArgs;
     /* CLIENTS FDS */
     fd_set readySet, currSet;
     /* -------------------------------------    Server   -------------------------------------
@@ -78,16 +78,17 @@ int main(int argc, char* argv[]){
     /* Pipe init for threads communications */
     sigHandler_Pipe = malloc(2*sizeof(int));
     SYSCALL_RETURN(pipe, pipe(sigHandler_Pipe),
-                   "ERROR - pipe failure, errno = %d", errno)
+                   "ERROR - pipe failure, errno = %d", errno);
 
     /* pthread_t sigHandler_t; */
-    args = {(sigHandler_Pipe)[1], &mask};
+    sigArgs.pipe = sigHandler_Pipe[1];
+    sigArgs.sigSet = &mask;
     SYSCALL_RETURN(sigHandler_pthread_creation,
                    pthread_create(
                            &sigHandler_t,
                            NULL,
                            signalHandler,
-                           &args
+                           &sigArgs
                    ),
                    "ERROR - Signal Handler Thread Creation Failure, errno = %d", errno);
     /*
