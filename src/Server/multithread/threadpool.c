@@ -43,8 +43,8 @@ static void threadPoolTaskDestroy(queueTask* task){
 static void *threadPoolWorker(void* arg){
     threadPool* tmpPool  = ((threadIdAndThreadPool*)arg)->tPool;
     int id = ((threadIdAndThreadPool*)arg)->id;
-    free(arg);
     queueTask* tmpTask;
+    free(arg);
     appendOnLog(ServerLog, "[Thread %d]: Started\n", id);
 
     while (1){
@@ -71,6 +71,7 @@ static void *threadPoolWorker(void* arg){
 }
 
 threadPool* initThreadPool(int threads){
+    int i;
     if(threads <= 0) {
         errno = EINVAL;
         return NULL;
@@ -101,7 +102,7 @@ threadPool* initThreadPool(int threads){
     threadPool1->workersPipes = malloc(threads * sizeof(int*));
 
     threadIdAndThreadPool* args[threadPool1->maxThreads];
-    for (int i = 0; i < threadPool1->maxThreads; i++){
+    for (i = 0; i < threadPool1->maxThreads; i++){
         /* Allocation of pipes and args for threads */
         threadPool1->workersPipes[i] = malloc(2 * sizeof(int));
         args[i] = malloc(sizeof(threadIdAndThreadPool));
@@ -137,6 +138,7 @@ void freePool(threadPool* tPool){
 }
 
 int stopThreadPool(threadPool* tPool, int hard_off){
+    queueTask* tmpTask;
     if(tPool == NULL){
         errno = EINVAL;
         return -1;
@@ -157,7 +159,7 @@ int stopThreadPool(threadPool* tPool, int hard_off){
     SYSCALL_RETURN(stopThreadPool_mutex_unlock, pthread_mutex_unlock(&(tPool->lock)),
                    "ERROR : pthread_mutex_unlock failed, errno = %d", errno);
     while(tPool->taskN>0){
-        queueTask* tmpTask = getTask(tPool);
+        tmpTask = getTask(tPool);
         /*threadPoolTaskDestroy(tmpTask); */
         free(tmpTask->arguments);
         free(tmpTask);
@@ -182,6 +184,9 @@ int stopThreadPool(threadPool* tPool, int hard_off){
 }
 
 int enqueue(threadPool* tPool, void (*func)(void*), void* arguments){
+    wTask * task;
+    queueTask* tmpTask;
+    int res = 0;
     if(tPool==NULL || func == NULL){
         errno = EINVAL;
         return -1;
@@ -190,12 +195,10 @@ int enqueue(threadPool* tPool, void (*func)(void*), void* arguments){
     SYSCALL_RETURN(enqueue_mutex_lock, pthread_mutex_lock(&(tPool->lock)),
                    "ERROR : pthread_mutex_lock failed, errno = %d", errno);
 
-    wTask * task = malloc(sizeof(wTask));
+    task = malloc(sizeof(wTask));
     task->client_fd = *(int*)arguments;
 
-    int res = 0;
 
-    queueTask* tmpTask;
     tmpTask = threadPoolTaskCreate(func, task);
     if(tPool->taskHead == NULL){
         tPool->taskHead = tmpTask;
