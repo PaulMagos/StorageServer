@@ -5,7 +5,7 @@
 #ifndef STORAGESERVER_LIST_H
 #define STORAGESERVER_LIST_H
 
-#endif //STORAGESERVER_LIST_H
+#endif /* STORAGESERVER_LIST_H */
 
 #include "node.h"
 

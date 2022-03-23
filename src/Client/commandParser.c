@@ -1,6 +1,6 @@
-//
-// Created by paul magos on 18/01/22.
-//
+/*
+ * Created by paul magos on 18/01/22.
+ */
 
 #include "../../headers/client.h"
 
@@ -120,7 +120,7 @@ int getCmdList(List* opList, int argc, char* argv[]){
         if(pFlag) fprintf(stdout, "SUCCESS - time = %lu\n", timeToSleep);
     }
     if(fFlag){
-        // Provo a collegarmi per 10 secondi
+        /* Provo a collegarmi per 10 secondi */
         struct timespec absTime = {10, 0};
         SYSCALL_EXIT(openConnection,
                      test,
@@ -154,29 +154,29 @@ int getCmdList(List* opList, int argc, char* argv[]){
 }
 
 void commandHandler(List* commandList){
-    // Arguments for f, d, D, w, R
+    /* Arguments for f, d, D, w, R */
     char* socket = NULL;
     char* readDir = NULL;
     char* expelledDir = NULL;
     long numOfFilesToWrite = INT_MAX;
     long numOfFilesToRead = INT_MAX;
 
-    // Response for SYSCALL_EXIT
+    /* Response for SYSCALL_EXIT */
     int scRes = 0;
 
-    // Command and argument for each element of opList
+    /* Command and argument for each element of opList */
     char* command = NULL;
     void* argument = NULL;
 
-    // Path details, to establish if it's a directory
+    /* Path details, to establish if it's a directory */
     struct stat dir_Details;
-    char* token; // For strtok_r
-    char* rest; // For strtok_r
+    char* token; /* For strtok_r */
+    char* rest; /* For strtok_r */
     char* path = NULL;
     char* temporary;
 
     signal(SIGPIPE, SIG_IGN);
-    // Control if given arguments for expelled files, and readen files from server are directories
+    /* Control if given arguments for expelled files, and readen files from server are directories */
     if(DFlag) {
         getArg((*commandList)->head, "D", &expelledDir);
         if(expelledDir) {
@@ -312,7 +312,7 @@ void commandHandler(List* commandList){
                             FILE* clientFile = fopen(clientPath, "wb");
                             if(clientFile){
                                 fwrite(buffer, 1, size, clientFile);
-                                //fprintf(clientFile, "%s", buffer);
+                                /*fprintf(clientFile, "%s", buffer); */
                             }
                             else fprintf(stderr, (pFlag)? "'%s' -> Saving failed\n":" ", token);
                             fclose(clientFile);
@@ -483,8 +483,10 @@ int recWrite(char* dirname, char* expelledDir, long cnt, int indent){
     if((directory = opendir(dirname))==NULL || filesToWrite == 0) return 0;
     char* path;
     errno = 0;
-    // StackOverflow has something similar at
-    // https://stackoverflow.com/questions/8436841/how-to-recursively-list-directories-in-c-on-linux/29402705
+    /*
+     * StackOverflow has something similar at
+     * https://stackoverflow.com/questions/8436841/how-to-recursively-list-directories-in-c-on-linux/29402705
+     */
     while ((element = readdir(directory)) != NULL && filesToWrite > 0){
         char newPath[PATH_MAX];
         snprintf(newPath, sizeof(newPath), "%s%c%s", dirname, (dirname[strlen(dirname)-1] == '/')? 0:'/',element->d_name);

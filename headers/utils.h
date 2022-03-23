@@ -48,7 +48,7 @@ static const char* sizes[] = {"GB", "MB", "KB", "B"};
 
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
-// ES 5 LEZIONI
+/* ES 5 LEZIONI */
 #define SYSCALL_EXIT(name, r, sc, str, ...)	    \
     if ((r=sc) == -1) {				            \
 	int errno_copy = errno;			            \
@@ -125,13 +125,15 @@ static inline void print_error(const char * str, ...) {
     va_end(argp);
     free(p);
 }
-// ES 5 LEZIONI
+/* ES 5 LEZIONI */
 
 int nanosleep(const struct timespec *req, struct timespec *rem);
 
-// msleep(): Sleep for the requested number of milliseconds.
-// StackOverflow ->
-// https://stackoverflow.com/questions/1157209/is-there-an-alternative-sleep-function-in-c-to-milliseconds
+/*
+ * msleep(): Sleep for the requested number of milliseconds.
+ * StackOverflow ->
+ * https://stackoverflow.com/questions/1157209/is-there-an-alternative-sleep-function-in-c-to-milliseconds
+*/
 static inline int msleep(long msec){
     struct timespec ts;
     int res;
@@ -152,13 +154,13 @@ static inline int msleep(long msec){
     return res;
 }
 
-// Returns the char of the int str in ascii, 0 if it's not an alphabet letter
+/* Returns the char of the int str in ascii, 0 if it's not an alphabet letter */
 static inline int intIsChar(int str){
     if((str > 96 && str < 123) || (str > 64 && str < 91)) return str;
     else return 0;
 }
 
-// Returns a string with the char you give in str
+/* Returns a string with the char you give in str */
 static inline long StringToLong(char* str) {
     long result;
 
@@ -212,4 +214,4 @@ static inline char* calculateSize(size_t size){
     strcpy(result, "0 B");
     return result;
 }
-#endif //STORAGESERVER_UTILS_H
+#endif /*STORAGESERVER_UTILS_H*/

@@ -1,10 +1,10 @@
-//
-// Created by paul magos on 11/01/22.
-
+/*
+ * Created by paul magos on 11/01/22.
+ */
 
 #include "../../headers/server.h"
 
-// -------------------------------- GLOBAR VARIABLES --------------------------------
+/* -------------------------------- GLOBAR VARIABLES -------------------------------- */
 serverConfig ServerConfig;
 fileServer* ServerStorage;
 logFile ServerLog;
@@ -21,8 +21,9 @@ int serverInit(char* configPath, char* logPath);
 void printServerStatus();
 
 int main(int argc, char* argv[]){
-    // -------------------------------------    Server   -------------------------------------
-    // Log, Config and Server Init
+    /* -------------------------------------    Server   -------------------------------------
+     * Log, Config and Server Init
+     */
     if(argc == 1){
         serverInit(NULL, NULL);
         fprintf(stdout, "No arguments, Server will start with default parameters\n");
@@ -37,13 +38,15 @@ int main(int argc, char* argv[]){
         exit(0);
     }
 
-    // SYSCALL RESPONSE VARIABLE
+    /* SYSCALL RESPONSE VARIABLE */
     int res = 0;
 
 
-    // ------------------------------------- SigHandler -------------------------------------
-    // Signal Handler & Respective Pipe Init
-    // Signal Set creation for the sigHandler thread
+    /*
+     * ------------------------------------- SigHandler -------------------------------------
+     * Signal Handler & Respective Pipe Init
+     * Signal Set creation for the sigHandler thread
+     */
     sigset_t mask;
     sigemptyset(&mask);
     sigaddset(&mask, SIGHUP);
@@ -53,7 +56,7 @@ int main(int argc, char* argv[]){
     SYSCALL_RETURN(pthread_sigmask, pthread_sigmask(SIG_BLOCK, &mask, NULL),
                    "ERROR - pthread_sigmask fault, errno = %d\n", errno)
 
-    // SigPipe Ignore
+    /* SigPipe Ignore */
     struct sigaction act;
     memset(&act, 0, sizeof(act));
     act.sa_handler = SIG_IGN;
@@ -61,12 +64,12 @@ int main(int argc, char* argv[]){
                    "ERROR - sigaction failure to ignore sigpipe, errno = %d\n", errno)
 
 
-    // Pipe init for threads communications
+    /* Pipe init for threads communications */
     int* sigHandler_Pipe = malloc(2*sizeof(int));
     SYSCALL_RETURN(pipe, pipe(sigHandler_Pipe),
                    "ERROR - pipe failure, errno = %d", errno)
 
-    //pthread_t sigHandler_t;
+    /* pthread_t sigHandler_t; */
     sigHandlerArgs args = {(sigHandler_Pipe)[1], &mask};
     SYSCALL_RETURN(sigHandler_pthread_creation,
                    pthread_create(
@@ -76,16 +79,20 @@ int main(int argc, char* argv[]){
                            &args
                    ),
                    "ERROR - Signal Handler Thread Creation Failure, errno = %d", errno);
-    // ------------------------------------- ThreadPool -------------------------------------
-    // ThreadPool Initialize
+    /*
+     * ------------------------------------- ThreadPool -------------------------------------
+     * ThreadPool Initialize
+     */
     threadPool1 = initThreadPool(ServerConfig.threadNumber);
     if(!threadPool1){
         fprintf(stderr, "ERROR - threadPool init failure");
         exit(EXIT_FAILURE);
     }
 
-    // ------------------------------------- ServerSocket -------------------------------------
-    // Socket creation
+    /*
+     * ------------------------------------- ServerSocket -------------------------------------
+     * Socket creation
+     */
     int max_fd = 0;
     int fd_server_socket, fd_client_socket = 0;
     struct sockaddr_un SocketAddress;
@@ -94,7 +101,7 @@ int main(int argc, char* argv[]){
     strncpy(SocketAddress.sun_path, ServerConfig.serverSocketName, UNIX_PATH_MAX);
     SocketAddress.sun_family = AF_UNIX;
 
-    // Socket binding and ready to listen
+    /* Socket binding and ready to listen */
     SYSCALL_EXIT(socket, fd_server_socket, socket(AF_UNIX, SOCK_STREAM, 0),
                  "ERROR - Socket set failure, errno = %d\n", errno)
     SYSCALL_EXIT(bind, res, bind(fd_server_socket, (struct sockaddr*) &SocketAddress, sizeof(SocketAddress)),
@@ -104,7 +111,7 @@ int main(int argc, char* argv[]){
 
     atexit(serverDestroy);
 
-    // ------------------------------------- Clients Fds -------------------------------------
+    /* ------------------------------------- Clients Fds ------------------------------------- */
     fd_set readySet, currSet;
     FD_ZERO(&currSet);
     FD_ZERO(&readySet);
@@ -119,7 +126,7 @@ int main(int argc, char* argv[]){
     int threadId;
 
     if(ServerStorage->stdOutput) fprintf(stdout, "Server Started Well, Waiting For Connections\n");
-    // ----------------------------------- MainThreadFunc ------------------------------------
+    /* ----------------------------------- MainThreadFunc ------------------------------------ */
     while (ServerStorage->status == E){
         readySet = currSet;
         SYSCALL_EXIT(select, res, select(max_fd+1, &readySet,NULL, NULL, NULL), "ERROR - Select failed, errno = %d", errno);
@@ -180,7 +187,7 @@ int main(int argc, char* argv[]){
 
 
     msleep(2000);
-    //serverDestroy();
+    /* serverDestroy(); */
     free(sigHandler_Pipe);
     if(res!=0) res = 0;
     return res;
@@ -242,21 +249,21 @@ static int serverConfigParser(char* path){
         return 0;
     }
 
-    // Define variables
+    /* Define variables */
     FILE *configFile;
     char* token, *rest;
     char fileBuffer[256];
     int socketSet = 0, policySet = 0;
-    // Config variables
+    /* Config variables */
     long threads = 0, max_file = 0, debug = -1;
     long max_bytes = 0;
-    // Try to open file
+    /* Try to open file */
     if((configFile = fopen(path, "r") )== NULL){
         free(path);
         return -1;
     }
 
-    // If file opened, try to parse it
+    /* If file opened, try to parse it */
     while (fgets(fileBuffer, 256, configFile) != NULL){
         token = strtok_r(fileBuffer, ":", &rest);
         if(token == NULL) {
@@ -308,7 +315,7 @@ static int serverConfigParser(char* path){
             if(debug == -1){
                 token = strtok_r(NULL, "\n\0", &rest);
                 if(token == NULL) return -1;
-                // De blank string
+                /* De blank string */
                 int c = 0, j = 0;
                 while(token[c]!='\0'){
                     if(token[c]!=' '){
@@ -329,7 +336,7 @@ static int serverConfigParser(char* path){
             if( policySet == 0){
                 token = strtok_r(NULL, "\n\0", &rest);
                 if(token == NULL) return -1;
-                // De blank string
+                /* De blank string */
                 int c = 0, j = 0;
                 while(token[c]!='\0'){
                     if(token[c]!=' '){
@@ -352,7 +359,7 @@ static int serverConfigParser(char* path){
                 token = strtok_r(NULL, "\n\0", &rest);
                 if (token == NULL) break;
 
-                // De blank string
+                /* De blank string */
                 int c = 0, j = 0;
                 while(token[c]!='\0'){
                     if(token[c]!=' '){
@@ -391,16 +398,16 @@ int serverInit(char* configPath, char* logPath){
     ServerStorage->stdOutput = debug;
     ServerStorage->status = E;
 
-    ServerStorage->connected = 0;               // Int
-    ServerStorage->deletedBytes = 0;            // size_t
-    ServerStorage->deletedFiles = 0;            // int
-    ServerStorage->expelledFiles = 0;           // size_t
-    ServerStorage->expelledBytes = 0;           // Int
-    ServerStorage->maxConnections = 0;          // Int
-    ServerStorage->sessionMaxBytes = 0;         // Size_t
-    ServerStorage->actualFilesBytes = 0;        // Size_t
-    ServerStorage->actualFilesNumber = 0;       // Int
-    ServerStorage->sessionMaxFilesNumber = 0;   // Int
+    ServerStorage->connected = 0;               /* Int */
+    ServerStorage->deletedBytes = 0;            /* size_t */
+    ServerStorage->deletedFiles = 0;            /* int */
+    ServerStorage->expelledFiles = 0;           /* size_t */
+    ServerStorage->expelledBytes = 0;           /* Int */
+    ServerStorage->maxConnections = 0;          /* Int */
+    ServerStorage->sessionMaxBytes = 0;         /* Size_t */
+    ServerStorage->actualFilesBytes = 0;        /* Size_t */
+    ServerStorage->actualFilesNumber = 0;       /* Int */
+    ServerStorage->sessionMaxFilesNumber = 0;   /* Int */
 
     ServerStorage->filesTable = icl_hash_create((3*ServerConfig.maxFile), NULL,NULL);
     if(!ServerStorage->filesTable) {
@@ -516,7 +523,7 @@ void printServerStatus(){
                 serverFile* file = (serverFile*)curr->data;
                 actual = calculateSize((int)file->size);
                 struct tm* cTime = gmtime(&(file->lastOpTime.tv_sec));
-                //if(file->latsOp==O_CREAT_LOCK||file->latsOp==O_CREAT ) continue;
+                /* if(file->latsOp==O_CREAT_LOCK||file->latsOp==O_CREAT ) continue; */
                 appendOnLog(ServerLog,"        %d %s --- %s %d/%d/%d %d:%d:%d --- %s\n", j, actual, requestToString(file->latsOp), cTime->tm_mday, cTime->tm_mon+1, cTime->tm_year+1900, cTime->tm_hour, cTime->tm_min, cTime->tm_sec, file->path);
                 fprintf(stdout, "        %d %s --- %s %d/%d/%d %d:%d:%d --- %s\n",  j, actual, requestToString(file->latsOp), cTime->tm_mday, cTime->tm_mon+1, cTime->tm_year+1900, cTime->tm_hour, cTime->tm_min, cTime->tm_sec, file->path);
                 free(actual);

@@ -66,7 +66,7 @@ static inline char* requestToString(fileFlags request){
     return "ERROR";
 }
 
-// Lezione 9 laboratorio, funzione di scrittura e lettura per evitare che rimangano dati sul buffer non gestiti
+/* Lezione 9 laboratorio, funzione di scrittura e lettura per evitare che rimangano dati sul buffer non gestiti */
 /** Evita letture parziali
  *
  *   \retval -1   errore (errno settato)
@@ -82,7 +82,7 @@ static inline int readn(long fd, void *buf, size_t size) {
             if (errno == EINTR) continue;
             return -1;
         }
-        if (r == 0) return 0;   // EOF
+        if (r == 0) return 0;   /* EOF */
         left -= r;
         bufptr  += r;
     }
@@ -136,7 +136,7 @@ static inline int readMessage(int fd, message* message1){
             fprintf(stderr, "Reading from %d fd", fd);
         }
     }
-    //printf("READN: %d %d %s %d %s\n", fd, (int )message1->size, requestToString(message1->request), (int)message1->feedback, strerror(message1->additional));
+    /*printf("READN: %d %d %s %d %s\n", fd, (int )message1->size, requestToString(message1->request), (int)message1->feedback, strerror(message1->additional)); */
 
     return readed;
 }
@@ -165,7 +165,7 @@ static inline int writeMessage(int fd, message* message1){
         }
     }
 
-    //printf("WRITEN: %d %d %s %d %s\n", fd, (int )message1->size, requestToString(message1->request), (int)message1->feedback, strerror(message1->additional));
+    /*printf("WRITEN: %d %d %s %d %s\n", fd, (int )message1->size, requestToString(message1->request), (int)message1->feedback, strerror(message1->additional)); */
 
     return written;
 }

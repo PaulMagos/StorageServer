@@ -1,6 +1,6 @@
-//
-// Created by paul magos on 07/01/22.
-//
+/*
+ * Created by paul magos on 07/01/22.
+ */
 #include "../../headers/list.h"
 #include <stdlib.h>
 #include <string.h>
@@ -8,7 +8,7 @@
 List returnNewList(){
     List myList =  malloc (sizeof (list));
     if(!(myList)) {
-        // ERRORE DOVUTO ALL'ALLOCAZIONE NON ANDATA A BUON FINE
+        /* ERRORE DOVUTO ALL'ALLOCAZIONE NON ANDATA A BUON FINE */
         errno = ENOMEM;
         return NULL;
     }
@@ -19,7 +19,7 @@ List returnNewList(){
 int createList(List* myList){
     *myList =  calloc( 1, sizeof (list));
     if(!(*myList)) {
-        // ERRORE DOVUTO ALL'ALLOCAZIONE NON ANDATA A BUON FINE
+        /* ERRORE DOVUTO ALL'ALLOCAZIONE NON ANDATA A BUON FINE */
         errno = ENOMEM;
         return -1;
     }
@@ -34,14 +34,14 @@ void printList(Node head){
 
 int pushTop(List* myList, char* index, void* data){
     if(!(*myList)){
-        // ERRORE DOVUTO AD ARGOMENTO INVALIDO
+        /* ERRORE DOVUTO AD ARGOMENTO INVALIDO */
         errno = EINVAL;
         return -1;
     }
 
     node* temp = createNode(index, data);
     if(!temp) {
-        // ERRORE DOVUTO ALL'ALLOCAZIONE NON ANDATA A BUON FINE
+        /* ERRORE DOVUTO ALL'ALLOCAZIONE NON ANDATA A BUON FINE */
         errno = ENOMEM;
         return -1;
     }
@@ -59,14 +59,14 @@ int pushTop(List* myList, char* index, void* data){
 
 int pushBottom(List* myList, char* index, void* data){
     if(!(*myList)){
-        // ERRORE DOVUTO AD ARGOMENTO INVALIDO
+        /* ERRORE DOVUTO AD ARGOMENTO INVALIDO */
         errno = EINVAL;
         return -1;
     }
 
     node* temp = createNode(index, data);
     if(!temp) {
-        // ERRORE DOVUTO ALL'ALLOCAZIONE NON ANDATA A BUON FINE
+        /* ERRORE DOVUTO ALL'ALLOCAZIONE NON ANDATA A BUON FINE */
         errno = ENOMEM;
         return -1;
     }
@@ -90,7 +90,7 @@ int pushBottom(List* myList, char* index, void* data){
 
 int pullTop(List* myList, char** index, void** data){
     if(!(*myList) || (*myList)->len < 1){
-        // ERRORE DOVUTO AD ARGOMENTO INVALIDO
+        /* ERRORE DOVUTO AD ARGOMENTO INVALIDO */
         errno = EINVAL;
         return -1;
     }
@@ -108,7 +108,7 @@ int pullTop(List* myList, char** index, void** data){
     if(tmp->index!= NULL) {
         *index = malloc(strlen(tmp->index)+1);
         strncpy(*index, tmp->index, strlen(tmp->index)+1);
-        //*data = malloc()
+        /* *data = malloc() */
         if(tmp->data!=NULL){
             *data = malloc(strlen(tmp->data)+1);
             memcpy(*data, tmp->data, strlen(tmp->data)+1);
@@ -121,7 +121,7 @@ int pullTop(List* myList, char** index, void** data){
 
 int removeByInt(List* myList, void* data){
     if(!(*myList) || (*myList)->len < 1){
-        // ERRORE DOVUTO AD ARGOMENTO INVALIDO
+        /* ERRORE DOVUTO AD ARGOMENTO INVALIDO */
         errno = EINVAL;
         return -1;
     }
@@ -154,7 +154,7 @@ int removeByInt(List* myList, void* data){
 
 Node getHead(List* myList){
     if(!(*myList) || (*myList)->len < 1){
-        // ERRORE DOVUTO AD ARGOMENTO INVALIDO
+        /* ERRORE DOVUTO AD ARGOMENTO INVALIDO */
         errno = EINVAL;
         return NULL;
     }
@@ -174,7 +174,7 @@ Node getHead(List* myList){
 /*
 int pullBottom(List* myList, char** index, void** data){
     if(!(*myList) || (*myList)->len < 1){
-        // ERRORE DOVUTO AD ARGOMENTO INVALIDO
+        /* ERRORE DOVUTO AD ARGOMENTO INVALIDO */
         errno = EINVAL;
         return -1;
     }
@@ -214,7 +214,7 @@ void freeNodes(Node head){
 
 int deleteList(List* myList) {
     if (!(*myList)) {
-        // ERRORE DOVUTO AD ARGOMENTO INVALIDO
+        /* ERRORE DOVUTO AD ARGOMENTO INVALIDO */
         errno = EINVAL;
         return -1;
     }

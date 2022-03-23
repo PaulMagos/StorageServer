@@ -1,12 +1,12 @@
-//
-// Created by paul magos on 07/01/22.
-//
+/*
+ * Created by paul magos on 07/01/22.
+ */
 #include "../../headers/node.h"
 #include <string.h>
 Node createNode(char* index, void* data){
     Node tmp = (Node)malloc(sizeof(node));
     if(!tmp){
-        // Failed to alloc
+        /* Failed to alloc */
         perror("malloc");
         return NULL;
     }

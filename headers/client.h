@@ -24,4 +24,4 @@ int getCmdList(List* opList, int argc, char* argv[]);
  */
 void commandHandler(List* commandList);
 
-#endif //STORAGESERVER_CLIENT_H
+#endif /* STORAGESERVER_CLIENT_H */

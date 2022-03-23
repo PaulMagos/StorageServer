@@ -96,4 +96,4 @@ int closeFile(const char* pathname);
  */
 int removeFile(const char* pathname);
 
-#endif //STORAGESERVER_API_H
+#endif /* STORAGESERVER_API_H */

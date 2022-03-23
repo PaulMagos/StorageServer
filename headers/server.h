@@ -11,110 +11,110 @@
 #include "icl_hash.h"
 
 
-// -------------------------------- SERVER STATUS --------------------------------
+/* -------------------------------- SERVER STATUS -------------------------------- */
 typedef enum{
-    E,                                      // Enabled
-    Q,                                      // Quitting, serve last requests only
-    S,                                      // Turned Off
+    E,                                      /* Enabled */
+    Q,                                      /* Quitting, serve last requests only */
+    S,                                      /* Turned Off */
 } serverStat;
 
-// Policy for replacement
+/* Policy for replacement */
 typedef enum cPolicy {
-    FIFO,                                   // Firs In, First Out
-    LIFO,                                   // Last In First Out
-    LRU,                                    // Last recently used
-    MRU,                                    // Most recently used
+    FIFO,                                   /* Firs In, First Out */
+    LIFO,                                   /* Last In First Out */
+    LRU,                                    /* Last recently used */
+    MRU,                                    /* Most recently used */
 } cachePolicy;
 
 
-// -------------------------------- SigHandler Args --------------------------------
+/* -------------------------------- SigHandler Args -------------------------------- */
 
 typedef struct{
-    int pipe;                               // Pipe for communication between threads
-    sigset_t *sigSet;                       // Signal set for the signal handler
+    int pipe;                               /* Pipe for communication between threads */
+    sigset_t *sigSet;                       /* Signal set for the signal handler */
 } sigHandlerArgs;
 
-// -------------------------------- Clients Struct --------------------------------
+/* -------------------------------- Clients Struct -------------------------------- */
 
 typedef struct{
-    List ClientsFds;                        // Client List
-    pthread_mutex_t lock;                   // Client list lock
+    List ClientsFds;                        /* Client List */
+    pthread_mutex_t lock;                   /* Client list lock */
 } clientList;
 
-// -------------------------------- SERVER CONFIG --------------------------------
+/* -------------------------------- SERVER CONFIG -------------------------------- */
 typedef struct{
-    int maxFile;                            // Server max number of files
-    size_t maxByte;                         // Capacity of the server
-    int threadNumber;                       // Number of threads that are working
-    cachePolicy policy;                     // File expulsion policy
-    char serverSocketName[UNIX_PATH_MAX];   // Socket name for listening
+    int maxFile;                            /* Server max number of files */
+    size_t maxByte;                         /* Capacity of the server */
+    int threadNumber;                       /* Number of threads that are working */
+    cachePolicy policy;                     /* File expulsion policy */
+    char serverSocketName[UNIX_PATH_MAX];   /* Socket name for listening */
 } serverConfig;
 
-// -------------------------------- FILES STRUCT --------------------------------
+/* -------------------------------- FILES STRUCT -------------------------------- */
 typedef struct {
-    // File itself
-    char* path;                             // The path in which hypothetically the server will store the files
-    size_t size;                            // The size of the file in bytes
-    void* content;                          // The actual content of the file
+    /* File itself */
+    char* path;                             /* The path in which hypothetically the server will store the files */
+    size_t size;                            /* The size of the file in bytes */
+    void* content;                          /* The actual content of the file */
 
-    // File accessing info
-    int lockFd;                             // Fd of the client who locked the file
-    int writers;                            // Number of writers at a given moment
-    int readers;                            // Number of readers at a given moment
-    int toDelete;                           // 1 if toDelete, 0 if not
-    List clients_fd;                        // Fd of the clients who have opened the file
-    fileFlags latsOp;                       // Last Operation
-    struct timespec lastOpTime;             // Last operation time
-    struct timespec creationTime;           // Creation time of the file
+    /* File accessing info */
+    int lockFd;                             /* Fd of the client who locked the file */
+    int writers;                            /* Number of writers at a given moment */
+    int readers;                            /* Number of readers at a given moment */
+    int toDelete;                           /* 1 if toDelete, 0 if not */
+    List clients_fd;                        /* Fd of the clients who have opened the file */
+    fileFlags latsOp;                       /* Last Operation */
+    struct timespec lastOpTime;             /* Last operation time */
+    struct timespec creationTime;           /* Creation time of the file */
 
 
-    // Mutex variables
-    pthread_mutex_t lock;                   // Mutex variable for lock
-    pthread_mutex_t order;                  // Access order Mutex
-    pthread_cond_t condition;               // Condition variable for access blocking
+    /* Mutex variables */
+    pthread_mutex_t lock;                   /* Mutex variable for lock */
+    pthread_mutex_t order;                  /* Access order Mutex */
+    pthread_cond_t condition;               /* Condition variable for access blocking */
 } serverFile;
 
- // -------------------------------- WORKER WORKING STRUCT --------------------------------
+/* -------------------------------- WORKER WORKING STRUCT -------------------------------- */
 typedef struct{
-    int stdOutput;                          // Bool variable to see operations on the terminal
-    int connected;                          // The number of clients connected now
-    int deletedFiles;                       // Number of deleted files
-    serverStat status;                      // Server status
-    int expelledFiles;                      // Number of expelled files
-    int maxConnections;                     // The max number of client connected in one session
-    size_t deletedBytes;                    // Number of deleted files bytes
-    size_t expelledBytes;                   // Number of expelled bytes
-    pthread_mutex_t lock;                   // Mutex variable for lock
-    int actualFilesNumber;                  // Number of files in one moment of the working session
-    size_t sessionMaxBytes;                 // Max bytes of file in one working session
-    size_t actualFilesBytes;                // Num of bytes in a momento of the working session
-    icl_hash_t * filesTable;                // Server storage hash table
-    int sessionMaxFilesNumber;              // Max files in one working session
-    char serverLog[UNIX_PATH_MAX];          // Log path for server
+    int stdOutput;                          /* Bool variable to see operations on the terminal */
+    int connected;                          /* The number of clients connected now */
+    int deletedFiles;                       /* Number of deleted files */
+    serverStat status;                      /* Server status */
+    int expelledFiles;                      /* Number of expelled files */
+    int maxConnections;                     /* The max number of client connected in one session */
+    size_t deletedBytes;                    /* Number of deleted files bytes */
+    size_t expelledBytes;                   /* Number of expelled bytes */
+    pthread_mutex_t lock;                   /* Mutex variable for lock */
+    int actualFilesNumber;                  /* Number of files in one moment of the working session */
+    size_t sessionMaxBytes;                 /* Max bytes of file in one working session */
+    size_t actualFilesBytes;                /* Num of bytes in a momento of the working session */
+    icl_hash_t * filesTable;                /* Server storage hash table */
+    int sessionMaxFilesNumber;              /* Max files in one working session */
+    char serverLog[UNIX_PATH_MAX];          /* Log path for server */
 } fileServer;
 
-// ------------------------------------ Thread Pool Struct ------------------------------------
+/* ------------------------------------ Thread Pool Struct ------------------------------------ */
 typedef struct task_{
-    void (*func)(void*);                    // Generic function with void argument
-    void* arguments;                        // Void argument of many kinds
-    struct task_ *next;                     // Pointer to the next task
+    void (*func)(void*);                    /* Generic function with void argument */
+    void* arguments;                        /* Void argument of many kinds */
+    struct task_ *next;                     /* Pointer to the next task */
 } queueTask;
 
 typedef struct{
-    int stop;                               // Serve the last clients and close the thread pool or literally stop
-    int taskN;                              // Queue Len
-    int maxTasks;                           // Max number of task executed
-    int maxThreads;                         // Max number of threads allowed
-    int taskRunning;                        // Current number of running tasks
-    int** workersPipes;                     // ThreadPool thread's pipes for communication with main thread
-    queueTask *taskHead;                    // Head of tasks list
-    queueTask *taskTail;                    // Tail of tasks list
-    pthread_t* workers;                     // Workers ids
-    pthread_mutex_t lock;                   // Lock variable for mutex access
-    pthread_cond_t work_cond;               // Signals to the threads that there is work to be done
+    int stop;                               /* Serve the last clients and close the thread pool or literally stop */
+    int taskN;                              /* Queue Len */
+    int maxTasks;                           /* Max number of task executed */
+    int maxThreads;                         /* Max number of threads allowed */
+    int taskRunning;                        /* Current number of running tasks */
+    int** workersPipes;                     /* ThreadPool thread's pipes for communication with main thread */
+    queueTask *taskHead;                    /* Head of tasks list */
+    queueTask *taskTail;                    /* Tail of tasks list */
+    pthread_t* workers;                     /* Workers ids */
+    pthread_mutex_t lock;                   /* Lock variable for mutex access */
+    pthread_cond_t work_cond;               /* Signals to the threads that there is work to be done */
 } threadPool;
 
-// -------------------------------- Worker arguments --------------------------------
+/* -------------------------------- Worker arguments -------------------------------- */
 typedef struct {
     int pipeT;
     int worker_id;
@@ -126,7 +126,7 @@ extern fileServer* ServerStorage;
 extern logFile ServerLog;
 extern clientList* fd_clients;
 
-// ------------------------------------ Thread Pool Functions ------------------------------------
+/* ------------------------------------ Thread Pool Functions ------------------------------------ */
 
 
 /**
@@ -158,7 +158,7 @@ int enqueue(threadPool* tPool, void (*func)(void*), void* arguments);
 int stopThreadPool(threadPool* tPool, int hard_off);
 
 
-// ------------------------------------ Worker Functions ------------------------------------
+/* ------------------------------------ Worker Functions ------------------------------------ */
 /**
  *   @func  taskExecute
  *   @effects executes the requests from the clients
@@ -253,7 +253,7 @@ void UnLockFile(int fd_client, int workerId, message* );
  *   @param workerId-> thread id
 */
 void AppendOnFile(int fd_client, int workerId, message* );
-// ------------------------------------ Files Functions ------------------------------------
+/* ------------------------------------ Files Functions ------------------------------------ */
 /**
  *   @func  fileReadersIncrement
  *   @effects increments the readers counter
@@ -340,7 +340,7 @@ void freeFile(void* file);
  * @return 0 if none, num of files if any
  */
 int icl_hash_toDelete(icl_hash_t * ht, List expelled, int fd, int workerId);
-// ------------------------------------ Server Functions ------------------------------------
+/* ------------------------------------ Server Functions ------------------------------------ */
 /** defaultConfig
  * @func  Sets the Server config with default settings
  * @param config Config structure to set
@@ -366,4 +366,4 @@ void fileBytesIncrement(size_t size);
  */
 void fileBytesDecrement(size_t size);
 
-#endif //STORAGESERVER_SERVER_H
+#endif /*STORAGESERVER_SERVER_H */

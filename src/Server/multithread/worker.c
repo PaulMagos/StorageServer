@@ -1,6 +1,6 @@
-//
-// Created by paul on 26/01/22.
-//
+/*
+ * Created by paul on 26/01/22.
+ */
 
 #include "../../../headers/server.h"
 
@@ -69,41 +69,41 @@ int opExecute(int fd, int workerId, message* message1){
         case O_WRITE:{
             ReceiveFile(fd, workerId, message1);
             break;
-        }   // write
+        }   /* write */
         case O_READ:{
             SendFile(fd, workerId, message1);
             break;
-        }   // read file
+        }   /* read file */
         case O_READN:{
             SendNFiles(fd, workerId, message1);
             break;
-        }   // read nFiles
+        }   /* read nFiles */
         case (O_LOCK):{
             LockFile(fd, workerId, message1);
             break;
-        }   // lock file
+        }   /* lock file */
         case O_UNLOCK:{
             UnLockFile(fd, workerId, message1);
             break;
-        }   // unlock file
+        }   /* unlock file */
         case O_DEL:{
             DeleteFile(fd, workerId, message1);
             break;
-        }   // delete file
+        }   /* delete file */
         case O_CLOSE:{
             CloseFile(fd, workerId, message1);
             break;
-        }   // close file
+        }   /* close file */
         case O_APPND:{
             AppendOnFile(fd, workerId, message1);
             break;
-        }   // append to file
+        }   /* append to file */
         case O_CREAT:
         case O_CREAT_LOCK:
         case O_PEN:{
             OpenFile(fd, workerId, message1);
             break;
-        }   // openFile
+        }   /* openFile */
         default:{
             message1->additional = EBADMSG;
             message1->feedback = ERROR;
@@ -623,7 +623,7 @@ void DeleteFile(int fd_client, int workerId, message* message1){
     message1->feedback = SUCCESS;
     if(ServerStorage->stdOutput) printf("[Thread %d]: DELETE File %d %s by client %d\n", workerId, (int)message1->size, (char*)message1->content, fd_client);
     appendOnLog(ServerLog,"[Thread %d]: DELETE File %d %s by client %d\n", workerId, message1->size, message1->content, fd_client);
-    //freeMessageContent(message1);
+    /* freeMessageContent(message1); */
     return;
 }
 void ReceiveFile(int fd_client, int workerId, message* message1){
@@ -655,7 +655,7 @@ void ReceiveFile(int fd_client, int workerId, message* message1){
 
     if(File->content!=NULL || searchInt(File->clients_fd->head, fd_client)==0 ||
             isLocked(File, fd_client)==1 || !(File->latsOp==O_CREAT||File->latsOp==O_CREAT_LOCK)){
-        // File already exists, use append to add new content
+        /* File already exists, use append to add new content */
         fileWritersDecrement(File, workerId);
         message1->additional = EACCES;
         message1->feedback = ERROR;
@@ -1043,7 +1043,7 @@ void AppendOnFile(int fd_client, int workerId, message* message1){
 
     if(searchInt(File->clients_fd->head, fd_client)==0 || (File->lockFd!=-1 && File->lockFd!=fd_client)
         || File->latsOp==O_CREAT || File->latsOp==O_CREAT_LOCK){
-        // File already exists, use append to add new content
+        /* File already exists, use append to add new content */
         fileWritersDecrement(File, workerId);
         message1->additional = EPERM;
         message1->feedback = ERROR;
@@ -1113,7 +1113,7 @@ void AppendOnFile(int fd_client, int workerId, message* message1){
     memcpy(File->content, message1->content, message1->size);
     fileWritersDecrement(File, workerId);
     lastOpUpdate(File, O_APPND, workerId);
-    // Success till here
+    /* Success till here */
     emptyMessage(message1);
     message1->feedback = SUCCESS;
     message1->additional = expelled->len;

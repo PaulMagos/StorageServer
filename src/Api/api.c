@@ -1,12 +1,12 @@
-//
-// Created by paul magos on 16/01/22.
-//
+/*
+ * Created by paul magos on 16/01/22.
+ */
 
 #include "../../headers/api.h"
 
-// Socket name
+/* Socket name */
 const char* sName;
-// Socket fd
+/* Socket fd */
 int fd_socket = -1;
 
 
@@ -39,17 +39,17 @@ int mkpath(char* file_path, mode_t mode);
 
 int openConnection(const char* sockname, int msec, const struct timespec abstime){
     if(!sockname || msec<0){
-        // INVALID ARGUMENTS
+        /* INVALID ARGUMENTS */
         errno = EINVAL;
         return -1;
     }
 
-    // SYS CALL RESPONSE ( "Re-Used" for other functions when needed )
+    /* SYS CALL RESPONSE ( "Re-Used" for other functions when needed ) */
     int scRes = -1;
     int connRes;
-    // Socket address
+    /* Socket address */
     struct sockaddr_un socketAdd;
-    // Time variables
+    /* Time variables */
     struct timespec currenTime, iniTime;
     memset(&socketAdd, '0', sizeof(socketAdd));
 
@@ -80,7 +80,7 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
         if(scRes==-1){
             return -1;
         }
-        //fprintf(stdout, "Trying connection... %d\n", (int)(currenTime.tv_sec-iniTime.tv_sec+1));
+        /* fprintf(stdout, "Trying connection... %d\n", (int)(currenTime.tv_sec-iniTime.tv_sec+1)); */
     }
 
     if(connRes==-1){
@@ -97,7 +97,7 @@ int closeConnection(const char* sockname){
         errno = EINVAL;
         return -1;
     }
-    // if it's not the socket we are connected to, gives an error
+    /* if it's not the socket we are connected to, gives an error */
     if(strcmp(sName, sockname)!=0){
         errno = ENOTCONN;
         return -1;
@@ -147,7 +147,7 @@ int openFile(const char* pathname, int flags){
         freeMessageContent(&msg);
         return -1;
     }
-    // File aperto correttamente
+    /* File aperto correttamente */
     freeMessageContent(&msg);
     return 0;
 }
@@ -172,7 +172,7 @@ int readFile(const char* pathname, void** buf, size_t* size){
     msg.feedback = 0;
     msg.additional = 0;
 
-    // Send request for reading file
+    /* Send request for reading file */
     SYSCALL_ASSIGN(writeMessage, scRes, writeMessage(fd_socket, &msg),
                  "ReadFile - Sending message to server, errno = %d\n", errno);
     if(scRes==-1){
@@ -185,7 +185,7 @@ int readFile(const char* pathname, void** buf, size_t* size){
     if(scRes==-1){
         return -1;
     }
-    // If any Error return
+    /* If any Error return */
     if(msg.feedback!=SUCCESS){
         errno = msg.additional;
         freeMessageContent(&msg);
@@ -193,7 +193,7 @@ int readFile(const char* pathname, void** buf, size_t* size){
     }
     freeMessageContent(&msg);
 
-    // Receive File
+    /* Receive File */
     SYSCALL_ASSIGN(readMessage, scRes, readMessage(fd_socket, &msg),
                  "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
     if(scRes==-1){
@@ -227,7 +227,7 @@ int readNFiles(int N, const char* dirname){
     msg.additional = N;
 
 
-    // Send request for reading file
+    /* Send request for reading file */
     SYSCALL_ASSIGN(writeMessage, scRes, writeMessage(fd_socket, &msg),
                  "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
     if(scRes==-1){
@@ -245,7 +245,7 @@ int readNFiles(int N, const char* dirname){
         freeMessageContent(&msg);
         return -1;
     }
-    // Salvo i file se devono essere salvati, li leggo altrimenti
+    /* Salvo i file se devono essere salvati, li leggo altrimenti */
     if(saveIntoDir(dirname, msg.additional) == -1) {
         freeMessageContent(&msg);
         return -1;
@@ -264,10 +264,12 @@ int writeFile(const char* pathname, const char* dirname){
         return -1;
     }
 
-    // LINUX/Posix stat library for retrieving a path info,
-    // I could've used standard library by seeking to the end of the file and back,
-    // but I've preferred this method
-    // https://stackoverflow.com/questions/238603/how-can-i-get-a-files-size-in-c
+    /*
+     * LINUX/Posix stat library for retrieving a path info,
+     * I could've used standard library by seeking to the end of the file and back,
+     * but I've preferred this method
+     * https://stackoverflow.com/questions/238603/how-can-i-get-a-files-size-in-c
+     */
     struct stat fileDet;
     if(stat(pathname, &fileDet) == -1){
         errno = EINVAL;
@@ -275,19 +277,19 @@ int writeFile(const char* pathname, const char* dirname){
     }
     size_t fileSize = fileDet.st_size;
 
-    // Alloco un buffer della dimensione del file e verifico che sia andata a buon fine l'allocazione
+    /* Alloco un buffer della dimensione del file e verifico che sia andata a buon fine l'allocazione */
     void* fileBuf = malloc(fileSize);
     if(fileBuf == NULL) {
         errno = ENOMEM;
         return -1;
     }
 
-    // Tento l'apertura del file in lettura binaria e ne verifico l'esito
+    /* Tento l'apertura del file in lettura binaria e ne verifico l'esito */
     FILE* fil3;
     if((fil3 = fopen(pathname, "rb")) == NULL){
         return -1;
     }
-    // Leggo il file nel buffer e verifico la dimensione dell'entità letta dalla "fread"
+    /* Leggo il file nel buffer e verifico la dimensione dell'entità letta dalla "fread" */
     if(fread(fileBuf, 1, fileSize, fil3) < fileSize){
         free(fileBuf);
         errno = EIO;
@@ -431,7 +433,7 @@ int appendToFile(const char* pathname, void* buf, size_t size, const char* dirna
         freeMessageContent(&msg);
         return -1;
     }
-    // Salvo i file se devono essere salvati
+    /* Salvo i file se devono essere salvati */
     if(saveIntoDir(dirname, msg.additional) == -1) return -1;
     freeMessageContent(&msg);
     return 0;
@@ -471,7 +473,7 @@ int lockFile(const char* pathname){
         freeMessageContent(&msg);
         return -1;
     }
-    // Mutua esclusione ottenuta
+    /* Mutua esclusione ottenuta */
     freeMessageContent(&msg);
     return 0;
 }
@@ -511,7 +513,7 @@ int unlockFile(const char* pathname){
         freeMessageContent(&msg);
         return -1;
     }
-    // Mutua esclusione rilasciata
+    /* Mutua esclusione rilasciata */
     freeMessageContent(&msg);
     return 0;
 }
@@ -552,7 +554,7 @@ int closeFile(const char* pathname){
         return -1;
     }
     freeMessageContent(&msg);
-    // File chiuso
+    /* File chiuso */
     return 0;
 }
 
@@ -591,7 +593,7 @@ int removeFile(const char* pathname){
         freeMessageContent(&msg);
         return -1;
     }
-    // File cancellato
+    /* File cancellato */
     freeMessageContent(&msg);
     return 0;
 }
@@ -608,7 +610,7 @@ int saveIntoDir(const char* dir, int numOfFiles){
     msg.feedback=SUCCESS;
     writeMessage(fd_socket, &msg);
     for(int i = 0; i<numOfFiles; i++){
-        // Get PATH and PATHLEN
+        /* Get PATH and PATHLEN */
         SYSCALL_ASSIGN(readMessage, scRes, readMessage(fd_socket, &msg),
                      "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
         if(scRes==-1){
@@ -616,7 +618,7 @@ int saveIntoDir(const char* dir, int numOfFiles){
             errno = EBADMSG;
             return -1;
         }
-        // IF ANY ERROR LET THE SERVER KNOW
+        /* IF ANY ERROR LET THE SERVER KNOW */
         if(msg.request!=O_SEND){
             freeMessageContent(&msg);
             msg.feedback = ERROR;
@@ -634,14 +636,14 @@ int saveIntoDir(const char* dir, int numOfFiles){
         strncpy(path, msg.content, msg.size+1);
         freeMessageContent(&msg);
 
-        // SUCCESS SEND ME THE FILE
+        /* SUCCESS SEND ME THE FILE */
         msg.feedback = SUCCESS;
         SYSCALL_ASSIGN(writeMessage, scRes, writeMessage(fd_socket, &msg),
                      "ERROR OpenFile - Sending feedback error to server, errno = %d\n", errno);
         if(scRes==-1){
             return -1;
         }
-        // FILE RECEIVED
+        /* FILE RECEIVED */
         SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
                      "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
         if(scRes==-1){
@@ -661,7 +663,7 @@ int saveIntoDir(const char* dir, int numOfFiles){
         freeMessageContent(&msg);
         free(path);
 
-        //if(fileBuf!=NULL) free(fileBuf);
+        /* if(fileBuf!=NULL) free(fileBuf); */
     }
 
     readMessage(fd_socket, &msg);

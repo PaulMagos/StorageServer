@@ -7,28 +7,32 @@
 
 #include "utils.h"
 
-// -------------------------------- LogFile Info --------------------------------
+/* -------------------------------- LogFile Info -------------------------------- */
 typedef struct{
-    FILE* file;                             // Log File pointer
-    pthread_mutex_t mutex;                  // Mutex for mutual access
+    FILE* file;                             /* Log File pointer */
+    pthread_mutex_t mutex;                  /* Mutex for mutual access */
 } logF;
 
 typedef logF* logFile;
 
-// From : https://www.techiedelight.com/print-current-date-and-time-in-c/
+/* From : https://www.techiedelight.com/print-current-date-and-time-in-c/ */
 static inline void getTime(char** val, int type){
     *val = malloc(20*sizeof(char));
     if(!(*val)) return;
-    // `time_t` is an arithmetic time type
+    /* `time_t` is an arithmetic time type */
     time_t now;
 
-    // Obtain current time
-    // `time()` returns the current time of the system as a `time_t` value
+    /*
+     * Obtain current time
+     * time()` returns the current time of the system as a `time_t` value
+     */
     time(&now);
 
-    // localtime converts a `time_t` value to calendar time and
-    // returns a pointer to a `tm` structure with its members
-    // filled with the corresponding values
+    /*
+     * localtime converts a `time_t` value to calendar time and
+     * returns a pointer to a `tm` structure with its members
+     * filled with the corresponding values
+     */
     struct tm *local = localtime(&now);
 
     if(type == 0)
@@ -71,4 +75,4 @@ int closeLogStr(logFile log);
  */
 void logSeparator(logFile log);
 
-#endif //STORAGESERVER_LOG_H
+#endif /* STORAGESERVER_LOG_H */

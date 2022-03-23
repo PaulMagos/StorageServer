@@ -1,6 +1,6 @@
-//
-// Created by paul on 26/01/22.
-//
+/*
+ * Created by paul on 26/01/22.
+ */
 
 #include "../../../headers/server.h"
 
@@ -36,7 +36,7 @@ static queueTask* threadPoolTaskCreate(void (*func)(void*), void* arguments){
 }
 
 static void threadPoolTaskDestroy(queueTask* task){
-    //if(task->arguments!=NULL) free(task->arguments);
+    /* if(task->arguments!=NULL) free(task->arguments); */
     free(task);
 }
 
@@ -102,13 +102,13 @@ threadPool* initThreadPool(int threads){
 
     threadIdAndThreadPool* args[threadPool1->maxThreads];
     for (int i = 0; i < threadPool1->maxThreads; i++){
-        // Allocation of pipes and args for threads
+        /* Allocation of pipes and args for threads */
         threadPool1->workersPipes[i] = malloc(2 * sizeof(int));
         args[i] = malloc(sizeof(threadIdAndThreadPool));
-        // Pipes initialization
+        /* Pipes initialization */
         threadPool1->workersPipes[i][0] = -1;
         threadPool1->workersPipes[i][1] = -1;
-        // ThreadPool pointer and Thread id set
+        /* ThreadPool pointer and Thread id set */
         args[i]->tPool = threadPool1;
         args[i]->id = i;
         if(pthread_create(&(threadPool1->workers[i]), NULL, threadPoolWorker, (void*)args[i]) != 0 || pipe(threadPool1->workersPipes[i]) == -1){
@@ -158,7 +158,7 @@ int stopThreadPool(threadPool* tPool, int hard_off){
                    "ERROR : pthread_mutex_unlock failed, errno = %d", errno);
     while(tPool->taskN>0){
         queueTask* tmpTask = getTask(tPool);
-        //threadPoolTaskDestroy(tmpTask);
+        /*threadPoolTaskDestroy(tmpTask); */
         free(tmpTask->arguments);
         free(tmpTask);
         tPool->taskN--;

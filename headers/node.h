@@ -5,7 +5,7 @@
 #ifndef STORAGESERVER_NODE_H
 #define STORAGESERVER_NODE_H
 
-#endif //STORAGESERVER_NODE_H
+#endif /*STORAGESERVER_NODE_H*/
 
 #include <errno.h>
 #include <stdlib.h>
@@ -25,7 +25,7 @@ typedef struct element{
  * */
 
 typedef node* Node;
-// Definition of Node, so we don't have to write "node*" everytime
+/* Definition of Node, so we don't have to write "node*" everytime */
 
 
 Node createNode(char* index, void* data);
