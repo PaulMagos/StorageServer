@@ -26,7 +26,7 @@ do
   J=$(($((J + 1))%10))
   # Scrivo 5 file dalla cartella J, J prende un valore da 1 a 10, quando arriva ad un valore > 10 utilizzo il modulo 10
   # per evitare che cerchi cartelle inesistenti
-  ${CLIENT} -f ${SOCKET} "${TIME}" -w "${WRITEFILESDIR}"/dir${J},5 -D ${EXPELLED} &
+  ${CLIENT} -f ${SOCKET} "${TIME}" -w "${WRITEFILESDIR}"/dir${J} -D ${EXPELLED} &
   # Scrivo 5 file dalla cartella 2
   ${CLIENT} -f ${SOCKET} "${TIME}" -w ${WRITEFILESDIR}/dir2,5 &
   # Scrivo 1 file lo leggo, richiedo la lock, rilascio la lock, lo cancello

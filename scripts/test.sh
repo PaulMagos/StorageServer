@@ -51,6 +51,6 @@ ${EXTERNTERMINAL} ${CLIENT} -f ${SOCKET} ${TIME} ${stdOut} -w ${WRITEFILESDIR},4
 echo
 echo "AVVIO CLIENT 3 TESTO -l E -u DI 2 FILE, E -R"
 ${EXTERNTERMINAL} ${CLIENT} -f ${SOCKET} ${TIME} ${stdOut} -l ${WRITEFILESDIR}/file1.txt,${WRITEFILESDIR}/file2.txt -u ${WRITEFILESDIR}/file1.txt,${WRITEFILESDIR}/file2.txt -R &
-(sleep 2; kill -1 ${SERVER_PID})
+#(sleep 2; kill -1 ${SERVER_PID})
 
 echo
