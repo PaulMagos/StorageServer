@@ -15,7 +15,7 @@
 typedef enum{
     E,                                      /* Enabled */
     Q,                                      /* Quitting, serve last requests only */
-    S,                                      /* Turned Off */
+    S                                       /* Turned Off */
 } serverStat;
 
 /* Policy for replacement */
@@ -23,7 +23,7 @@ typedef enum cPolicy {
     FIFO,                                   /* Firs In, First Out */
     LIFO,                                   /* Last In First Out */
     LRU,                                    /* Last recently used */
-    MRU,                                    /* Most recently used */
+    MRU                                     /* Most recently used */
 } cachePolicy;
 
 

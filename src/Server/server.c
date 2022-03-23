@@ -22,15 +22,11 @@ void printServerStatus();
 
 int main(int argc, char* argv[]){
     /* SYSCALL RESPONSE VARIABLE */
-    int res = 0;
-    int threadId;
-    int i, j;
-    int max_fd = 0;
-    int fd_server_socket, fd_client_socket = 0;
+    int res = 0, threadId, i, j, c, max_fd = 0, fd_server_socket, fd_client_socket = 0, cont, *sigHandler_Pipe;
     struct sockaddr_un SocketAddress;
     /* SigPipe */
     struct sigaction act;
-    int* sigHandler_Pipe;
+    /* int* sigHandler_Pipe; */
     sigset_t mask;
     sigHandlerArgs sigArgs;
     /* CLIENTS FDS */
@@ -156,7 +152,7 @@ int main(int argc, char* argv[]){
 
             if(i == sigHandler_Pipe[0]){
                 if(ServerStorage->status==S){
-                    for(int c = 0; c<=max_fd; c++){
+                    for(c = 0; c<=max_fd; c++){
                         if(FD_ISSET(c, &currSet)) close(c);
                     }
                     break;
@@ -165,7 +161,7 @@ int main(int argc, char* argv[]){
                 }
             }
 
-            int cont = 1;
+            cont = 1;
             for(threadId = 0; threadId < ServerConfig.threadNumber; threadId++){
                 if(i == threadPool1->workersPipes[threadId][0]){
                     if(readn(threadPool1->workersPipes[threadId][0], &fd_client_socket, sizeof(int)) == -1){
@@ -473,8 +469,8 @@ void printServerStatus(){
     serverFile* file;
     char* deletedBytes;
     char* serverMaxBytes;
-    createList(&toDel);
     icl_entry_t *bucket, *curr, *tmp;
+    createList(&toDel);
     for (i = 0; i<ServerStorage->filesTable->nbuckets; i++) {
         bucket = ServerStorage->filesTable->buckets[i];
         for(curr = bucket, tmp=bucket; tmp!=NULL; curr=curr->next){
@@ -507,23 +503,23 @@ void printServerStatus(){
     deletedBytes = calculateSize(ServerStorage->deletedBytes);
     appendOnLog(ServerLog,"        Max client: %d\n", ServerStorage->maxConnections);
     appendOnLog(ServerLog,"        Max number of files saved: %d\n", ServerStorage->sessionMaxFilesNumber);
-    appendOnLog(ServerLog,"        Max bytes of files saved: %s %zu B\n", max, ServerStorage->sessionMaxBytes);
+    appendOnLog(ServerLog,"        Max bytes of files saved: %s %d B\n", max, (int)ServerStorage->sessionMaxBytes);
     appendOnLog(ServerLog,"        Number of files expelled: %d\n", ServerStorage->expelledFiles);
-    appendOnLog(ServerLog,"        Number of bytes expelled: %s %zu B\n", expelled, ServerStorage->expelledBytes);
+    appendOnLog(ServerLog,"        Number of bytes expelled: %s %d B\n", expelled, (int)ServerStorage->expelledBytes);
     appendOnLog(ServerLog,"        Number of files deleted: %d\n", ServerStorage->deletedFiles);
-    appendOnLog(ServerLog,"        Number of bytes deleted: %s %zu B\n", deletedBytes, ServerStorage->deletedBytes);
+    appendOnLog(ServerLog,"        Number of bytes deleted: %s %d B\n", deletedBytes, (int)ServerStorage->deletedBytes);
     appendOnLog(ServerLog,"        Files on the server at shutdown %d of %d\n", ServerStorage->actualFilesNumber, ServerConfig.maxFile);
-    appendOnLog(ServerLog,"        Bytes on the server at shutdown %s of %s (%zu of %zu):\n\n", actual, serverMaxBytes, ServerStorage->actualFilesNumber, ServerConfig.maxByte);
+    appendOnLog(ServerLog,"        Bytes on the server at shutdown %s of %s (%d of %d):\n\n", actual, serverMaxBytes, (int)ServerStorage->actualFilesBytes, (int)ServerConfig.maxByte);
     fprintf(stdout, "\n--------------------------------------------------------------------------------------------------\n");
     fprintf(stdout, "        Max client: %d\n", ServerStorage->maxConnections);
     fprintf(stdout, "        Max number of files saved: %d\n", ServerStorage->sessionMaxFilesNumber);
-    fprintf(stdout, "        Max bytes of files saved: %s %zu\n", max, ServerStorage->sessionMaxBytes);
+    fprintf(stdout, "        Max bytes of files saved: %s %d\n", max, (int)ServerStorage->sessionMaxBytes);
     fprintf(stdout, "        Number of files expelled: %d\n", ServerStorage->expelledFiles);
-    fprintf(stdout, "        Number of bytes expelled: %s %zu B\n", expelled, ServerStorage->expelledBytes);
+    fprintf(stdout, "        Number of bytes expelled: %s %d B\n", expelled, (int)ServerStorage->expelledBytes);
     fprintf(stdout, "        Number of files deleted: %d\n", ServerStorage->deletedFiles);
-    fprintf(stdout, "        Number of bytes deleted: %s %zu B\n", deletedBytes, ServerStorage->deletedBytes);
+    fprintf(stdout, "        Number of bytes deleted: %s %d B\n", deletedBytes, (int)ServerStorage->deletedBytes);
     fprintf(stdout, "        Files on the server at shutdown %d of %d\n", ServerStorage->actualFilesNumber, ServerConfig.maxFile);
-    fprintf(stdout, "        Bytes on the server at shutdown %s of %s (%zu of %zu):\n\n", actual, serverMaxBytes, ServerStorage->actualFilesBytes, ServerConfig.maxByte);
+    fprintf(stdout, "        Bytes on the server at shutdown %s of %s (%d of %d):\n\n", actual, serverMaxBytes, (int)ServerStorage->actualFilesBytes,(int) ServerConfig.maxByte);
     free(max);
     free(expelled);
     free(actual);
@@ -683,10 +679,10 @@ void* icl_hash_find(icl_hash_t *ht, void* key)
 
 int icl_hash_toDelete(icl_hash_t * ht, List expelled, int fd, int workerId){
     icl_entry_t *bucket, *curr;
+    serverFile* file;
     int i;
 
     if(!ht) return 0;
-    serverFile* file;
     for(i=0; i<ht->nbuckets; i++) {
         bucket = ht->buckets[i];
         for(curr=bucket; curr!=NULL; ) {
