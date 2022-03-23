@@ -534,7 +534,7 @@ void printServerStatus(){
                 actual = calculateSize((int)file->size);
                 cTime = gmtime(&(file->lastOpTime.tv_sec));
                 /* if(file->latsOp==O_CREAT_LOCK||file->latsOp==O_CREAT ) continue; */
-                appendOnLog(ServerLog,"        %d %s --- %s %d/%d/%d %d:%d:%d --- %s\n", j, actual, requestToString(file->latsOp), cTime->tm_mday, cTime->tm_mon+1, cTime->tm_year+1900, cTime->tm_hour, cTime->tm_min, cTime->tm_sec, file->path);
+                appendOnLog(ServerLog,"        %d %s --- %s %d/%d/%d %d:%d:%d --- %s %d %d\n", j, actual, requestToString(file->latsOp), cTime->tm_mday, cTime->tm_mon+1, cTime->tm_year+1900, cTime->tm_hour, cTime->tm_min, cTime->tm_sec, file->path, file->lockFd, file->toDelete);
                 fprintf(stdout, "        %d %s --- %s %d/%d/%d %d:%d:%d --- %s\n",  j, actual, requestToString(file->latsOp), cTime->tm_mday, cTime->tm_mon+1, cTime->tm_year+1900, cTime->tm_hour, cTime->tm_min, cTime->tm_sec, file->path);
                 free(actual);
             }

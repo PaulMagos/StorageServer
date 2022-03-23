@@ -23,6 +23,7 @@ int createList(List* myList){
         errno = ENOMEM;
         return -1;
     }
+    (*myList)->head=NULL;
     return 0;
 }
 
@@ -143,7 +144,7 @@ int removeByInt(List* myList, void* data){
         return 0;
     }
 
-    while(tmp!=NULL && tmp->arg.dataInt==*(int*)data){
+    while(tmp!=NULL && tmp->arg.dataInt!=*(int*)data){
         prev = tmp;
         tmp = tmp->next;
     }
