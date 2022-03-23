@@ -461,15 +461,11 @@ void serverDestroy(){
 }
 void printServerStatus(){
     int i, j;
-    char* max;
     List toDel;
-    char* actual;
-    char* expelled;
     struct tm* cTime;
     serverFile* file;
-    char* deletedBytes;
-    char* serverMaxBytes;
     icl_entry_t *bucket, *curr, *tmp;
+    char* max, *index,* actual,* expelled,* deletedBytes,* serverMaxBytes;
     createList(&toDel);
     for (i = 0; i<ServerStorage->filesTable->nbuckets; i++) {
         bucket = ServerStorage->filesTable->buckets[i];
@@ -486,7 +482,6 @@ void printServerStatus(){
         }
     }
 
-    char* index;
     while(toDel->len>0){
         pullTop(&toDel, &index,NULL);
         icl_hash_delete(ServerStorage->filesTable, index, free, freeFile);
