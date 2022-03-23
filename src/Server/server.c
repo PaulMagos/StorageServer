@@ -565,9 +565,8 @@ serverFile * icl_hash_toReplace(icl_hash_t *ht, cachePolicy policy, int workerId
         bucket = ht->buckets[i];
         for(curr = bucket; curr!=NULL; curr=curr->next){
             file1 = (serverFile*)curr->data;
-            if(file1->toDelete != 0) continue;
-            if(file1->lockFd != -1) continue;
-            if(file2 && file2->lockFd != -1) continue;
+            if(file1->toDelete != 0 || file1->lockFd != -1 || file1->latsOp==O_CREAT_LOCK || file1->latsOp==O_CREAT) continue;
+            if(file2 && (file2->lockFd != -1 || file2->latsOp==O_CREAT_LOCK || file2->latsOp==O_CREAT)) continue;
             fileReadersIncrement(file1, workerId);
             if(file2 && file1!=file2) fileReadersIncrement(file2, workerId);
             exFile2 = file2;
