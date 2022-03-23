@@ -1,7 +1,7 @@
 SHELL = /bin/sh
 CC = gcc
 INCLUDES = -I ./headers
-CFLAGS += -std=c99 -Wall -Werror -Wextra -pedantic -g $(INCLUDES)
+CFLAGS += -Wall -Werror -Wextra -pedantic -g $(INCLUDES)
 
 
 CLIENTOUTPUT = ./bin/client

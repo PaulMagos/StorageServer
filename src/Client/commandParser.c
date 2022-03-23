@@ -4,6 +4,16 @@
 
 #include "../../headers/client.h"
 
+/*
+ * Strtok non standard c99
+ * man7.org says it's conform POSIX
+ */
+extern char* strtok_r(char*, const char*, char**);
+/*
+ * Strtok non standard c99
+ * man7.org says it's conform POSIX
+ */
+extern char* realpath(const char*, char*);
 
 bool pFlag, fFlag, dFlag, DFlag;
 long timeToSleep = 1;
@@ -482,6 +492,7 @@ int recWrite(char* dirname, char* expelledDir, long cnt, int indent){
     DIR* directory;
     struct dirent* element;
     long filesToWrite = cnt;
+    char newPath[257];
     int scRes = 0;
     char* path;
     if((directory = opendir(dirname))==NULL || filesToWrite == 0) return 0;
@@ -491,7 +502,6 @@ int recWrite(char* dirname, char* expelledDir, long cnt, int indent){
      * https://stackoverflow.com/questions/8436841/how-to-recursively-list-directories-in-c-on-linux/29402705
      */
     while ((element = readdir(directory)) != NULL && filesToWrite > 0){
-        char newPath[PATH_MAX];
         snprintf(newPath, sizeof(newPath), "%s%c%s", dirname, (dirname[strlen(dirname)-1] == '/')? 0:'/',element->d_name);
         switch(element->d_type){
             case DT_REG:{
