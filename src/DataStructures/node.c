@@ -5,6 +5,8 @@
 #include <string.h>
 Node createNode(char* index, void* data){
     Node tmp = (Node)malloc(sizeof(node));
+    size_t  argSize;
+    char* argument;
     if(!tmp){
         /* Failed to alloc */
         perror("malloc");
@@ -13,9 +15,9 @@ Node createNode(char* index, void* data){
     if(index != NULL) {
         tmp->index = malloc(strlen(index)+1);
         strncpy(tmp->index, index, strlen(index)+1);
-        char* argument = (char*)data;
+        argument = (char*)data;
         if(data!=NULL){
-            size_t  argSize = strlen(argument)+1;
+            argSize = strlen(argument)+1;
             tmp->arg.data = malloc(argSize);
             memcpy(tmp->arg.data, argument, argSize);
         } else tmp->arg.data = NULL;
