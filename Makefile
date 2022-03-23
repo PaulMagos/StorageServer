@@ -13,8 +13,11 @@ APIDIR = ./src/Api
 OBJS = $(DATAOBJ) $(CLIENTOBJ) $(SERVEROBJ) $(APIOBJ) $(MULTIOBJ) $(LOGOBJ)
 
 TARGETS = $(CLIENTOUTPUT) $(SERVEROUTPUT)
+
 all : genTexts $(TARGETS)
 	make clean
+	chmod +x ./scripts/man.sh
+	./scripts/man.sh
 
 # ---------------------------- DATA STRUCTURES ----------------------------- #
 DATASRC = $(wildcard $(DATASTRUCTURES)/*.c)

@@ -46,9 +46,6 @@ do
       fi
     done
   done
-  #echo "./files/test${TEST3}/write/dir${j}/file${j}${i}.txt" >> ./files/test${TEST3}/write/dir${j}/file${j}${i}.txt
-  #echo "./files/test${TEST1}/write/file${i}.txt" >> ./files/test${TEST1}/write/file${i}.txt
-  #echo "./files/test${TEST2}/write/file${i}.txt" >> ./files/test${TEST2}/write/file${i}.txt
 done
 
 rm -f ./scripts/newTerm
