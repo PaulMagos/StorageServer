@@ -634,6 +634,7 @@ void DeleteFile(int fd_client, int workerId, message* message1){
     return;
 }
 void ReceiveFile(int fd_client, int workerId, message* message1){
+    int scRes = 0;
     List expelled;
     serverFile* File;
 
@@ -735,7 +736,6 @@ void ReceiveFile(int fd_client, int workerId, message* message1){
     File->size = message1->size;
     File->content = malloc(message1->size);
     memcpy(File->content, message1->content, message1->size);
-    int scRes = 0;
 
 
     SYSCALL_ASSIGN(pthred_unlock, scRes, pthread_mutex_unlock(&(ServerStorage->lock)),
