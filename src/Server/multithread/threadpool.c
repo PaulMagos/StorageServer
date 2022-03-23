@@ -71,13 +71,15 @@ static void *threadPoolWorker(void* arg){
 }
 
 threadPool* initThreadPool(int threads){
-    int i;
+    int i, j;
+    threadPool* threadPool1;
+    threadIdAndThreadPool* args[threads];
     if(threads <= 0) {
         errno = EINVAL;
         return NULL;
     }
 
-    threadPool* threadPool1 = (threadPool*)calloc(1, sizeof (threadPool));
+    threadPool1 = (threadPool*)calloc(1, sizeof (threadPool));
     if ( threadPool1 == NULL ) {
         return NULL;
     }
@@ -101,7 +103,6 @@ threadPool* initThreadPool(int threads){
 
     threadPool1->workersPipes = malloc(threads * sizeof(int*));
 
-    threadIdAndThreadPool* args[threadPool1->maxThreads];
     for (i = 0; i < threadPool1->maxThreads; i++){
         /* Allocation of pipes and args for threads */
         threadPool1->workersPipes[i] = malloc(2 * sizeof(int));
@@ -113,7 +114,7 @@ threadPool* initThreadPool(int threads){
         args[i]->tPool = threadPool1;
         args[i]->id = i;
         if(pthread_create(&(threadPool1->workers[i]), NULL, threadPoolWorker, (void*)args[i]) != 0 || pipe(threadPool1->workersPipes[i]) == -1){
-            for(int j = 0; j<i; j++) {
+            for(j = 0; j<i; j++) {
                 free(threadPool1->workersPipes[j]);
                 free(args[j]);
             }
@@ -138,6 +139,7 @@ void freePool(threadPool* tPool){
 }
 
 int stopThreadPool(threadPool* tPool, int hard_off){
+    int i;
     queueTask* tmpTask;
     if(tPool == NULL){
         errno = EINVAL;
@@ -166,11 +168,11 @@ int stopThreadPool(threadPool* tPool, int hard_off){
         tPool->taskN--;
     }
 
-    for(int i = 0; i < tPool->maxThreads && tPool->workersPipes[i]!=NULL; i++){
+    for(i = 0; i < tPool->maxThreads && tPool->workersPipes[i]!=NULL; i++){
         free(tPool->workersPipes[i]);
     }
     free(tPool->workersPipes);
-     for(int i = 0; i < tPool->maxThreads; i++){
+     for(i = 0; i < tPool->maxThreads; i++){
         if(pthread_join(tPool->workers[i], NULL) != 0){
             errno = EFAULT;
             return -1;
