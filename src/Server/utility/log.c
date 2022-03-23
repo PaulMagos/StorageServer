@@ -55,6 +55,7 @@ void createLog(char* dir, logFile* log){
 
 int appendOnLog(logFile log, char* strBuf,...){
     char* time;
+    va_list argList;
     if(!log || !strBuf) {
         errno = EINVAL;
         return -1;
@@ -62,7 +63,6 @@ int appendOnLog(logFile log, char* strBuf,...){
     SYSCALL_RETURN(pthread_mutex_init, pthread_mutex_lock(&(log->mutex)),
                    "ERROR - Log File Lock, errno = %d\n", errno);
 
-    va_list argList;
     va_start(argList, strBuf);
 
     getTime(&time,1);
