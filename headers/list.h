@@ -1,6 +1,6 @@
-//
-// Created by paul magos on 07/01/22.
-//
+/*
+ Created by paul magos on 07/01/22.
+*/
 
 #ifndef STORAGESERVER_LIST_H
 #define STORAGESERVER_LIST_H
