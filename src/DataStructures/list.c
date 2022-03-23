@@ -174,7 +174,7 @@ Node getHead(List* myList){
 /*
 int pullBottom(List* myList, char** index, void** data){
     if(!(*myList) || (*myList)->len < 1){
-        /* ERRORE DOVUTO AD ARGOMENTO INVALIDO */
+         ERRORE DOVUTO AD ARGOMENTO INVALIDO
         errno = EINVAL;
         return -1;
     }

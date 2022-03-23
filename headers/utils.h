@@ -48,6 +48,8 @@ static const char* sizes[] = {"GB", "MB", "KB", "B"};
 
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wvariadic-macros"
 /* ES 5 LEZIONI */
 #define SYSCALL_EXIT(name, r, sc, str, ...)	    \
     if ((r=sc) == -1) {				            \
@@ -126,6 +128,7 @@ static inline void print_error(const char * str, ...) {
     free(p);
 }
 /* ES 5 LEZIONI */
+#pragma GCC diagnostic pop
 
 int nanosleep(const struct timespec *req, struct timespec *rem);
 

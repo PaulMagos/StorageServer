@@ -13,10 +13,10 @@
 
 typedef struct element{
     char* index;
-    union dt{
+    union{
         int dataInt;
         void* data;
-    } ;
+    };
     struct element* next;
     struct element* prev;
 } node;
