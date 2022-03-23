@@ -33,13 +33,14 @@ void printList(Node head){
 }
 
 int pushTop(List* myList, char* index, void* data){
+    node* temp;
     if(!(*myList)){
         /* ERRORE DOVUTO AD ARGOMENTO INVALIDO */
         errno = EINVAL;
         return -1;
     }
 
-    node* temp = createNode(index, data);
+    temp = createNode(index, data);
     if(!temp) {
         /* ERRORE DOVUTO ALL'ALLOCAZIONE NON ANDATA A BUON FINE */
         errno = ENOMEM;
@@ -58,13 +59,14 @@ int pushTop(List* myList, char* index, void* data){
 }
 
 int pushBottom(List* myList, char* index, void* data){
+    node* temp;
     if(!(*myList)){
         /* ERRORE DOVUTO AD ARGOMENTO INVALIDO */
         errno = EINVAL;
         return -1;
     }
 
-    node* temp = createNode(index, data);
+    temp = createNode(index, data);
     if(!temp) {
         /* ERRORE DOVUTO ALL'ALLOCAZIONE NON ANDATA A BUON FINE */
         errno = ENOMEM;
@@ -89,13 +91,14 @@ int pushBottom(List* myList, char* index, void* data){
 }
 
 int pullTop(List* myList, char** index, void** data){
+    node* temp;
     if(!(*myList) || (*myList)->len < 1){
         /* ERRORE DOVUTO AD ARGOMENTO INVALIDO */
         errno = EINVAL;
         return -1;
     }
 
-    node* tmp = (*myList)->head;
+    tmp = (*myList)->head;
 
     (*myList)->len--;
     if((*myList)->len == 0){
@@ -120,14 +123,15 @@ int pullTop(List* myList, char** index, void** data){
 }
 
 int removeByInt(List* myList, void* data){
+    Node tmp, prev;
     if(!(*myList) || (*myList)->len < 1){
         /* ERRORE DOVUTO AD ARGOMENTO INVALIDO */
         errno = EINVAL;
         return -1;
     }
 
-    Node tmp=(*myList)->head;
-    Node prev=NULL;
+    tmp=(*myList)->head;
+    prev=NULL;
 
     if(tmp!=NULL&&tmp->arg.dataInt==*(int*)data){
         if(tmp->next) (*myList)->head = tmp->next;
@@ -153,13 +157,14 @@ int removeByInt(List* myList, void* data){
 }
 
 Node getHead(List* myList){
+    mode* tmp;
     if(!(*myList) || (*myList)->len < 1){
         /* ERRORE DOVUTO AD ARGOMENTO INVALIDO */
         errno = EINVAL;
         return NULL;
     }
 
-    node* tmp = (*myList)->head;
+    tmp = (*myList)->head;
 
     (*myList)->len--;
     if((*myList)->len == 0){
