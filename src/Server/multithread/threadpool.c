@@ -72,9 +72,10 @@ static void *threadPoolWorker(void* arg){
 
 threadPool* initThreadPool(int threads){
     int i, j;
+    int thNum = threads;
     threadPool* threadPool1;
-    threadIdAndThreadPool* args[threads];
-    if(threads <= 0) {
+    threadIdAndThreadPool* args[thNum];
+    if(thNum <= 0) {
         errno = EINVAL;
         return NULL;
     }
@@ -89,8 +90,8 @@ threadPool* initThreadPool(int threads){
     threadPool1->taskN = 0;
     threadPool1->maxTasks = 0;
     threadPool1->taskRunning = 0;
-    threadPool1->maxThreads = threads;
-    threadPool1->workers = (pthread_t*)calloc(threads, sizeof(pthread_t));
+    threadPool1->maxThreads = thNum;
+    threadPool1->workers = (pthread_t*)calloc(thNum, sizeof(pthread_t));
     if(threadPool1->workers == NULL){
         free(threadPool1);
         return NULL;
@@ -101,7 +102,7 @@ threadPool* initThreadPool(int threads){
         return NULL;
     }
 
-    threadPool1->workersPipes = malloc(threads * sizeof(int*));
+    threadPool1->workersPipes = malloc(thNum * sizeof(int*));
 
     for (i = 0; i < threadPool1->maxThreads; i++){
         /* Allocation of pipes and args for threads */
