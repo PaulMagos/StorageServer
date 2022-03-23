@@ -74,7 +74,7 @@ threadPool* initThreadPool(int threads){
     int i, j;
     int thNum = threads;
     threadPool* threadPool1;
-    threadIdAndThreadPool* args[thNum];
+    threadIdAndThreadPool** args;
     if(thNum <= 0) {
         errno = EINVAL;
         return NULL;
@@ -103,6 +103,7 @@ threadPool* initThreadPool(int threads){
     }
 
     threadPool1->workersPipes = malloc(thNum * sizeof(int*));
+    args = malloc(thNum* sizeof(threadIdAndThreadPool*));
 
     for (i = 0; i < threadPool1->maxThreads; i++){
         /* Allocation of pipes and args for threads */
@@ -124,6 +125,7 @@ threadPool* initThreadPool(int threads){
             return NULL;
         }
     }
+    free(args);
     appendOnLog(ServerLog, "[ThreadPool]: Started\n");
     return threadPool1;
 }
