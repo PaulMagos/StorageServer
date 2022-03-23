@@ -13,24 +13,22 @@ int recWrite(char* dirname, char* expelledDir, long cnt, int indent);
 char* charToString(char str);
 
 void Helper(){
-    fprintf(stdout,
-        "-h \t\t\t help (commands description)\n"
-               "-f filename  \t\t socket name (AF_UNIX socket)\n"
-               "-w dirname[,n=0] \t sends n files from dirname, if n=0 it sends all the files it can;"
-               "recursively access sub directories\n"
-               "-W file1[,file2] \t list of files to send to the server, detached by comma\n"
-               "-D dirname \t\t expelled files (from server) directory for client, it has to be used "
-               "with -w or -W, if not specified the files sent by the server will be ignored by the client\n"
-               "-r file1[,file2] \t list of files to read from the server, detached by comma\n"
-               "-R [n=0] \t\t read n files from the server, if n = 0 or not specified, it reads all "
-               "the files on the server\n"
-               "-d dirname \t\t directory name for storing the files readen from the server\n"
-               "-t time \t\t waiting time between queries to the server\n"
-               "-l file1[,file2] \t list of file on which we need mutual exclusion\n"
-               "-u file1[,file2] \t list of file on which we have to release mutual exclusion\n"
-               "-c file1[,file2] \t list of file we want to remove from the server\n"
-               "-p \t\t\t enables print on the standard output for each operation \n"
-            );
+    printf("-h \t\t\t help (commands description)\n");
+    printf("-f filename  \t\t socket name (AF_UNIX socket)\n");
+    printf("-w dirname[,n=0] \t sends n files from dirname, if n=0 it sends all the files it can;");
+    printf("recursively access sub directories\n");
+    printf("-W file1[,file2] \t list of files to send to the server, detached by comma\n");
+    printf("-D dirname \t\t expelled files (from server) directory for client, it has to be used ");
+    printf("with -w or -W, if not specified the files sent by the server will be ignored by the client\n");
+    printf("-r file1[,file2] \t list of files to read from the server, detached by comma\n");
+    printf("-R [n=0] \t\t read n files from the server, if n = 0 or not specified, it reads all ");
+    printf("the files on the server\n");
+    printf("-d dirname \t\t directory name for storing the files readen from the server\n");
+    printf("-t time \t\t waiting time between queries to the server\n");
+    printf("-l file1[,file2] \t list of file on which we need mutual exclusion\n");
+    printf("-u file1[,file2] \t list of file on which we have to release mutual exclusion\n");
+    printf("-c file1[,file2] \t list of file we want to remove from the server\n");
+    printf("-p \t\t\t enables print on the standard output for each operation \n");
 }
 
 int getCmdList(List* opList, int argc, char* argv[]){
