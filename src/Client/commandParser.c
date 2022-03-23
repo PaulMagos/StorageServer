@@ -178,6 +178,7 @@ void commandHandler(List* commandList){
     char* fileName;
     char* fileDir;
     FILE * clientFile;
+    size_t size;
 
     signal(SIGPIPE, SIG_IGN);
     /* Control if given arguments for expelled files, and readen files from server are directories */
@@ -299,7 +300,6 @@ void commandHandler(List* commandList){
                     else {
                         SYSCALL_BREAK(openFile, scRes, openFile(path, 0), (pFlag) ?
                             "'%s' -> READ Open failed, errno = %d\n" : "", token, errno);
-                        size_t size;
                         SYSCALL_BREAK(readFile, scRes, readFile(path, &buffer, &size), (pFlag) ?
                             "'%s' -> READ Read failed, errno = %d\n" : "", token, errno);
                         if (readDir != NULL){
