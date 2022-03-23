@@ -186,10 +186,6 @@ void OpenFile(int fd_client, int workerId, message* message1){
             else{
                 if(ServerStorage->actualFilesNumber == ServerConfig.maxFile){
                     expelledFile     = icl_hash_toReplace(ServerStorage->filesTable, ServerConfig.policy, workerId);
-                    while(expelledFile && (expelledFile->latsOp==O_CREAT||expelledFile->latsOp==O_CREAT_LOCK)) {
-                        expelledFile  = icl_hash_toReplace(ServerStorage->filesTable, ServerConfig.policy, workerId);
-                        continue;
-                    }
                     appendOnLog(ServerLog, "[Thread %d]: REPLACEALG\n", workerId);
                     if(expelledFile==NULL) {
                         if(message1->size>0) freeMessageContent(message1);
@@ -370,10 +366,6 @@ void OpenFile(int fd_client, int workerId, message* message1){
             } else {
                 if(ServerStorage->actualFilesNumber==ServerConfig.maxFile){
                     expelledFile     = icl_hash_toReplace(ServerStorage->filesTable, ServerConfig.policy, workerId);
-                    while(expelledFile && (expelledFile->latsOp==O_CREAT||expelledFile->latsOp==O_CREAT_LOCK)) {
-                        expelledFile  = icl_hash_toReplace(ServerStorage->filesTable, ServerConfig.policy, workerId);
-                        continue;
-                    }
                     appendOnLog(ServerLog, "[Thread %d]: REPLACEALG\n", workerId);
                     if(expelledFile==NULL) {
                         if(message1->size>0) freeMessageContent(message1);
