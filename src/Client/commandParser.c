@@ -173,6 +173,12 @@ void commandHandler(List* commandList){
     char* path = NULL;
     char* temporary;
 
+    /* VARIABLE */
+    void *buffer;
+    char* fileName;
+    char* fileDir;
+    FILE * clientFile;
+
     signal(SIGPIPE, SIG_IGN);
     /* Control if given arguments for expelled files, and readen files from server are directories */
     if(DFlag) {
@@ -293,21 +299,20 @@ void commandHandler(List* commandList){
                     else {
                         SYSCALL_BREAK(openFile, scRes, openFile(path, 0), (pFlag) ?
                             "'%s' -> READ Open failed, errno = %d\n" : "", token, errno);
-                        void *buffer;
                         size_t size;
                         SYSCALL_BREAK(readFile, scRes, readFile(path, &buffer, &size), (pFlag) ?
                             "'%s' -> READ Read failed, errno = %d\n" : "", token, errno);
                         if (readDir != NULL){
                             char clientPath[UNIX_PATH_MAX];
                             memset(clientPath, 0, UNIX_PATH_MAX);
-                            char* fileName = path;
+                            fileName = path;
                             sprintf(clientPath, "%s%s", readDir, fileName);
-                            char* fileDir = clientPath;
+                            fileDir = clientPath;
                             fileDir = basename(fileDir);
 
                             if(mkpath(clientPath, S_IRWXU)==-1) continue;
 
-                            FILE* clientFile = fopen(clientPath, "wb");
+                            clientFile = fopen(clientPath, "wb");
                             if(clientFile){
                                 fwrite(buffer, 1, size, clientFile);
                                 /*fprintf(clientFile, "%s", buffer); */
@@ -478,8 +483,8 @@ int recWrite(char* dirname, char* expelledDir, long cnt, int indent){
     struct dirent* element;
     long filesToWrite = cnt;
     int scRes = 0;
-    if((directory = opendir(dirname))==NULL || filesToWrite == 0) return 0;
     char* path;
+    if((directory = opendir(dirname))==NULL || filesToWrite == 0) return 0;
     errno = 0;
     /*
      * StackOverflow has something similar at
