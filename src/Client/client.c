@@ -1,6 +1,6 @@
-//
-// Created by paul on 11/01/22.
-//
+/*
+ Created by paul on 11/01/22.
+*/
 
 #include "../../headers/client.h"
 List commandList;
