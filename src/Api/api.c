@@ -24,7 +24,9 @@ int diffTimespec(struct timespec time1, struct timespec time0) {
 
 struct timespec diff_timespec(const struct timespec time1,
                               const struct timespec time0) {
-    struct timespec diff = {time1.tv_sec - time0.tv_sec,time1.tv_nsec - time0.tv_nsec};
+    struct timespec diff;
+    diff.tv_sec = time1.tv_sec - time0.tv_sec;
+    diff.tv_nsec = time1.tv_nsec - time0.tv_nsec;
     if (diff.tv_nsec < 0) {
         diff.tv_nsec += 1000000000;
         diff.tv_sec--;
