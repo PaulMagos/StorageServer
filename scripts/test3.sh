@@ -14,7 +14,7 @@ WRITEFILESDIR=${FORLDER}/write
 
 echo
 echo "AVVIO SERVER"
-${SERVER} ./configs/config${I}.txt ./log/test${I} &
+${MEMCHECK} ${SERVER} ./configs/config${I}.txt ./log/test${I} &
 SERVER_PID=$!
 THIS_PID=$$
 
