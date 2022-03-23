@@ -28,7 +28,7 @@ int createList(List* myList){
 
 void printList(Node head){
     if(head == NULL) return;
-    fprintf(stderr, "%s, %s\n", head->index, (char*)head->data);
+    fprintf(stderr, "%s, %s\n", head->index, (char*)head->arg.data);
     printList(head->next);
 }
 
@@ -109,9 +109,9 @@ int pullTop(List* myList, char** index, void** data){
         *index = malloc(strlen(tmp->index)+1);
         strncpy(*index, tmp->index, strlen(tmp->index)+1);
         /* *data = malloc() */
-        if(tmp->data!=NULL){
-            *data = malloc(strlen(tmp->data)+1);
-            memcpy(*data, tmp->data, strlen(tmp->data)+1);
+        if(tmp->arg.data!=NULL){
+            *data = malloc(strlen(tmp->arg.data)+1);
+            memcpy(*data, tmp->arg.data, strlen(tmp->arg.data)+1);
         }
     }
 
@@ -129,7 +129,7 @@ int removeByInt(List* myList, void* data){
     Node tmp=(*myList)->head;
     Node prev=NULL;
 
-    if(tmp!=NULL&&tmp->dataInt==*(int*)data){
+    if(tmp!=NULL&&tmp->arg.dataInt==*(int*)data){
         if(tmp->next) (*myList)->head = tmp->next;
         else (*myList)->head=NULL;
         if(tmp->next) tmp->next->prev=NULL;
@@ -138,7 +138,7 @@ int removeByInt(List* myList, void* data){
         return 0;
     }
 
-    while(tmp!=NULL && tmp->dataInt==*(int*)data){
+    while(tmp!=NULL && tmp->arg.dataInt==*(int*)data){
         prev = tmp;
         tmp = tmp->next;
     }
@@ -232,7 +232,7 @@ int search(Node head, char* str){
 
 int searchInt(Node head, int num){
     if(head == NULL) return 0;
-    if (head->dataInt == num){
+    if (head->arg.dataInt == num){
         return 1;
     }
     return searchInt(head->next, num);
@@ -240,6 +240,6 @@ int searchInt(Node head, int num){
 
 void getArg(Node head, char* str, char** dir){
     if(head == NULL) return;
-    if (*head->index == *str) *dir = head->data;
+    if (*head->index == *str) *dir = head->arg.data;
     getArg(head->next, str, &(*dir));
 }

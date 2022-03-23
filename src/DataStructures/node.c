@@ -16,12 +16,12 @@ Node createNode(char* index, void* data){
         char* argument = (char*)data;
         if(data!=NULL){
             size_t  argSize = strlen(argument)+1;
-            tmp->data = malloc(argSize);
-            memcpy(tmp->data, argument, argSize);
-        } else tmp->data = NULL;
+            tmp->arg.data = malloc(argSize);
+            memcpy(tmp->arg.data, argument, argSize);
+        } else tmp->arg.data = NULL;
     } else{
         tmp->index = NULL;
-        tmp->dataInt = *(int*)data;
+        tmp->arg.dataInt = *(int*)data;
     }
     tmp->next=NULL;
     tmp->prev=NULL;
@@ -32,7 +32,7 @@ Node createNode(char* index, void* data){
 void freeNode(Node nodeToFree){
     if(nodeToFree){
         if((nodeToFree)->index) {
-            if((nodeToFree)->data!= NULL) free((nodeToFree)->data);
+            if((nodeToFree)->arg.data!= NULL) free((nodeToFree)->arg.data);
             free((nodeToFree)->index);
         }
         free(nodeToFree);

@@ -16,7 +16,7 @@ typedef struct element{
     union{
         int dataInt;
         void* data;
-    };
+    } arg;
     struct element* next;
     struct element* prev;
 } node;
