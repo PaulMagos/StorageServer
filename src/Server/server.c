@@ -551,7 +551,7 @@ void printServerStatus(){
     fprintf(stdout, "--------------------------------------------------------------------------------------------------\n");
 }
 
-int tSpecCmp(struct timespec time1, struct timespec time0, int mode) {
+int tSpecCmp(struct timespec time1, struct timespec time0) {
     return (time1.tv_sec == time0.tv_sec)? time1.tv_nsec > time0.tv_nsec : time1.tv_sec > time0.tv_sec;
 }
 
