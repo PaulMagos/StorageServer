@@ -7,7 +7,7 @@
 
 int opExecute(int fd, int workerId, message* message1);
 int lastOpUpdate(serverFile* file, fileFlags op, int thread);
-int ExpelledHandler(int fd, int workerId, List expelled);
+int ExpelledHandler(int fd, int workerId, List expelled, int mode);
 
 
 void taskExecute(void* argument){
@@ -185,7 +185,7 @@ void OpenFile(int fd_client, int workerId, message* message1){
             }
             else{
                 if(ServerStorage->actualFilesNumber == ServerConfig.maxFile){
-                    expelledFile     = icl_hash_toReplace(ServerStorage->filesTable, ServerConfig.policy, workerId);
+                    expelledFile = icl_hash_toReplace(ServerStorage->filesTable, workerId);
                     appendOnLog(ServerLog, "[Thread %d]: REPLACEALG\n", workerId);
                     if(expelledFile==NULL) {
                         if(message1->size>0) freeMessageContent(message1);
@@ -365,10 +365,12 @@ void OpenFile(int fd_client, int workerId, message* message1){
                 return;
             } else {
                 if(ServerStorage->actualFilesNumber==ServerConfig.maxFile){
-                    expelledFile     = icl_hash_toReplace(ServerStorage->filesTable, ServerConfig.policy, workerId);
+                    expelledFile     = icl_hash_toReplace(ServerStorage->filesTable, workerId);
                     appendOnLog(ServerLog, "[Thread %d]: REPLACEALG\n", workerId);
                     if(expelledFile==NULL) {
                         if(message1->size>0) freeMessageContent(message1);
+                        SYSCALL_RET(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
+                                    "ERROR - ServerStorage lock release failure, errno = %d", errno)
                         return;
                     }
                     fileWritersIncrement(expelledFile, workerId);
@@ -466,12 +468,13 @@ void OpenFile(int fd_client, int workerId, message* message1){
                 if( searchInt(File->clients_fd->head, fd_client) == 0) {
                  pushTop(&File->clients_fd, NULL, &fd_client);
                 }
+                fileWritersDecrement(File, workerId);
+                lastOpUpdate(File, O_CREAT_LOCK, workerId);
+
                 SYSCALL_RET(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
                                "ERROR - ServerStorage lock release failure, errno = %d", errno)
                 if(ServerStorage->stdOutput) printf("[Thread %d]: Server UnLock\n", workerId);
-                fileWritersDecrement(File, workerId);
 
-                lastOpUpdate(File, O_CREAT_LOCK, workerId);
                 message1->feedback = SUCCESS;
                 if(ServerStorage->stdOutput) printf("[Thread %d]: OPENLOCK File %d %s by client %d\n", workerId, (int)File->size, File->path, fd_client);
                 appendOnLog(ServerLog,"[Thread %d]: OPENLOCK File %d %s by client %d\n", workerId, File->size, File->path, fd_client);
@@ -489,11 +492,8 @@ void OpenFile(int fd_client, int workerId, message* message1){
                 message1->feedback = ERROR;
                 return ;
             }
-            SYSCALL_RET(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
-                           "ERROR - ServerStorage lock release failure, errno = %d", errno)
-            if(ServerStorage->stdOutput) printf("[Thread %d]: Server UnLock\n", workerId);
 
-            if(isLocked(File, fd_client)==1 || File->latsOp==O_CREAT || File->latsOp==O_CREAT_LOCK || File->toDelete!=0){
+            if(isLocked(File, fd_client)==1 || File->latsOp==O_CREAT || File->latsOp==O_CREAT_LOCK || File->latsOp==O_WRITETOCLOSE || File->toDelete!=0){
                 errno = EBUSY;
                 message1->additional = errno;
                 message1->feedback = ERROR;
@@ -510,6 +510,10 @@ void OpenFile(int fd_client, int workerId, message* message1){
                 pushTop(&File->clients_fd, NULL, &fd_client);
             }
             fileWritersDecrement(File, workerId);
+            lastOpUpdate(File, O_PEN, workerId);
+            SYSCALL_RET(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
+                        "ERROR - ServerStorage lock release failure, errno = %d", errno)
+            if(ServerStorage->stdOutput) printf("[Thread %d]: Server UnLock\n", workerId);
             message1->feedback = SUCCESS;
             if(ServerStorage->stdOutput) printf("[Thread %d]: OPEN File %d %s by client %d\n", workerId, (int)File->size, File->path, fd_client);
             appendOnLog(ServerLog,"[Thread %d]: OPEN File %d %s by client %d\n", workerId, File->size, File->path, fd_client);
@@ -545,9 +549,6 @@ void CloseFile(int fd_client, int workerId, message* message1){
     }
     fileWritersIncrement(File, workerId);
 
-    SYSCALL_RET(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
-                "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
-    if(ServerStorage->stdOutput) printf("[Thread %d]: Server UnLock\n", workerId);
 
 
     if(searchInt(File->clients_fd->head, fd_client)==1 ){
@@ -558,10 +559,15 @@ void CloseFile(int fd_client, int workerId, message* message1){
         fileWritersDecrement(File, workerId);
         return;
     }
+    fileWritersDecrement(File, workerId);
+    if(File->latsOp==O_WRITETOCLOSE) lastOpUpdate(File, O_WRITE, workerId);
+
+    SYSCALL_RET(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
+                "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
+    if(ServerStorage->stdOutput) printf("[Thread %d]: Server UnLock\n", workerId);
     message1->feedback = SUCCESS;
     if(ServerStorage->stdOutput) printf("[Thread %d]: CLOSE File %s by client %d\n", workerId, File->path, fd_client);
     appendOnLog(ServerLog, "[Thread %d]: CLOSE File %s by client %d\n", workerId, File->path, fd_client);
-    fileWritersDecrement(File, workerId);
     return;
 }
 void DeleteFile(int fd_client, int workerId, message* message1){
@@ -701,7 +707,7 @@ void ReceiveFile(int fd_client, int workerId, message* message1){
     }
     createList(&expelled);
     while (ServerStorage->actualFilesBytes+message1->size > ServerConfig.maxByte){
-        serverFile* file = icl_hash_toReplace(ServerStorage->filesTable, ServerConfig.policy, workerId);
+        serverFile* file = icl_hash_toReplace(ServerStorage->filesTable, workerId);
         appendOnLog(ServerLog, "[Thread %d]: REPLACEALG\n", workerId);
         if(file == NULL) {
             message1->additional = 132;
@@ -715,7 +721,7 @@ void ReceiveFile(int fd_client, int workerId, message* message1){
 
             return ;
         }
-        if(file->latsOp==O_CREAT||file->latsOp==O_CREAT_LOCK) continue;
+        if(file->latsOp==O_CREAT||file->latsOp==O_CREAT_LOCK||file->latsOp==O_WRITETOCLOSE) continue;
         fileBytesDecrement(file->size);
         fileNumDecrement();
         ServerStorage->expelledBytes+=file->size;
@@ -748,7 +754,7 @@ void ReceiveFile(int fd_client, int workerId, message* message1){
     icl_hash_toDelete(ServerStorage->filesTable, expelled, fd_client, workerId);
     fileWritersDecrement(File, workerId);
     if(ServerStorage->stdOutput) printf("[Thread %d]: Server UnLock\n", workerId);
-    lastOpUpdate(File, O_WRITE, workerId);
+    lastOpUpdate(File, O_WRITETOCLOSE, workerId);
 
     message1->feedback = SUCCESS;
     message1->additional = expelled->len;
@@ -756,7 +762,7 @@ void ReceiveFile(int fd_client, int workerId, message* message1){
 
     if(ServerStorage->stdOutput) printf("[Thread %d]: WRITE File %d %s received by client %d\n", workerId, (int)File->size, File->path, fd_client);
     appendOnLog(ServerLog, "[Thread %d]: WRITE File %d %s received from client %d\n", workerId, File->size, File->path, fd_client);
-    if(ExpelledHandler(fd_client, workerId, expelled)==-1){
+    if(ExpelledHandler(fd_client, workerId, expelled, 1)==-1){
         deleteList(&expelled);
         errno = EBADMSG;
         message1->additional = errno;
@@ -786,7 +792,7 @@ void SendFile(int fd_client, int workerId, message* message1){
 
     File = icl_hash_find(ServerStorage->filesTable, message1->content);
     if(message1->content) freeMessageContent(message1);
-    if(File==NULL){
+    if(File==NULL || File->toDelete!=0){
         errno = ENOENT;
         message1->additional = errno;
         message1->feedback = ERROR;
@@ -865,8 +871,7 @@ void SendNFiles(int fd_client, int workerId, message* message1){
         bucket = ServerStorage->filesTable->buckets[i];
         for(curr = bucket; curr!=NULL && (int)expelled->len<numberOfFiles; curr=curr->next){
             file = (serverFile*) curr->data;
-            if(file->latsOp==O_CREAT||file->latsOp==O_CREAT_LOCK) continue;
-            if(file->writers!=0) continue;
+            if(file->latsOp==O_CREAT||file->latsOp==O_CREAT_LOCK||file->latsOp==O_WRITETOCLOSE || file->writers!=0 || file->toDelete!=0) continue;
             fileReadersIncrement(file, workerId);
             if(isLocked(file, fd_client)==1 ) {
                 fileReadersDecrement(file,workerId);
@@ -882,7 +887,7 @@ void SendNFiles(int fd_client, int workerId, message* message1){
                 fileReadersDecrement(file,workerId);
                 return;
             }
-            fileReadersDecrement(file,workerId);
+            fileReadersDecrement(file, workerId);
         }
     }
 
@@ -899,7 +904,7 @@ void SendNFiles(int fd_client, int workerId, message* message1){
     if(ServerStorage->stdOutput) printf("[Thread %d]: Send %d files to client %d\n", workerId, numberOfFiles, fd_client);
     appendOnLog(ServerLog, "[Thread %d]: Send %d files to client %d\n", workerId, numberOfFiles, fd_client);
     message1->additional = numberOfFiles;
-    if(ExpelledHandler(fd_client, workerId, expelled)!=0){
+    if(ExpelledHandler(fd_client, workerId, expelled, 0)!=0){
         deleteList(&expelled);
         errno = EBADMSG;
         message1->additional = errno;
@@ -1092,7 +1097,7 @@ void AppendOnFile(int fd_client, int workerId, message* message1){
 
     createList(&expelled);
     while (ServerStorage->actualFilesBytes-File->size+message1->size > ServerConfig.maxByte){
-        serverFile* file = icl_hash_toReplace(ServerStorage->filesTable, ServerConfig.policy, workerId);
+        serverFile* file = icl_hash_toReplace(ServerStorage->filesTable, workerId);
         appendOnLog(ServerLog, "[Thread %d]: REPLACEALG\n", workerId);
         if(file == NULL) {
             message1->additional = 132;
@@ -1131,7 +1136,7 @@ void AppendOnFile(int fd_client, int workerId, message* message1){
     if(ServerStorage->stdOutput) printf("[Thread %d]: Server UnLock\n", workerId);
     if(ServerStorage->stdOutput) printf("[Thread %d]: APPEND File %d %s by client %d\n", workerId, (int)File->size, File->path, fd_client);
     appendOnLog(ServerLog, "[Thread %d]: APPEND File %d %s by client %d\n", workerId, File->size, File->path, fd_client);
-    if(ExpelledHandler(fd_client, workerId, expelled)==-1){
+    if(ExpelledHandler(fd_client, workerId, expelled,1 )==-1){
         deleteList(&expelled);
         errno = EBADMSG;
         message1->additional = errno;
@@ -1142,7 +1147,7 @@ void AppendOnFile(int fd_client, int workerId, message* message1){
     return;
 }
 
-int ExpelledHandler(int fd, int workerId, List expelled){
+int ExpelledHandler(int fd, int workerId, List expelled, int mode){
     message curr;
     int num = expelled->len;
     char* index;
@@ -1159,7 +1164,7 @@ int ExpelledHandler(int fd, int workerId, List expelled){
     SYSCALL_RETURN(pthred_unlock, pthread_mutex_lock(&(ServerStorage->lock)),
                    "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
     if(ServerStorage->stdOutput) printf("[Thread %d]: Server Lock\n", workerId);
-    scRes = readMessage(fd, &curr);
+    /*scRes = readMessage(fd, &curr);
     if(scRes==-1){
         curr.feedback=ERROR;
         curr.additional=EBADMSG;
@@ -1171,7 +1176,7 @@ int ExpelledHandler(int fd, int workerId, List expelled){
         while (expelled->len>0){
             pullTop(&expelled, &index, NULL);
             File = icl_hash_find(ServerStorage->filesTable, index);
-            if(File && (File->toDelete==1||File->toDelete==fd) && isLocked(File, fd)!=1 && File->latsOp!=O_CREAT) {
+            if(File && (File->toDelete==1||File->toDelete==fd) && isLocked(File, fd)!=1 && (File->latsOp!=O_CREAT_LOCK&&File->latsOp!=O_WRITETOCLOSE) && mode) {
                 fileWritersIncrement(File, workerId);
                 if(ServerStorage->stdOutput) printf("[Thread %d]: EXPELL File %d %s, %d of %d files\n", workerId, (int)File->size, index, num-expelled->len, num);
                 appendOnLog(ServerLog, "[Thread %d]: EXPELL File %d %s, %d of %d files\n", workerId, File->size, index, num-expelled->len, num);
@@ -1180,12 +1185,12 @@ int ExpelledHandler(int fd, int workerId, List expelled){
             }
             free(index);
         }
-    }
+    }*/
     freeMessageContent(&curr);
     while (expelled->len>0){
         pullTop(&expelled, &index, NULL);
         if((File = icl_hash_find(ServerStorage->filesTable, index)) != NULL){
-            if(File->latsOp == O_CREAT || File->latsOp==O_CREAT_LOCK || isLocked(File, fd)==1){
+            if(File->latsOp == O_CREAT || File->latsOp==O_CREAT_LOCK || File->latsOp==O_WRITETOCLOSE || isLocked(File, fd)==1){
                 free(index);
                 continue;
             }
@@ -1193,6 +1198,7 @@ int ExpelledHandler(int fd, int workerId, List expelled){
             free(index);
             continue;
         }
+
         len = strlen(index)+1;
 
         curr.size = len;
@@ -1225,7 +1231,6 @@ int ExpelledHandler(int fd, int workerId, List expelled){
 
         freeMessageContent(&curr);
 
-
         fileWritersIncrement(File, workerId);
         len = (int)File->size;
 
@@ -1246,13 +1251,14 @@ int ExpelledHandler(int fd, int workerId, List expelled){
             return -1;
         }
 
-        fileWritersDecrement(File, workerId);
-        if(File->toDelete==1||File->toDelete==fd) {
+        if((File->toDelete==1||File->toDelete==fd)&&mode) {
+            fileWritersDecrement(File, workerId);
             icl_hash_delete(ServerStorage->filesTable, index, free, freeFile);
             if(ServerStorage->stdOutput) printf("[Thread %d]: EXPELL File %s, %d of %d files sent to client %d\n", workerId, index, num-expelled->len, num, fd);
             appendOnLog(ServerLog, "[Thread %d]: EXPELL File %s, %d of %d files sent to client %d\n", workerId, index, num-expelled->len, num, fd);
         }
         else {
+            fileWritersDecrement(File, workerId);
             lastOpUpdate(File, O_READ, workerId);
             if(ServerStorage->stdOutput) printf("[Thread %d]: READ File %d %s, %d of %d files sent to client %d\n", workerId, (int)File->size, index, num-expelled->len, num, fd);
             appendOnLog(ServerLog, "[Thread %d]: READ File %d %s, %d of %d files sent to client %d\n", workerId, File->size, index, num-expelled->len, num, fd);

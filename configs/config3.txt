@@ -1,6 +1,6 @@
-Files: 100
+Files: 24
 Bytes: 1048576
 Threads: 8
-Policy: MRU
+Policy: LIFO
 Debug: False
 Socket: ./tmp/cs_socket

@@ -612,9 +612,9 @@ int saveIntoDir(const char* dir, int numOfFiles){
     int save = (dir==NULL)? 0 : 1;
     if(numOfFiles==0) return 0;
     memset(&msg, 0, sizeof(message));
-    msg.additional=save;
+    /*msg.additional=save;
     msg.feedback=SUCCESS;
-    writeMessage(fd_socket, &msg);
+    writeMessage(fd_socket, &msg);*/
     for(i = 0; i<numOfFiles; i++){
         /* Get PATH and PATHLEN */
         SYSCALL_ASSIGN(readMessage, scRes, readMessage(fd_socket, &msg),

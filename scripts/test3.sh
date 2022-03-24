@@ -22,7 +22,7 @@ endTime=$(($SECONDS+30))
 SEC=$(($endTime-$SECONDS))
 while (( $SEC>0 ))
 do
-  J=$(($((J + 1))%10))
+  J=$(($RANDOM%10))+1
   # Scrivo 5 file dalla cartella J, J prende un valore da 1 a 10, quando arriva ad un valore > 10 utilizzo il modulo 10
   # per evitare che cerchi cartelle inesistenti
   ${CLIENT} -f ${SOCKET} "${TIME}" -w "${WRITEFILESDIR}"/dir${J} -D ${EXPELLED} &
@@ -51,7 +51,7 @@ do
   ${CLIENT} -f ${SOCKET} "${TIME}" -R 10 -d ${SAVEDIR}
   if (( $SEC > $endTime-$SECONDS ))
   then
-    #clear
+    clear
     SEC=$(($endTime-$SECONDS))
     echo $SEC  # Stampo il tempo mancante
   fi

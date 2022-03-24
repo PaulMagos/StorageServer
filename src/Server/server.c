@@ -109,15 +109,21 @@ int main(int argc, char* argv[]){
     SocketAddress.sun_family = AF_UNIX;
 
     /* Socket binding and ready to listen */
-    SYSCALL_ASSIGN(socket, fd_server_socket, socket(AF_UNIX, SOCK_STREAM, 0),
-                 "ERROR - Socket set failure, errno = %d\n", errno)
-    if(fd_server_socket == -1) exit(errno);
-    SYSCALL_ASSIGN(bind, res, bind(fd_server_socket, (struct sockaddr*) &SocketAddress, sizeof(SocketAddress)),
-                 "ERROR - Socket bind failure, errno = %d\n", errno)
-    if(res==-1) exit(errno);
-    SYSCALL_ASSIGN(listen, res, listen(fd_server_socket, SOMAXCONN),
-                 "ERROR - Socket listen failure, errno = %d\n", errno)
-    if(res==-1) exit(errno);
+    fd_server_socket = socket(AF_UNIX, SOCK_STREAM, 0);
+    if(fd_server_socket == -1) {
+        fprintf(stderr,  "ERROR - Socket set failure, errno = %d\n", errno);
+        exit(errno);
+    }
+    res = bind(fd_server_socket, (struct sockaddr*) &SocketAddress, sizeof(SocketAddress));
+    if(res==-1) {
+        fprintf(stderr,  "ERROR - Socket bind failure, errno = %d\n", errno);
+        exit(errno);
+    }
+    res = listen(fd_server_socket, SOMAXCONN);
+    if(res==-1) {
+        fprintf(stderr,  "ERROR - Socket listen failure, errno = %d\n", errno);
+        exit(errno);
+    }
 
     atexit(serverDestroy);
 
@@ -138,14 +144,17 @@ int main(int argc, char* argv[]){
     /* ----------------------------------- MainThreadFunc ------------------------------------ */
     while (ServerStorage->status == E){
         readySet = currSet;
-        SYSCALL_ASSIGN(select, res, select(max_fd+1, &readySet,NULL, NULL, NULL), "ERROR - Select failed, errno = %d", errno);
-        if(res==-1) exit(errno);
+        res = select(max_fd+1, &readySet,NULL, NULL, NULL);
+        if(res==-1) {
+            fprintf(stderr, "ERROR - Select failed, errno = %d", errno);
+            exit(errno);
+        }
         for(i = 0; i <= max_fd; i++){
             if(!FD_ISSET(i, &readySet)) continue;
             if(i==fd_server_socket && ServerStorage->status==E && max_fd<1000){
-                SYSCALL_ASSIGN(acceptNewConn, fd_client_socket, accept(fd_server_socket, NULL, NULL),
-                             "ERROR - Accept new connection to server, errno = %d", errno);
+                fd_client_socket = accept(fd_server_socket, NULL, NULL);
                 if(fd_client_socket==-1){
+                    if(ServerStorage->stdOutput) fprintf(stderr, "ERROR - Accept new connection to server, errno = %d", errno);
                     continue;
                 }
                 newClient();
@@ -421,7 +430,7 @@ int serverInit(char* configPath, char* logPath){
     ServerStorage->actualFilesNumber = 0;       /* Int */
     ServerStorage->sessionMaxFilesNumber = 0;   /* Int */
 
-    ServerStorage->filesTable = icl_hash_create((3*ServerConfig.maxFile), NULL,NULL);
+    ServerStorage->filesTable = icl_hash_create((2*ServerConfig.maxFile), NULL,NULL);
     if(!ServerStorage->filesTable) {
         free(ServerStorage);
         errno = ENOMEM;
@@ -453,46 +462,40 @@ void serverDestroy(){
     printServerStatus();
     closeLogStr(ServerLog);
     if(pthread_mutex_destroy(&(ServerStorage->lock)) != 0){
-        SYSCALL_ASSIGN(ServerInit_hashDestroy, res, icl_hash_destroy(ServerStorage->filesTable, free, freeFile),
-                     "ERROR - Icl_Hash destroy fault, errno = %d", errno);
+        res =icl_hash_destroy(ServerStorage->filesTable, free, freeFile);
+        if(res == -1 && ServerStorage->stdOutput) printf("ERROR - Icl_Hash destroy fault, errno = %d", errno);
         free(ServerStorage);
         exit(0);
     }
-    SYSCALL_ASSIGN(ServerInit_hashDestroy, res, icl_hash_destroy(ServerStorage->filesTable, free, freeFile),
-                 "ERROR - Icl_Hash destroy fault, errno = %d", errno);
-    if(res == -1 && ServerStorage->stdOutput) printf("ERROR");
+    res = icl_hash_destroy(ServerStorage->filesTable, free, freeFile);
+    if(res == -1 && ServerStorage->stdOutput) printf("ERROR - Icl_Hash destroy fault, errno = %d", errno);
     free(ServerStorage);
 }
 void printServerStatus(){
     int i, j;
-    List toDel;
-    struct tm* cTime, *lTime;
+    struct tm cTime, lTime;
     serverFile* file;
     icl_entry_t *bucket, *curr, *tmp;
-    char* max, *index,* actual,* expelled,* deletedBytes,* serverMaxBytes;
-    createList(&toDel);
+    char* max,* actual,* expelled,* deletedBytes,* serverMaxBytes;
     for (i = 0; i<ServerStorage->filesTable->nbuckets; i++) {
         bucket = ServerStorage->filesTable->buckets[i];
-        for(curr = bucket, tmp=bucket; tmp!=NULL; curr=curr->next){
+        for(curr = bucket, tmp=bucket; tmp!=NULL;){
             tmp=curr->next;
             file = (serverFile*)curr->data;
             if(file->toDelete!=0) {
-                pushTop(&toDel, file->path, NULL);
+                curr=curr->next;
+                icl_hash_delete(ServerStorage->filesTable, file->path, free, freeFile);
+                continue;
             }else if(file->latsOp==O_CREAT_LOCK || file->latsOp==O_CREAT) {
                 fileNumDecrement();
                 ServerStorage->sessionMaxFilesNumber--;
-                pushTop(&toDel, file->path, NULL);
-            }
+                curr=curr->next;
+                icl_hash_delete(ServerStorage->filesTable, file->path, free, freeFile);
+                continue;
+            } else if(file->latsOp==O_WRITETOCLOSE) file->latsOp=O_WRITE;
+            curr=curr->next;
         }
     }
-
-    while(toDel->len>0){
-        pullTop(&toDel, &index,NULL);
-        icl_hash_delete(ServerStorage->filesTable, index, free, freeFile);
-        if(index!=NULL)free(index);
-    }
-
-    deleteList(&toDel);
 
     logSeparator(ServerLog);
     max = calculateSize(ServerStorage->sessionMaxBytes);
@@ -536,11 +539,11 @@ void printServerStatus(){
                 j++;
                 file = (serverFile*)curr->data;
                 actual = calculateSize((int)file->size);
-                cTime = gmtime(&(file->creationTime.tv_sec));
-                lTime = gmtime(&(file->lastOpTime.tv_sec));
+                localtime_r(&(file->creationTime.tv_sec), &cTime);
+                localtime_r(&(file->lastOpTime.tv_sec), &lTime);
                 /* if(file->latsOp==O_CREAT_LOCK||file->latsOp==O_CREAT ) continue; */
-                appendOnLog(ServerLog,"        %d %s --- %s %d/%d/%d %d:%d:%d --- %d/%d %d:%d:%d --- %s\n", j, actual, requestToString(file->latsOp), lTime->tm_mday, lTime->tm_mon+1, lTime->tm_year+1900, lTime->tm_hour, lTime->tm_min, lTime->tm_sec, cTime->tm_mday, cTime->tm_mon+1, cTime->tm_hour, cTime->tm_min, cTime->tm_sec, file->path);
-                fprintf(stdout, "        %d %s --- %s %d/%d/%d %d:%d:%d --- %d/%d %d:%d:%d --- %s\n", j, actual, requestToString(file->latsOp), lTime->tm_mday, lTime->tm_mon+1, lTime->tm_year+1900, lTime->tm_hour, lTime->tm_min, lTime->tm_sec, cTime->tm_mday, cTime->tm_mon+1, cTime->tm_hour, cTime->tm_min, cTime->tm_sec, file->path);
+                appendOnLog(ServerLog,"        %d %s --- %s %d/%d/%d %d:%d:%d --- %d/%d %d:%d:%d --- %s\n", j, actual, requestToString(file->latsOp), lTime.tm_mday, lTime.tm_mon+1, lTime.tm_year+1900, lTime.tm_hour, lTime.tm_min, lTime.tm_sec, cTime.tm_mday, cTime.tm_mon+1, cTime.tm_hour, cTime.tm_min, cTime.tm_sec, file->path);
+                fprintf(stdout, "        %d %s --- %s %d/%d/%d %d:%d:%d --- %d/%d %d:%d:%d --- %s\n", j, actual, requestToString(file->latsOp), lTime.tm_mday, lTime.tm_mon+1, lTime.tm_year+1900, lTime.tm_hour, lTime.tm_min, lTime.tm_sec, cTime.tm_mday, cTime.tm_mon+1, cTime.tm_hour, cTime.tm_min, cTime.tm_sec, file->path);
                 free(actual);
             }
         }
@@ -548,36 +551,65 @@ void printServerStatus(){
     fprintf(stdout, "--------------------------------------------------------------------------------------------------\n");
 }
 
+int tSpecCmp(struct timespec time1, struct timespec time0, int mode) {
+    return (time1.tv_sec == time0.tv_sec)? time1.tv_nsec > time0.tv_nsec : time1.tv_sec > time0.tv_sec;
+}
 
-serverFile* replaceFile(serverFile* file1, serverFile* file2, cachePolicy policy){
+serverFile* replaceFile(serverFile* file1, serverFile* file2){
     if(file1 == NULL && file2 == NULL) return NULL;
     if(file1 == NULL) return file2;
     if(file2 == NULL) return file1;
-    switch (policy) {
-        case FIFO: return tSpecCmp(file1->creationTime, file2->creationTime,>)? file2 : file1;
-        case LIFO: return tSpecCmp(file1->creationTime, file2->creationTime,>)? file1 : file2;
-        case LRU:  return tSpecCmp(file1->lastOpTime, file2->lastOpTime,>)? file2 : file1;
-        case MRU:  return tSpecCmp(file1->lastOpTime, file2->lastOpTime,>)? file1 : file2;
+    /*
+     * struct tm* cTime1 = gmtime(&(file1->creationTime.tv_sec));
+     * struct tm* cTime2 = gmtime(&(file2->creationTime.tv_sec));
+     * printf("file1: %s %d:%d:%d,file2: %s %d:%d:%d, %ld\n", file1->path, cTime1->tm_hour, cTime1->tm_min, cTime1->tm_sec, file2->path, cTime2->tm_hour, cTime2->tm_min, cTime2->tm_sec, file1->creationTime.tv_sec-file2->creationTime.tv_sec);
+    */
+    switch (ServerConfig.policy) {
+        case FIFO:
+            if (tSpecCmp(file1->creationTime, file2->creationTime)) {
+                return file1;
+            } else {
+                return file2;
+            }
+        case LIFO:
+            if (tSpecCmp(file1->creationTime, file2->creationTime)) {
+                return file2;
+            } else {
+                return file1;
+            }
+        case LRU:
+            if (tSpecCmp(file1->lastOpTime, file2->lastOpTime)) {
+                return file1;
+            } else {
+                return file2;
+            }
+        case MRU:
+            if (tSpecCmp(file1->lastOpTime, file2->lastOpTime)) {
+                return file2;
+            } else {
+                return file1;
+            }
         default: return NULL;
     }
 }
 
-serverFile * icl_hash_toReplace(icl_hash_t *ht, cachePolicy policy, int workerId){
+serverFile * icl_hash_toReplace(icl_hash_t *ht, int workerId){
     int i;
     icl_entry_t *bucket, *curr;
     serverFile *file1, *file2 = NULL, *exFile2 = NULL;
     for (i = 0; i<ht->nbuckets; i++) {
         bucket = ht->buckets[i];
         for(curr = bucket; curr!=NULL; curr=curr->next){
-            file1 = (serverFile*)curr->data;
-            if(file1->toDelete != 0 || file1->lockFd != -1 || file1->latsOp==O_CREAT_LOCK || file1->latsOp==O_CREAT) continue;
-            if(file2 && (file2->lockFd != -1 || file2->latsOp==O_CREAT_LOCK || file2->latsOp==O_CREAT)) continue;
+            file1= (serverFile*) curr->data;
+            if(!file1 || file1->toDelete != 0 || file1->lockFd != -1 || file1->latsOp==O_CREAT_LOCK || file1->latsOp==O_CREAT || file1->latsOp==O_WRITETOCLOSE) continue;
             fileReadersIncrement(file1, workerId);
             if(file2 && file1!=file2) fileReadersIncrement(file2, workerId);
             exFile2 = file2;
-            file2 = replaceFile(file1, file2, policy);
+            file2 = replaceFile(file1, file2);
             fileReadersDecrement(file1, workerId);
-            if(file2 && exFile2 && (file2 != exFile2 || file1!=file2)) fileReadersDecrement(exFile2, workerId);
+            if(file2 && exFile2 && (file2 != exFile2 || file1!=file2)) {
+                fileReadersDecrement(exFile2, workerId);
+            }
         }
     }
     return file2;
@@ -684,11 +716,10 @@ int icl_hash_toDelete(icl_hash_t * ht, List expelled, int fd, int workerId){
     if(!ht) return 0;
     for(i=0; i<ht->nbuckets; i++) {
         bucket = ht->buckets[i];
-        for(curr=bucket; curr!=NULL; ) {
+        for(curr=bucket; curr!=NULL; curr = curr->next) {
             file = ((serverFile*)curr->data);
             if(curr->key){
-                if(file->writers>0) {
-                    curr = curr->next;
+                if(file->writers>0 || file->latsOp==O_CREAT_LOCK || file->latsOp==O_CREAT) {
                     continue;
                 }
                 if(file->toDelete==fd){
@@ -698,7 +729,6 @@ int icl_hash_toDelete(icl_hash_t * ht, List expelled, int fd, int workerId){
                     fileWritersDecrement(file, workerId);
                 }
             }
-            curr = curr->next;
         }
     }
 

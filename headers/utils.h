@@ -40,28 +40,11 @@
 
 static const char* sizes[] = {"GB", "MB", "KB", "B"};
 
-
-# define tSpecCmp(a, b, CMP)                                                  \
-   (((a).tv_sec == (b).tv_sec) ?                                             \
-   ((a).tv_nsec CMP (b).tv_nsec) :                                          \
-   ((a).tv_sec CMP (b).tv_sec))
-
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wvariadic-macros"
 /* ES 5 LEZIONI */
-#define SYSCALL_EXITFREE(name, toFree,r, sc, str, ...)	    \
-    if ((r=sc) == -1) {				            \
-	int errno_copy = errno;			            \
-        if(strcmp(str, "")!=0 &&                \
-        strcmp(str, " ")!=0){                   \
-            perror(#name);                      \
-            print_error(str, __VA_ARGS__);      \
-        }                                       \
-    free(toFree),                               \
-	exit(errno_copy);			                \
-    }                                           \
 
 #define SYSCALL_RETURN(name, sc, str, ...)	    \
     if (sc == -1) {				                \
@@ -207,5 +190,9 @@ static inline char* calculateSize(size_t size){
     }
     strcpy(result, "0 B");
     return result;
+
+
 }
+
+
 #endif /*STORAGESERVER_UTILS_H*/

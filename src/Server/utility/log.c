@@ -83,10 +83,13 @@ int closeLogStr(logFile log){
     int scRes;
     if(log == NULL) return -1;
     fprintf(log->file, "-------------------- END LOG --------------------\n");
-    SYSCALL_ASSIGN(fclose, scRes, fclose(log->file), "ERROR - Log File Close, errno = %d\n", errno);
+    scRes = fclose(log->file);
     pthread_mutex_destroy(&(log->mutex));
     free(log);
-    if(scRes==-1) return -1;
+    if(scRes==-1) {
+        fprintf(stderr, "ERROR - Log File Close, errno = %d\n", errno);
+        return -1;
+    }
     return 0;
 }
 

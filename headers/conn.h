@@ -34,7 +34,8 @@ typedef enum{
     O_DATA = 256,
     O_SEND = 512,
     O_READN = 1024,
-    O_NULL = 2048
+    O_NULL = 2048,
+    O_WRITETOCLOSE = 4096
 } fileFlags;
 
 typedef enum {
@@ -65,6 +66,7 @@ static inline char* requestToString(fileFlags request){
         case O_DATA: return "DATA";
         case O_SEND: return "SEND";
         case O_READN: return "READ N FILES";
+        case O_WRITETOCLOSE: return "WRITTEN TO CLOSE";
         case O_NULL: return "NULL";
     }
     return "ERROR";

@@ -486,7 +486,7 @@ void commandHandler(List* commandList){
     }
 
     msleep(timeToSleep);
-    SYSCALL_ASSIGN(closeConnection, scRes, closeConnection(socket), (pFlag) ? "ERROR closing connection to %s, errno = %d":"", socket, errno);
+    scRes = closeConnection(socket);
     if(scRes==-1) exit(errno);
     free(socket);
     return;

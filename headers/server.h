@@ -297,7 +297,7 @@ int isLocked(serverFile* file, long fd);
  * @param policy -- the policy to be used for the comparison
  * @returns file1 or file2 to replace on success, NULL on failure.
  */
-serverFile* replaceFile(serverFile* file1, serverFile* file2, cachePolicy policy);
+serverFile* replaceFile(serverFile* file1, serverFile* file2);
 
 /**
  * @func  Returns a replaceable file
@@ -307,7 +307,7 @@ serverFile* replaceFile(serverFile* file1, serverFile* file2, cachePolicy policy
  * @returns file to replace on success, NULL on failure.
  */
 serverFile
-* icl_hash_toReplace(icl_hash_t *ht, cachePolicy policy, int workerId);
+* icl_hash_toReplace(icl_hash_t *ht, int workerId);
 
 /**
  * @func  Returns a string with the policy in "policy"
