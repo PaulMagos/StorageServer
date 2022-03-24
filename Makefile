@@ -1,6 +1,6 @@
 SHELL = /bin/sh
 CC = gcc
-INCLUDES = -I ./headers
+INCLUDES = -I currSet/headers
 CFLAGS += -Wall -Werror -Wextra -pedantic -g $(INCLUDES)
 
 
@@ -16,8 +16,8 @@ TARGETS = $(CLIENTOUTPUT) $(SERVEROUTPUT)
 
 all : genTexts $(TARGETS)
 	make clean
-	chmod +x ./scripts/man.sh
-	./scripts/man.sh
+	#chmod +x ./scripts/man.sh
+	#./scripts/man.sh
 
 # ---------------------------- DATA STRUCTURES ----------------------------- #
 DATASRC = $(wildcard $(DATASTRUCTURES)/*.c)
@@ -50,7 +50,7 @@ MULTIOBJ = $(patsubst $(SERVERDIR)/multithread/%.c, $(SERVERDIR)/multithread/%.o
 LOGOBJ = $(patsubst $(SERVERDIR)/utility/%.c, $(SERVERDIR)/utility/%.o, $(LOGSRC))
 
 $(SERVEROUTPUT): $(SERVEROBJ) $(DATAOBJ) $(MULTIOBJ) $(LOGOBJ)
-	$(CC) $(SERVEROBJ) $(DATAOBJ) $(MULTIOBJ) $(LOGOBJ) -o $@
+	$(CC) -pthread $(SERVEROBJ) $(DATAOBJ) $(MULTIOBJ) $(LOGOBJ) -o $@
 
 $(SERVERDIR)/%.o: $(SERVERDIR)/%.c
 	$(CC) $(CFLAGS) -c $< -o $@

@@ -21,12 +21,7 @@ typedef enum {
 } Type_;
 
 typedef list* List;
-/**
- *   @func returnNewList
- *   @effects -> allocates space
- *   @return -> returns NULL if there's a failure, an allocated List otherwise
- */
-List returnNewList();
+
 /**
  *   @func  createList
  *   @param myList -> variable List to allocate
@@ -34,13 +29,6 @@ List returnNewList();
  *   @return -> returns -1 if there's a failure, 0 otherwise
  */
 int createList(List* myList);
-
-/**
- *   @func  printList
- *   @param head -> List head
- *   @effects -> Prints the list from head till curr->next == NULL
- */
-void printList(Node head);
 
 /**
  *   @func  pushTop
@@ -78,16 +66,6 @@ int pullTop(List* myList, char** index, void** data);
  *   @return -> returns -1 if there's a failure, 0 otherwise
  */
 int removeByInt(List* myList, void* data);
-/**
- *   @func  pullBottom
- *   @param myList -> List
- *   @param index -> index for the node index
- *   @param data -> data for the node data
- *   @effects -> Pulls a node with index and data from the bottom of the List myList
- *   @return -> returns -1 if there's a failure, 0 otherwise
- *
-int pullBottom(List* myList, char** index, void** data);*/
-
 
 /**
  *   @func  deleteList

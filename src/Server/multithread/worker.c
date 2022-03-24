@@ -493,7 +493,7 @@ void OpenFile(int fd_client, int workerId, message* message1){
                            "ERROR - ServerStorage lock release failure, errno = %d", errno)
             if(ServerStorage->stdOutput) printf("[Thread %d]: Server UnLock\n", workerId);
 
-            if(isLocked(File, fd_client)==1 || File->latsOp==O_CREAT){
+            if(isLocked(File, fd_client)==1 || File->latsOp==O_CREAT || File->latsOp==O_CREAT_LOCK || File->toDelete!=0){
                 errno = EBUSY;
                 message1->additional = errno;
                 message1->feedback = ERROR;

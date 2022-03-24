@@ -5,17 +5,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-List returnNewList(){
-    List myList =  malloc (sizeof (list));
-    if(!(myList)) {
-        /* ERRORE DOVUTO ALL'ALLOCAZIONE NON ANDATA A BUON FINE */
-        errno = ENOMEM;
-        return NULL;
-    }
-    return myList;
-}
-
-
 int createList(List* myList){
     *myList =  calloc( 1, sizeof (list));
     if(!(*myList)) {
@@ -25,12 +14,6 @@ int createList(List* myList){
     }
     (*myList)->head=NULL;
     return 0;
-}
-
-void printList(Node head){
-    if(head == NULL) return;
-    fprintf(stderr, "%s, %s\n", head->index, (char*)head->arg.data);
-    printList(head->next);
 }
 
 int pushTop(List* myList, char* index, void* data){
@@ -157,60 +140,6 @@ int removeByInt(List* myList, void* data){
     freeNode(tmp);
     return 0;
 }
-
-Node getHead(List* myList){
-    node* tmp;
-    if(!(*myList) || (*myList)->len < 1){
-        /* ERRORE DOVUTO AD ARGOMENTO INVALIDO */
-        errno = EINVAL;
-        return NULL;
-    }
-
-    tmp = (*myList)->head;
-
-    (*myList)->len--;
-    if((*myList)->len == 0){
-        (*myList)->head = NULL;
-    }else {
-        (*myList)->head = (*myList)->head->next;
-    }
-
-
-    return tmp;
-}
-/*
-int pullBottom(List* myList, char** index, void** data){
-    if(!(*myList) || (*myList)->len < 1){
-         ERRORE DOVUTO AD ARGOMENTO INVALIDO
-        errno = EINVAL;
-        return -1;
-    }
-
-    node* tmp = (*myList)->tail;
-
-    (*myList)->len--;
-    if((*myList)->len == 0){
-        (*myList)->head = NULL;
-        (*myList)->tail = NULL;
-    }else {
-        (*myList)->tail = (*myList)->tail->prev;
-        (*myList)->tail->next = NULL;
-    }
-
-
-    if(tmp->index!= NULL) {
-        *index = malloc(strlen(tmp->index)+1);
-        strncpy(*index, tmp->index, strlen(tmp->index)+1);
-        *data = malloc()
-        if(tmp->data!=NULL){
-            *data = malloc(strlen(tmp->data)+1);
-            memcpy(*data, tmp->data, strlen(tmp->data)+1);
-        }
-    }
-
-    freeNode(tmp);
-    return 0;
-}*/
 
 void freeNodes(Node head){
     if((head) == NULL) return;

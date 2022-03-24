@@ -9,30 +9,32 @@ int main(int argc,char* argv[]){
     int del;
 
     /* Command list creation */
-    SYSCALL_EXIT(createList,
+    SYSCALL_ASSIGN(createList,
                  del,
                  createList(&commandList),
                  "Error during list creation, errno = %d\n",
                  errno);
     atexit(freeList);
     /* Command list parsing */
-    SYSCALL_EXIT(getCmdList,
+    SYSCALL_ASSIGN(getCmdList,
                  del,
                  getCmdList(&commandList, argc, argv),
                  "Error during list parsing, errno = %d\n",
                  errno);
     /* Free Command List
-    SYSCALL_EXIT(deleteList,
+    SYSCALL_ASSIGN(deleteList,
                  del,
                  deleteList(&commandList),
                  "Errore during list free, errno = %d\n",
                  errno);*/
+    if(del==-1) return del;
     del = 0;
     return del;
 }
 
 void freeList(){
     int del;
-    SYSCALL_EXIT(deleteList, del, deleteList(&commandList),
+    SYSCALL_ASSIGN(deleteList, del, deleteList(&commandList),
                  "Errore during list free, errno = %d\n", errno);
+    exit(errno);
 }

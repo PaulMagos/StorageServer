@@ -56,7 +56,8 @@ int openConnection(const char* sockname, int msec, const struct timespec abstime
     }
     memset(&socketAdd, '0', sizeof(socketAdd));
 
-    SYSCALL_EXIT(lengthCheck, scRes, lengthCheck(sockname), "ERROR - socket name too long, errno = %d\n", errno);
+    SYSCALL_ASSIGN(lengthCheck, scRes, lengthCheck(sockname), "ERROR - socket name too long, errno = %d\n", errno);
+    if(scRes==-1) exit(errno);
     strncpy(socketAdd.sun_path, sockname, UNIX_PATH_MAX);
     socketAdd.sun_family = AF_UNIX;
 
@@ -107,7 +108,8 @@ int closeConnection(const char* sockname){
         return -1;
     }
     sName = NULL;
-    SYSCALL_EXIT(close, scRes, close(fd_socket), "ERROR - closing connection to %s, errno = %d\n", sockname, errno);
+    SYSCALL_ASSIGN(close, scRes, close(fd_socket), "ERROR - closing connection to %s, errno = %d\n", sockname, errno);
+    if(scRes==-1) return -1;
     fd_socket = -1;
     return 0;
 }
@@ -648,7 +650,7 @@ int saveIntoDir(const char* dir, int numOfFiles){
             return -1;
         }
         /* FILE RECEIVED */
-        SYSCALL_EXIT(readMessage, scRes, readMessage(fd_socket, &msg),
+        SYSCALL_ASSIGN(readMessage, scRes, readMessage(fd_socket, &msg),
                      "ERROR OpenFile - Sending message to server, errno = %d\n", errno);
         if(scRes==-1){
             return -1;

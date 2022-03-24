@@ -51,17 +51,6 @@ static const char* sizes[] = {"GB", "MB", "KB", "B"};
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wvariadic-macros"
 /* ES 5 LEZIONI */
-#define SYSCALL_EXIT(name, r, sc, str, ...)	    \
-    if ((r=sc) == -1) {				            \
-	int errno_copy = errno;			            \
-        if(strcmp(str, "")!=0 &&                \
-        strcmp(str, " ")!=0){                   \
-            perror(#name);                      \
-            print_error(str, __VA_ARGS__);      \
-        }                                       \
-	exit(errno_copy);			                \
-    }                                           \
-
 #define SYSCALL_EXITFREE(name, toFree,r, sc, str, ...)	    \
     if ((r=sc) == -1) {				            \
 	int errno_copy = errno;			            \

@@ -215,7 +215,7 @@ int enqueue(threadPool* tPool, void (*func)(void*), void* arguments){
 
     tPool->taskN++;
 
-    SYSCALL_EXIT(enqueue_pthread_cond_broadcast, res, pthread_cond_broadcast(&(tPool->work_cond)),
+    SYSCALL_ASSIGN(enqueue_pthread_cond_broadcast, res, pthread_cond_broadcast(&(tPool->work_cond)),
                  "ERROR : pthread_cond_broadcast failed, errno = %d", errno);
     SYSCALL_RETURN(enqueue_mutex_unlock, pthread_mutex_unlock(&(tPool->lock)),
                    "ERROR : pthread_mutex_unlock failed, errno = %d", errno);

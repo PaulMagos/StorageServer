@@ -77,7 +77,7 @@ int getCmdList(List* opList, int argc, char* argv[]){
                     errno = EINVAL;
                     return -1;
                 }else {
-                    SYSCALL_EXIT(pushBottom, test, pushBottom(&(*opList), charToString(option),optarg),
+                    SYSCALL_BREAK(pushBottom, test, pushBottom(&(*opList), charToString(option),optarg),
                                  "Error List Push, errno = %d\n", errno);
                     fArg = optarg;
                     ((fFlag) = true);
@@ -98,7 +98,7 @@ int getCmdList(List* opList, int argc, char* argv[]){
                         rNum = argv[optind];
                     }
                 }
-                SYSCALL_EXIT(pushBottom, test, pushBottom(&(*opList), charToString(option),rNum),
+                SYSCALL_BREAK(pushBottom, test, pushBottom(&(*opList), charToString(option),rNum),
                              "Error List Push, errno = %d\n", errno);
                 break;
             }
@@ -113,24 +113,26 @@ int getCmdList(List* opList, int argc, char* argv[]){
                 return -1;
             }
             default:{
-                SYSCALL_EXIT(pushBottom, test, pushBottom(&(*opList), charToString(option),optarg),
+                SYSCALL_BREAK(pushBottom, test, pushBottom(&(*opList), charToString(option),optarg),
                              "Error List Push, errno = %d\n", errno);
                 break;
             };
         }
+        if(test==-1) exit(errno);
 
     }
     if(hFlag) Helper();
     if(timeArg!=NULL){
-        SYSCALL_EXIT(StringToLong, timeToSleep, StringToLong(timeArg), (pFlag)?
+        SYSCALL_ASSIGN(StringToLong, timeToSleep, StringToLong(timeArg), (pFlag)?
                      "ERROR - Time Char '%s' to Long Conversion gone wrong, errno=%d\n":"", timeArg, errno);
         if(timeToSleep==INT_MAX) timeToSleep=0;
+        if(timeToSleep==-1) exit(errno);
         if(pFlag) fprintf(stdout, "SUCCESS - time = %lu\n", timeToSleep);
     }
     if(fFlag){
         /* Provo a collegarmi per 10 secondi */
         struct timespec absTime = {10, 0};
-        SYSCALL_EXIT(openConnection,
+        SYSCALL_ASSIGN(openConnection,
                      test,
                      openConnection(fArg,
                                     1000,
@@ -138,6 +140,7 @@ int getCmdList(List* opList, int argc, char* argv[]){
                      (pFlag)?"Connection error to socket %s, errno %d\n":"",
                      fArg,
                      errno);
+        if(test==-1) exit(errno);
         if(pFlag) fprintf(stdout, "SUCCESS - Connected to %s\n", fArg);
         msleep(timeToSleep);
     }
@@ -169,7 +172,7 @@ void commandHandler(List* commandList){
     long numOfFilesToWrite = INT_MAX;
     long numOfFilesToRead = INT_MAX;
 
-    /* Response for SYSCALL_EXIT */
+    /* Response for SYSCALL */
     int scRes = 0;
 
     /* Command and argument for each element of opList */
@@ -238,14 +241,14 @@ void commandHandler(List* commandList){
                 }
                 if(S_ISDIR(dir_Details.st_mode)){
                     if((temporary = strtok_r(NULL, ",", &rest)) != NULL)
-                        SYSCALL_EXIT(StringToLong, numOfFilesToWrite, StringToLong(temporary), (pFlag)?
+                        SYSCALL_ASSIGN(StringToLong, numOfFilesToWrite, StringToLong(temporary), (pFlag)?
                                      "Char '%s' to Long Conversion gone wrong, errno=%d\n":"", temporary, errno);
                     if(pFlag) fprintf(stdout, "Accessing Folder %s : \n", token);
                     scRes = recWrite(token, expelledDir, numOfFilesToWrite, 0);
                 } else{
                     fprintf(stderr, "'%s' -> Not a valid DIR\n",token);
                 }
-                if(scRes == -1 || (errno == 9 || errno == EPIPE)){
+                if(scRes == -1 || (errno == 9 || errno == EPIPE) || numOfFilesToWrite==-1){
                     if(socket) free(socket);
                     if(argument) free(argument);
                     exit(errno);
@@ -483,7 +486,8 @@ void commandHandler(List* commandList){
     }
 
     msleep(timeToSleep);
-    SYSCALL_EXIT(closeConnection, scRes, closeConnection(socket), (pFlag) ? "ERROR closing connection to %s, errno = %d":"", socket, errno);
+    SYSCALL_ASSIGN(closeConnection, scRes, closeConnection(socket), (pFlag) ? "ERROR closing connection to %s, errno = %d":"", socket, errno);
+    if(scRes==-1) exit(errno);
     free(socket);
     return;
 }

@@ -109,12 +109,15 @@ int main(int argc, char* argv[]){
     SocketAddress.sun_family = AF_UNIX;
 
     /* Socket binding and ready to listen */
-    SYSCALL_EXIT(socket, fd_server_socket, socket(AF_UNIX, SOCK_STREAM, 0),
+    SYSCALL_ASSIGN(socket, fd_server_socket, socket(AF_UNIX, SOCK_STREAM, 0),
                  "ERROR - Socket set failure, errno = %d\n", errno)
-    SYSCALL_EXIT(bind, res, bind(fd_server_socket, (struct sockaddr*) &SocketAddress, sizeof(SocketAddress)),
+    if(fd_server_socket == -1) exit(errno);
+    SYSCALL_ASSIGN(bind, res, bind(fd_server_socket, (struct sockaddr*) &SocketAddress, sizeof(SocketAddress)),
                  "ERROR - Socket bind failure, errno = %d\n", errno)
-    SYSCALL_EXIT(listen, res, listen(fd_server_socket, SOMAXCONN),
+    if(res==-1) exit(errno);
+    SYSCALL_ASSIGN(listen, res, listen(fd_server_socket, SOMAXCONN),
                  "ERROR - Socket listen failure, errno = %d\n", errno)
+    if(res==-1) exit(errno);
 
     atexit(serverDestroy);
 
@@ -135,7 +138,8 @@ int main(int argc, char* argv[]){
     /* ----------------------------------- MainThreadFunc ------------------------------------ */
     while (ServerStorage->status == E){
         readySet = currSet;
-        SYSCALL_EXIT(select, res, select(max_fd+1, &readySet,NULL, NULL, NULL), "ERROR - Select failed, errno = %d", errno);
+        SYSCALL_ASSIGN(select, res, select(max_fd+1, &readySet,NULL, NULL, NULL), "ERROR - Select failed, errno = %d", errno);
+        if(res==-1) exit(errno);
         for(i = 0; i <= max_fd; i++){
             if(!FD_ISSET(i, &readySet)) continue;
             if(i==fd_server_socket && ServerStorage->status==E && max_fd<1000){
@@ -449,7 +453,7 @@ void serverDestroy(){
     printServerStatus();
     closeLogStr(ServerLog);
     if(pthread_mutex_destroy(&(ServerStorage->lock)) != 0){
-        SYSCALL_EXIT(ServerInit_hashDestroy, res, icl_hash_destroy(ServerStorage->filesTable, free, freeFile),
+        SYSCALL_ASSIGN(ServerInit_hashDestroy, res, icl_hash_destroy(ServerStorage->filesTable, free, freeFile),
                      "ERROR - Icl_Hash destroy fault, errno = %d", errno);
         free(ServerStorage);
         exit(0);
@@ -462,7 +466,7 @@ void serverDestroy(){
 void printServerStatus(){
     int i, j;
     List toDel;
-    struct tm* cTime;
+    struct tm* cTime, *lTime;
     serverFile* file;
     icl_entry_t *bucket, *curr, *tmp;
     char* max, *index,* actual,* expelled,* deletedBytes,* serverMaxBytes;
@@ -522,9 +526,9 @@ void printServerStatus(){
     free(deletedBytes);
     if(ServerStorage->actualFilesNumber>0){
         appendOnLog(ServerLog,"        Files :\n");
-        appendOnLog(ServerLog,"        Size --- Last Operation & Time --- Path\n");
+        appendOnLog(ServerLog,"        Size --- Last Operation & Time --- Create Time --- Path\n");
         fprintf(stdout, "        Files :\n");
-        fprintf(stdout, "        Size --- Last Operation & Time --- Path\n");
+        fprintf(stdout, "        Size --- Last Operation & Time --- Create Time --- Path\n");
         j = 0;
         for (i = 0; i<ServerStorage->filesTable->nbuckets; i++) {
             bucket = ServerStorage->filesTable->buckets[i];
@@ -532,10 +536,11 @@ void printServerStatus(){
                 j++;
                 file = (serverFile*)curr->data;
                 actual = calculateSize((int)file->size);
-                cTime = gmtime(&(file->lastOpTime.tv_sec));
+                cTime = gmtime(&(file->creationTime.tv_sec));
+                lTime = gmtime(&(file->lastOpTime.tv_sec));
                 /* if(file->latsOp==O_CREAT_LOCK||file->latsOp==O_CREAT ) continue; */
-                appendOnLog(ServerLog,"        %d %s --- %s %d/%d/%d %d:%d:%d --- %s\n", j, actual, requestToString(file->latsOp), cTime->tm_mday, cTime->tm_mon+1, cTime->tm_year+1900, cTime->tm_hour, cTime->tm_min, cTime->tm_sec, file->path);
-                fprintf(stdout, "        %d %s --- %s %d/%d/%d %d:%d:%d --- %s\n",  j, actual, requestToString(file->latsOp), cTime->tm_mday, cTime->tm_mon+1, cTime->tm_year+1900, cTime->tm_hour, cTime->tm_min, cTime->tm_sec, file->path);
+                appendOnLog(ServerLog,"        %d %s --- %s %d/%d/%d %d:%d:%d --- %d/%d %d:%d:%d --- %s\n", j, actual, requestToString(file->latsOp), lTime->tm_mday, lTime->tm_mon+1, lTime->tm_year+1900, lTime->tm_hour, lTime->tm_min, lTime->tm_sec, cTime->tm_mday, cTime->tm_mon+1, cTime->tm_hour, cTime->tm_min, cTime->tm_sec, file->path);
+                fprintf(stdout, "        %d %s --- %s %d/%d/%d %d:%d:%d --- %d/%d %d:%d:%d --- %s\n", j, actual, requestToString(file->latsOp), lTime->tm_mday, lTime->tm_mon+1, lTime->tm_year+1900, lTime->tm_hour, lTime->tm_min, lTime->tm_sec, cTime->tm_mday, cTime->tm_mon+1, cTime->tm_hour, cTime->tm_min, cTime->tm_sec, file->path);
                 free(actual);
             }
         }
