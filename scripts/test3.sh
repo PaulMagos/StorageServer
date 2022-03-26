@@ -13,7 +13,7 @@ WRITEFILESDIR=${FORLDER}/write
 
 echo
 echo "AVVIO SERVER"
-${SERVER} ./configs/config${I}.txt ./log/test${I} &
+${MEMCHECK} ${SERVER} ./configs/config${I}.txt ./log/test${I} &
 SERVER_PID=$!
 THIS_PID=$$
 
@@ -22,7 +22,7 @@ endTime=$(($SECONDS+30))
 SEC=$(($endTime-$SECONDS))
 while (( $SEC>0 ))
 do
-  J=$(($RANDOM%10))+1
+  J=$(($RANDOM%10+1))
   # Scrivo 5 file dalla cartella J, J prende un valore da 1 a 10, quando arriva ad un valore > 10 utilizzo il modulo 10
   # per evitare che cerchi cartelle inesistenti
   ${CLIENT} -f ${SOCKET} "${TIME}" -w "${WRITEFILESDIR}"/dir${J} -D ${EXPELLED} &
@@ -45,7 +45,7 @@ do
   # Scrivo 1 file lo leggo, richiedo la lock, rilascio la lock, lo cancello
   ${CLIENT} -f ${SOCKET} "${TIME}" -W ${WRITEFILESDIR}/dir10/file102.txt -r ${WRITEFILESDIR}/dir10/file102.txt -l ${WRITEFILESDIR}/dir10/file102.txt -u ${WRITEFILESDIR}/dir10/file102.txt -c ${WRITEFILESDIR}/dir10/file102.txt &
   # Richiedo la lettura di 10 file e setto la directory per salvarli
-  ${CLIENT} -f ${SOCKET} "${TIME}" -R 10 -d ${SAVEDIR} &
+  ${CLIENT} -f ${SOCKET} "${TIME}" -R 10  -d ${SAVEDIR} &
   ${CLIENT} -f ${SOCKET} "${TIME}" -R 10 -d ${SAVEDIR} &
   ${CLIENT} -f ${SOCKET} "${TIME}" -R 10 -d ${SAVEDIR} &
   ${CLIENT} -f ${SOCKET} "${TIME}" -R 10 -d ${SAVEDIR}
