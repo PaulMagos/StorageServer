@@ -121,8 +121,7 @@ int main(int argc, char* argv[]){
     }
     res = bind(fd_server_socket, (struct sockaddr*) &SocketAddress, sizeof(SocketAddress));
     if(res==-1) {
-        fprintf(stderr,  "ERROR - Socket bind failure, errno = %d\n", errno);
-        msleep(2000);
+        fprintf(stderr,  "ERROR - Socket %s bind failure, errno = %d\n", ServerConfig.serverSocketName, errno);
         exit(errno);
     }
     res = listen(fd_server_socket, SOMAXCONN);
@@ -402,7 +401,7 @@ static int serverConfigParser(char* path){
     }
 
     if(socketSet == 0){
-        strncpy(ServerConfig.serverSocketName, "../../tmp/cs_socket", UNIX_PATH_MAX);
+        strncpy(ServerConfig.serverSocketName, "./tmp/cs_socket", UNIX_PATH_MAX);
     }
     if(threads == 0 || max_file == 0 || max_bytes == 0){
         fprintf(stderr, "ERROR - Config file wrong parsing");
@@ -674,7 +673,7 @@ void defaultConfig(serverConfig* config){
     config->maxByte = 15728640;
     config->threadNumber = 15;
     config->policy = FIFO;
-    strncpy(config->serverSocketName, "../../tmp/cs_socket", UNIX_PATH_MAX);
+    strncpy(config->serverSocketName, "./tmp/cs_socket", UNIX_PATH_MAX);
 }
 
 void newClient(){
