@@ -7,13 +7,20 @@
 void createLog(char* dir, logFile* log){
     char* time;
     char* path;
-    int pathLen;
+    int pathLen, slash = 0;
     char* directory;
-
     if(dir == NULL) {
-        directory = "../log";
+        directory = malloc(strlen("./log/logs/")+1);
+        memset(directory, 0, strlen("./log/logs/")+1);
+        strncpy(directory, "./log/logs/", strlen("./log/logs/")+1);
     }
-    else directory = dir;
+    else {
+        if(dir[strlen(dir)-1] != '/') slash = 1;
+        directory = malloc(strlen(dir)+1+slash);
+        memset(directory, 0, strlen(dir)+1+slash);
+        strncpy(directory, dir, strlen(dir)+1);
+        if(slash) directory[strlen(dir)+1]='/';
+    }
     if(*log == NULL) *log = malloc(sizeof(logF));
     else return;
     if(!*log){
@@ -21,14 +28,15 @@ void createLog(char* dir, logFile* log){
         exit(EXIT_FAILURE);
     }
 
+    mkpath(directory, S_IRWXU);
 
     getTime(&time,0);
     if(time == NULL) return;
-    pathLen = strlen(directory) + strlen(time) + strlen(".txt") + 2;
+    pathLen = strlen(directory) + strlen(time) + strlen(".txt") + 1 + slash;
     path = malloc(pathLen);
     if(!path) exit(ENOMEM);
-    snprintf(path, pathLen, "%s%c%s.txt", directory, ((directory[strlen(directory)-1] == '/')? 0:'/'),time);
-
+    snprintf(path, pathLen, "%s%s.txt", directory, time);
+    free(directory);
 
     if(((*log)->file = fopen(path, "w")) == NULL){
         free((*log));

@@ -12,6 +12,8 @@ clientList* fd_clients;
 pthread_t sigHandler_t;
 threadPool* threadPool1;
 
+int* sigHandler_Pipe;
+
 void serverDestroy();
 void newClient();
 void removeClient();
@@ -22,7 +24,7 @@ void printServerStatus();
 
 int main(int argc, char* argv[]){
     /* SYSCALL RESPONSE VARIABLE */
-    int res = 0, threadId, i, j, c, max_fd = 0, fd_server_socket, fd_client_socket = 0, cont, *sigHandler_Pipe;
+    int res = 0, threadId, i, j, c, max_fd = 0, fd_server_socket, fd_client_socket = 0, cont;
     struct sockaddr_un SocketAddress;
     /* SigPipe */
     struct sigaction act;
@@ -49,6 +51,7 @@ int main(int argc, char* argv[]){
     }
 
 
+    atexit(serverDestroy);
 
 
     /*
@@ -93,6 +96,7 @@ int main(int argc, char* argv[]){
      */
     threadPool1 = initThreadPool(ServerConfig.threadNumber);
     if(!threadPool1){
+        //free(sigHandler_Pipe);
         fprintf(stderr, "ERROR - threadPool init failure");
         exit(EXIT_FAILURE);
     }
@@ -111,21 +115,22 @@ int main(int argc, char* argv[]){
     /* Socket binding and ready to listen */
     fd_server_socket = socket(AF_UNIX, SOCK_STREAM, 0);
     if(fd_server_socket == -1) {
+        //free(sigHandler_Pipe);
         fprintf(stderr,  "ERROR - Socket set failure, errno = %d\n", errno);
         exit(errno);
     }
     res = bind(fd_server_socket, (struct sockaddr*) &SocketAddress, sizeof(SocketAddress));
     if(res==-1) {
         fprintf(stderr,  "ERROR - Socket bind failure, errno = %d\n", errno);
+        msleep(2000);
         exit(errno);
     }
     res = listen(fd_server_socket, SOMAXCONN);
     if(res==-1) {
+        //free(sigHandler_Pipe);
         fprintf(stderr,  "ERROR - Socket listen failure, errno = %d\n", errno);
         exit(errno);
     }
-
-    atexit(serverDestroy);
 
     /* ------------------------------------- Clients Fds ------------------------------------- */
     FD_ZERO(&currSet);
@@ -207,7 +212,7 @@ int main(int argc, char* argv[]){
 
     msleep(2000);
     /* serverDestroy(); */
-    free(sigHandler_Pipe);
+    //free(sigHandler_Pipe);
     if(res!=0) res = 0;
     return res;
 }
@@ -459,6 +464,7 @@ void serverDestroy(){
         printf("Error - StopThreadPool, %d", errno);
     }
     signalHandlerDestroy();
+    free(sigHandler_Pipe);
     printServerStatus();
     closeLogStr(ServerLog);
     if(pthread_mutex_destroy(&(ServerStorage->lock)) != 0){
