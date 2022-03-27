@@ -13,7 +13,7 @@ WRITEFILESDIR=${FORLDER}/write
 
 echo
 echo "AVVIO SERVER"
-${MEMCHECK} ${SERVER} ./configs/config${I}.txt ./log/test${I} &
+${SERVER} ./configs/config${I}.txt ./log/test${I} &
 SERVER_PID=$!
 THIS_PID=$$
 

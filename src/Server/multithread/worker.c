@@ -887,6 +887,7 @@ void SendNFiles(int fd_client, int workerId, message* message1){
                 fileReadersDecrement(file,workerId);
                 return;
             }
+            pushTop(&file->clients_fd, NULL, &fd_client);
             fileReadersDecrement(file, workerId);
         }
     }
@@ -1258,6 +1259,7 @@ int ExpelledHandler(int fd, int workerId, List expelled, int mode){
             appendOnLog(ServerLog, "[Thread %d]: EXPELL File %s, %d of %d files sent to client %d\n", workerId, index, num-expelled->len, num, fd);
         }
         else {
+            removeByInt(&File->clients_fd, &fd);
             fileWritersDecrement(File, workerId);
             lastOpUpdate(File, O_READ, workerId);
             if(ServerStorage->stdOutput) printf("[Thread %d]: READ File %d %s, %d of %d files sent to client %d\n", workerId, (int)File->size, index, num-expelled->len, num, fd);
