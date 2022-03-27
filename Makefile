@@ -14,10 +14,8 @@ OBJS = $(DATAOBJ) $(CLIENTOBJ) $(SERVEROBJ) $(APIOBJ) $(MULTIOBJ) $(LOGOBJ)
 
 TARGETS = $(CLIENTOUTPUT) $(SERVEROUTPUT)
 
-all :  $(TARGETS)
+all :  $(TARGETS) genTexts
 	make clean
-	chmod +x ./scripts/man.sh
-	./scripts/man.sh
 
 # ---------------------------- DATA STRUCTURES ----------------------------- #
 DATASRC = $(wildcard $(DATASTRUCTURES)/*.c)
@@ -109,3 +107,8 @@ genTexts:
 delTexts:
 	chmod +x ./scripts/delTexts &
 	./scripts/delTexts
+
+# Manual for the make
+makeMan:
+	chmod +x ./scripts/man.sh
+	./scripts/man.sh

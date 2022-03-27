@@ -1354,20 +1354,3 @@ int lastOpUpdate(serverFile* file, fileFlags op, int thread){
     if(fileWritersDecrement(file, thread)==-1) return -1;
     return 0;
 }
-
-wTask* taskCreate (int client_fd){
-    wTask *task;
-    if(client_fd == -1) return NULL;
-    task = (wTask*)malloc(sizeof(wTask));
-    task->pipeT = -1;
-    task->worker_id = -1;
-    task->client_fd = client_fd;
-    return task;
-}
-int taskDestroy(wTask* task){
-    if(task != NULL) {
-        free(task);
-        return 0;
-    }
-    return -1;
-}

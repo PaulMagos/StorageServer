@@ -74,7 +74,7 @@ typedef struct {
     pthread_cond_t condition;               /* Condition variable for access blocking */
 } serverFile;
 
-/* -------------------------------- WORKER WORKING STRUCT -------------------------------- */
+/* --------------------------------------- Server Struct --------------------------------------- */
 typedef struct{
     int stdOutput;                          /* Bool variable to see operations on the terminal */
     int connected;                          /* The number of clients connected now */
@@ -166,22 +166,6 @@ int stopThreadPool(threadPool* tPool, int hard_off);
  */
 void taskExecute (void* argument);
 
-/**
- *   @func  taskCreate
- *   @effects creates a variable that describes who has to be served
- *   @param client_fd -> client to serve
- *   @return returns the task in case everything goes right, NULL if an error occurs
-*/
-wTask* taskCreate (int client_fd);
-
-
-/**
- *   @func  taskDestroy
- *   @effects frees the task
- *   @param task -> task to destroy
- *   @return returns 0 in case everything goes right, -1 if an error occurs
-*/
-int taskDestroy(wTask* task);
 /**
  *   @func  CloseConnection
  *   @effects closes the connection to the client on fd_client, if needed unlocks all the files locked by fd_client
