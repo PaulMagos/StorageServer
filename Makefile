@@ -14,7 +14,7 @@ OBJS = $(DATAOBJ) $(CLIENTOBJ) $(SERVEROBJ) $(APIOBJ) $(MULTIOBJ) $(LOGOBJ)
 
 TARGETS = $(CLIENTOUTPUT) $(SERVEROUTPUT)
 
-all :  $(TARGETS) genTexts
+all : genTexts $(TARGETS)
 	make clean
 
 # ---------------------------- DATA STRUCTURES ----------------------------- #

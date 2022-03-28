@@ -685,6 +685,8 @@ void ReceiveFile(int fd_client, int workerId, message* message1){
         message1->feedback = ERROR;
         fileWritersDecrement(File, workerId);
         freeMessageContent(message1);
+        fileNumDecrement();
+        icl_hash_delete(ServerStorage->filesTable, File->path, free, freeFile);
         SYSCALL_RET(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
                        "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
         if(ServerStorage->stdOutput) printf("[Thread %d]: Server UnLock\n", workerId);
@@ -698,6 +700,7 @@ void ReceiveFile(int fd_client, int workerId, message* message1){
         message1->feedback = ERROR;
         fileWritersDecrement(File, workerId);
         freeMessageContent(message1);
+        fileNumDecrement();
         icl_hash_delete(ServerStorage->filesTable, File->path, free, freeFile);
         SYSCALL_RET(pthred_unlock, pthread_mutex_unlock(&(ServerStorage->lock)),
                        "ERROR - ServerStorage lock acquisition failure, errno = %d", errno)
@@ -747,6 +750,8 @@ void ReceiveFile(int fd_client, int workerId, message* message1){
         fileBytesDecrement(File->size);
         fileNumDecrement();
         fileWritersDecrement(File, workerId);
+        fileBytesDecrement(File->size);
+        fileNumDecrement();
         icl_hash_delete(ServerStorage->filesTable, File->path, free, freeFile);
         return;
     }
