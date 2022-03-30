@@ -19,7 +19,7 @@ void createLog(char* dir, logFile* log){
         directory = malloc(strlen(dir)+1+slash);
         memset(directory, 0, strlen(dir)+1+slash);
         strncpy(directory, dir, strlen(dir)+1);
-        if(slash) directory[strlen(dir)+1]='/';
+        if(slash) directory[strlen(dir)]='/';
     }
     if(*log == NULL) *log = malloc(sizeof(logF));
     else return;
