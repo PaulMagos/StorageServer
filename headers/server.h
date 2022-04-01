@@ -291,7 +291,7 @@ serverFile* replaceFile(serverFile* file1, serverFile* file2);
  * @returns file to replace on success, NULL on failure.
  */
 serverFile
-* icl_hash_toReplace(icl_hash_t *ht, int workerId);
+* icl_hash_toReplace(icl_hash_t *ht, int fd, int workerId);
 
 /**
  * @func  Returns a string with the policy in "policy"

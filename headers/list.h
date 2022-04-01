@@ -40,6 +40,16 @@ int createList(List* myList);
  */
 int pushTop(List* myList, char* index, void* data);
 /**
+ *   @func  pushFile
+ *   @param myList -> List
+ *   @param index -> index of the node
+ *   @param data -> data to insert
+ *   @param size -> size of data
+ *   @effects -> Pushes a new node with index and data to the top of the List myList (allocates size_t size for data)
+ *   @return -> returns -1 if there's a failure, 0 otherwise
+ */
+int pushFile(List* myList, char* index, void* data, size_t size);
+/**
  *   @func  pushBottom
  *   @param myList -> List
  *   @param index -> index of the node
@@ -57,7 +67,16 @@ int pushBottom(List* myList, char* index, void* data);
  *   @return -> returns -1 if there's a failure, 0 otherwise
  */
 int pullTop(List* myList, char** index, void** data);
-
+/**
+ *   @func  pullTop
+ *   @param myList -> List
+ *   @param index -> index for the node index
+ *   @param data -> data for the node data
+ *   @param size -> data size
+ *   @effects -> Pulls a node with index and data from the top of the List myList
+ *   @return -> returns -1 if there's a failure, 0 otherwise
+ */
+int pullTopFile(List* myList, char** index, void** data, size_t* size);
 /**
  *   @func  removeByInt
  *   @param myList -> List

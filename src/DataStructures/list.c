@@ -42,6 +42,32 @@ int pushTop(List* myList, char* index, void* data){
     return 0;
 }
 
+int pushFile(List* myList, char* index, void* data, size_t size){
+    node* temp;
+    if(!(*myList)){
+        /* ERRORE DOVUTO AD ARGOMENTO INVALIDO */
+        errno = EINVAL;
+        return -1;
+    }
+
+    temp = createNodeFile(index, data, size);
+    if(!temp) {
+        /* ERRORE DOVUTO ALL'ALLOCAZIONE NON ANDATA A BUON FINE */
+        errno = ENOMEM;
+        return -1;
+    }
+
+    temp->next = (*myList)->head;
+    temp->prev = NULL;
+
+    if((*myList)->head!=NULL) {
+        (*myList)->head->prev = temp;
+    }
+    (*myList)->head = temp;
+    (*myList)->len++;
+    return 0;
+}
+
 int pushBottom(List* myList, char* index, void* data){
     node* temp;
     Node last;
@@ -100,6 +126,39 @@ int pullTop(List* myList, char** index, void** data){
         if(tmp->arg.data!=NULL){
             *data = malloc(strlen(tmp->arg.data)+1);
             memcpy(*data, tmp->arg.data, strlen(tmp->arg.data)+1);
+        }
+    }
+
+    freeNode(tmp);
+    return 0;
+}
+
+int pullTopFile(List* myList, char** index, void** data, size_t* size){
+    node* tmp;
+    if(!(*myList) || (*myList)->len < 1){
+        /* ERRORE DOVUTO AD ARGOMENTO INVALIDO */
+        errno = EINVAL;
+        return -1;
+    }
+
+    tmp = (*myList)->head;
+
+    (*myList)->len--;
+    if((*myList)->len == 0){
+        (*myList)->head = NULL;
+    }else {
+        (*myList)->head = (*myList)->head->next;
+        (*myList)->head->prev = NULL;
+    }
+
+    if(tmp->index!= NULL) {
+        *index = malloc(strlen(tmp->index)+1);
+        strncpy(*index, tmp->index, strlen(tmp->index)+1);
+        /* *data = malloc() */
+        if(tmp->arg.data!=NULL){
+            *data = malloc(tmp->size);
+            memcpy(*data, tmp->arg.data, tmp->size);
+            *size = tmp->size;
         }
     }
 

@@ -17,6 +17,7 @@ typedef struct element{
         int dataInt;
         void* data;
     } arg;
+    size_t size;
     struct element* next;
     struct element* prev;
 } node;
@@ -30,9 +31,9 @@ typedef node* Node;
 
 Node createNode(char* index, void* data);
 /*
- * Node allocation method
+ * Node allocation methods
  * */
-
+Node createNodeFile(char* index, void* data, size_t size);
 /**
  * @effect frees the node
  * @param nodeToFree

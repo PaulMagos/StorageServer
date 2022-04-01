@@ -497,7 +497,7 @@ void printServerStatus(){
                 curr=curr->next;
                 icl_hash_delete(ServerStorage->filesTable, file->path, free, freeFile);
                 continue;
-            } else if(file->latsOp==O_WRITETOCLOSE) file->latsOp=O_WRITE;
+            } //else if(file->latsOp==O_WRITETOCLOSE) file->latsOp=O_WRITE;
             curr=curr->next;
         }
     }
@@ -598,7 +598,7 @@ serverFile* replaceFile(serverFile* file1, serverFile* file2){
     }
 }
 
-serverFile * icl_hash_toReplace(icl_hash_t *ht, int workerId){
+serverFile * icl_hash_toReplace(icl_hash_t *ht, int fd, int workerId){
     int i;
     icl_entry_t *bucket, *curr;
     serverFile *file1, *file2 = NULL, *exFile2 = NULL;
@@ -606,7 +606,14 @@ serverFile * icl_hash_toReplace(icl_hash_t *ht, int workerId){
         bucket = ht->buckets[i];
         for(curr = bucket; curr!=NULL; curr=curr->next){
             file1= (serverFile*) curr->data;
-            if(!file1 || file1->toDelete != 0 || file1->lockFd != -1 || file1->latsOp==O_CREAT_LOCK || file1->latsOp==O_CREAT || file1->latsOp==O_WRITETOCLOSE) continue;
+            if(
+                    !file1 ||
+                    (file1->toDelete != 0) ||
+                    file1->latsOp==O_CREAT_LOCK ||
+                    file1->latsOp==O_CREAT ||
+                    file1->latsOp==O_WRITETOCLOSE ||
+                    isLocked(file1, fd) == 1
+            ) continue;
             fileReadersIncrement(file1, workerId);
             if(file2 && file1!=file2) fileReadersIncrement(file2, workerId);
             exFile2 = file2;
@@ -617,6 +624,9 @@ serverFile * icl_hash_toReplace(icl_hash_t *ht, int workerId){
             }
         }
     }
+    fileWritersIncrement(file2, workerId);
+    file2->lockFd=fd;
+    fileWritersDecrement(file2, workerId);
     return file2;
 }
 
@@ -724,13 +734,19 @@ int icl_hash_toDelete(icl_hash_t * ht, List expelled, int fd, int workerId){
         for(curr=bucket; curr!=NULL; curr = curr->next) {
             file = ((serverFile*)curr->data);
             if(curr->key){
-                if(file->writers>0 || file->latsOp==O_CREAT_LOCK || file->latsOp==O_CREAT) {
-                    continue;
+                if(
+                    file->writers>0 ||
+                    file->latsOp==O_CREAT_LOCK ||
+                    file->latsOp==O_WRITETOCLOSE ||
+                    file->latsOp==O_CREAT ||
+                    isLocked(file, fd)==1)
+                {
+                        continue;
                 }
                 if(file->toDelete==fd){
                     fileWritersIncrement(file, workerId);
-                    pushTop(&expelled, file->path, NULL);
-                    file->toDelete = 1;
+                    pushFile(&expelled, file->path, file->content, file->size);
+                    icl_hash_delete(ht, file, free, freeFile);
                     fileWritersDecrement(file, workerId);
                 }
             }

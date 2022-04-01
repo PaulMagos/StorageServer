@@ -31,6 +31,32 @@ Node createNode(char* index, void* data){
     return tmp;
 }
 
+Node createNodeFile(char* index, void* data, size_t size){
+    Node tmp = (Node)malloc(sizeof(node));
+    if(!tmp){
+        /* Failed to alloc */
+        perror("malloc");
+        return NULL;
+    }
+
+    if(index != NULL) {
+        tmp->index = malloc(strlen(index)+1);
+        strncpy(tmp->index, index, strlen(index)+1);
+        if(data!=NULL){
+            tmp->size = size;
+            tmp->arg.data = malloc(size);
+            memcpy(tmp->arg.data, data, size);
+        } else tmp->arg.data = NULL;
+    } else{
+        tmp->index = NULL;
+        tmp->arg.dataInt = *(int*)data;
+    }
+    tmp->next=NULL;
+    tmp->prev=NULL;
+
+    return tmp;
+}
+
 void freeNode(Node nodeToFree){
     if(nodeToFree){
         if((nodeToFree)->index) {
